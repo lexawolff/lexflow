@@ -4,6 +4,7 @@ import {
   Home,
   Landmark,
   LayoutDashboard,
+  ListTodo,
   Settings,
   Sparkles,
   Users,
@@ -26,6 +27,11 @@ export const navigationItems = [
     href: "/casos",
     icon: Landmark,
   },
+  {
+  title: "Tarefas",
+  href: "/tarefas",
+  icon: ListTodo,
+},
   {
     title: "Pessoas",
     href: "/pessoas",
