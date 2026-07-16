@@ -7,6 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+//
+// ENUMS
+//
+
+enum TaskType {
+  PRAZO_PROCESSUAL
+  PRORROGACAO_BENEFICIO
+  ATENDIMENTO
+  AUDIENCIA
+  PERICIA
+  DOCUMENTO_PENDENTE
+  CONTATO_CLIENTE
+  RPV
+  OUTRO
+}
+
 enum UserRole {
   OWNER
   ADMIN
@@ -14,6 +30,19 @@ enum UserRole {
   INTERN
   FINANCIAL
   VIEWER
+}
+
+enum PracticeArea {
+  PREVIDENCIARIO
+  CIVEL
+  FAMILIA
+  TRABALHISTA
+  CONSUMIDOR
+  ADMINISTRATIVO
+  TRIBUTARIO
+  EMPRESARIAL
+  CRIMINAL
+  OUTRO
 }
 
 enum CaseStatus {
@@ -56,60 +85,111 @@ enum TaskStatus {
   ATRASADA
 }
 
-enum TaskType {
-  PRAZO_PROCESSUAL
-  PRORROGACAO_BENEFICIO
-  AUDIENCIA
-  PERICIA
-  DOCUMENTO_PENDENTE
-  CONTATO_CLIENTE
-  RPV
-  OUTRO
-}
-
 enum ExtraServiceStatus {
   A_RECEBER
   RECEBIDO
   CANCELADO
 }
 
+enum DocumentCategory {
+  RG
+  CPF
+  CNIS
+  CTPS
+  COMPROVANTE_RESIDENCIA
+  LAUDO
+  EXAME
+  RECEITA
+  ATESTADO
+  CONTRATO
+  PROCURACAO
+  PETICAO
+  SENTENCA
+  ACORDAO
+  OUTRO
+}
+
+enum ReceivableType {
+  HONORARIO_CONTRATUAL
+  HONORARIO_SUCUMBENCIAL
+  RPV
+  ACORDO
+  CONSULTA
+  SERVICO_EXTRA
+  OUTRO
+}
+
+enum PayableCategory {
+  ALUGUEL
+  SALARIO
+  IMPOSTO
+  SOFTWARE
+  MARKETING
+  MATERIAL_ESCRITORIO
+  CUSTAS
+  OUTRO
+}
+
+//
+// USER
+//
+
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  imageUrl  String?
+  id       String  @id @default(uuid())
+  name     String
+  email    String  @unique
+  imageUrl String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   memberships Membership[]
 }
 
+//
+// WORKSPACE
+//
+
 model Workspace {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
+  id String @id @default(uuid())
+
+  name String
+  slug String @unique
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members       Membership[]
-  clients       Client[]
-  cases         Case[]
-  payables      Payable[]
-  receivables   Receivable[]
-  rpvs          Rpv[]
-  tasks         Task[]
+  members Membership[]
+
+  clients Client[]
+  cases   Case[]
+
+  payables    Payable[]
+  receivables Receivable[]
+  rpvs        Rpv[]
+  tasks       Task[]
+
   extraServices ExtraService[]
-  documents     Document[]
-  clientEvents  ClientEvent[]
-  caseEvents    CaseEvent[]
+
+  documents Document[]
+
+  clientEvents ClientEvent[]
+  caseEvents   CaseEvent[]
 }
 
+//
+// MEMBERSHIP
+//
+
 model Membership {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
+
   userId      String
   workspaceId String
-  role        UserRole @default(OWNER)
-  createdAt   DateTime @default(now())
+
+  role UserRole @default(OWNER)
+
+  createdAt DateTime @default(now())
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -119,23 +199,72 @@ model Membership {
   @@index([workspaceId])
 }
 
+//
 model Client {
   id          String @id @default(uuid())
   workspaceId String
 
-  name       String
-  cpf        String?
-  rg         String?
-  birthDate  DateTime?
-  phone      String?
-  whatsapp   String?
-  email      String?
+  // ==========================
+  // Dados pessoais
+  // ==========================
+
+  name String
+
+  cpf String?
+  rg  String?
+
+  birthDate DateTime?
+
+  motherName String?
+  fatherName String?
+
+  gender        String?
+  maritalStatus String?
+
+  nationality String?
+  education   String?
+
   profession String?
-  income     Decimal?
-  address    String?
-  city       String?
-  state      String?
-  notes      String?
+  income     Float?
+
+  // ==========================
+  // Contato
+  // ==========================
+
+  phone    String?
+  whatsapp String?
+  email    String?
+
+  // ==========================
+  // Endereço
+  // ==========================
+
+  cep           String?
+  address       String?
+  addressNumber String?
+  complement    String?
+  neighborhood  String?
+  city          String?
+  state         String?
+
+  // ==========================
+  // Previdenciário
+  // ==========================
+
+  pis String?
+
+  // ==========================
+  // Gov.br
+  // ==========================
+
+  govLogin             String?
+  govPasswordEncrypted String? @db.Text
+
+  // ==========================
+  // Observações
+  // ==========================
+
+  notes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -153,30 +282,46 @@ model Client {
   @@index([cpf])
 }
 
+//
+// CASE
+//
+
 model Case {
-  id          String @id @default(uuid())
+  id String @id @default(uuid())
+
   workspaceId String
   clientId    String
 
-  title         String
-  number        String?
-  court         String?
-  courtUnit     String?
-  subject       String?
+  title String
+
+  practiceArea PracticeArea
+
+  subject String?
+
+  number String?
+
+  court     String?
+  courtUnit String?
+
   opposingParty String?
-  caseLink      String?
-  value         Decimal?
-  status        CaseStatus @default(ATENDIMENTO_INICIAL)
+
+  caseLink String?
+
+  value Decimal?
+
+  status CaseStatus @default(ATENDIMENTO_INICIAL)
 
   protocolDate DateTime?
   nextDeadline DateTime?
-  notes        String?
+
+  notes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   documents   Document[]
   receivables Receivable[]
@@ -188,20 +333,33 @@ model Case {
   @@index([clientId])
   @@index([number])
   @@index([status])
+  @@index([practiceArea])
 }
 
+//
+// PAYABLE
+//
+
 model Payable {
-  id          String @id @default(uuid())
+  id String @id @default(uuid())
+
   workspaceId String
 
-  description   String
-  category      String?
-  amount        Decimal
-  dueDate       DateTime
-  paidAt        DateTime?
-  status        FinancialStatus @default(PENDENTE)
+  description String
+
+  category PayableCategory @default(OUTRO)
+
+  amount Decimal
+
+  dueDate DateTime
+
+  paidAt DateTime?
+
+  status FinancialStatus @default(PENDENTE)
+
   paymentMethod String?
-  notes         String?
+
+  notes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -211,67 +369,108 @@ model Payable {
   @@index([workspaceId])
   @@index([dueDate])
   @@index([status])
+  @@index([category])
 }
 
-model Receivable {
-  id          String  @id @default(uuid())
-  workspaceId String
-  clientId    String
-  caseId      String?
+//
+// RECEIVABLE
+//
 
-  description   String
-  type          String?
-  totalAmount   Decimal
-  paidAmount    Decimal         @default(0)
-  dueDate       DateTime?
-  receivedAt    DateTime?
-  status        FinancialStatus @default(PENDENTE)
+model Receivable {
+  id String @id @default(uuid())
+
+  workspaceId String
+
+  clientId String
+
+  caseId String?
+
+  description String
+
+  type ReceivableType @default(HONORARIO_CONTRATUAL)
+
+  totalAmount Decimal
+
+  paidAmount Decimal @default(0)
+
+  dueDate DateTime?
+
+  receivedAt DateTime?
+
+  status FinancialStatus @default(PENDENTE)
+
   paymentMethod String?
-  notes         String?
+
+  notes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  case      Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  case Case? @relation(fields: [caseId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId])
   @@index([clientId])
   @@index([caseId])
   @@index([dueDate])
   @@index([status])
+  @@index([type])
 }
 
-model Rpv {
-  id          String @id @default(uuid())
-  workspaceId String
-  caseId      String
+//
+// RPV
+//
 
-  requisitionNumber   String?
-  court               String?
-  grossAmount         Decimal
-  contractualFeeRate  Decimal?
+model Rpv {
+  id String @id @default(uuid())
+
+  workspaceId String
+
+  caseId String
+
+  requisitionNumber String?
+
+  court String?
+
+  grossAmount Decimal
+
+  contractualFeeRate Decimal?
+
   contractualFeeValue Decimal?
-  sucumbencyFeeValue  Decimal?
-  clientNetAmount     Decimal?
+
+  sucumbencyFeeValue Decimal?
+
+  clientNetAmount Decimal?
+
   expectedPaymentDate DateTime?
-  paidAt              DateTime?
-  bank                String?
-  status              RpvStatus @default(AGUARDANDO_EXPEDICAO)
-  notes               String?
+
+  paidAt DateTime?
+
+  bank String?
+
+  status RpvStatus @default(AGUARDANDO_EXPEDICAO)
+
+  notes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  case      Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([caseId])
   @@index([expectedPaymentDate])
   @@index([status])
 }
+
+//
+// TASK
+//
 
 model Task {
   id          String  @id @default(uuid())
@@ -288,6 +487,9 @@ model Task {
   dueDate     DateTime
   completedAt DateTime?
 
+  location      String?
+  googleEventId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -299,21 +501,34 @@ model Task {
   @@index([clientId])
   @@index([caseId])
   @@index([dueDate])
+  @@index([startsAt])
   @@index([status])
   @@index([type])
+  @@index([googleEventId])
 }
 
+//
+// EXTRA SERVICE
+//
+
 model ExtraService {
-  id          String @id @default(uuid())
+  id String @id @default(uuid())
+
   workspaceId String
 
   description String
+
   serviceType String
-  date        DateTime
-  amount      Decimal
-  status      ExtraServiceStatus @default(A_RECEBER)
-  paidAt      DateTime?
-  notes       String?
+
+  date DateTime
+
+  amount Decimal
+
+  status ExtraServiceStatus @default(A_RECEBER)
+
+  paidAt DateTime?
+
+  notes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -325,55 +540,90 @@ model ExtraService {
   @@index([status])
 }
 
-model Document {
-  id          String  @id @default(uuid())
-  workspaceId String
-  clientId    String?
-  caseId      String?
+//
+// DOCUMENT
+//
 
-  name     String
-  fileUrl  String
+model Document {
+  id String @id @default(uuid())
+
+  workspaceId String
+
+  clientId String?
+
+  caseId String?
+
+  name String
+
+  category DocumentCategory?
+
+  fileUrl String
+
   fileType String?
-  size     Int?
+
+  size Int?
+
+  uploadedBy String?
 
   createdAt DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  client    Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  case      Case?     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  case Case? @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([clientId])
   @@index([caseId])
+  @@index([category])
 }
 
-model ClientEvent {
-  id          String @id @default(uuid())
-  workspaceId String
-  clientId    String
+//
+// CLIENT EVENT
+//
 
-  title   String
+model ClientEvent {
+  id String @id @default(uuid())
+
+  workspaceId String
+
+  clientId String
+
+  title String
+
   content String?
-  date    DateTime @default(now())
+
+  date DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([clientId])
 }
 
-model CaseEvent {
-  id          String @id @default(uuid())
-  workspaceId String
-  caseId      String
+//
+// CASE EVENT
+//
 
-  title   String
+model CaseEvent {
+  id String @id @default(uuid())
+
+  workspaceId String
+
+  caseId String
+
+  title String
+
   content String?
-  date    DateTime @default(now())
+
+  date DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  case      Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([caseId])

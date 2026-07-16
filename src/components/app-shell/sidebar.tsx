@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 
 export function Sidebar() {
   return (
-    <aside className="hidden h-screen w-64 shrink-0 bg-gradient-to-b from-sidebar-from to-sidebar-to px-4 py-5 text-sidebar-foreground lg:flex lg:flex-col">
+    <aside className="fixed left-0 top-0 hidden h-screen w-64 bg-gradient-to-b from-sidebar-from to-sidebar-to px-4 py-5 text-sidebar-foreground lg:flex lg:flex-col">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">LexFlow</h1>
         <p className="text-xs tracking-[0.2em] text-sidebar-muted">

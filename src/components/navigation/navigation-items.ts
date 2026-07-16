@@ -33,10 +33,10 @@ export const navigationItems = [
   icon: ListTodo,
 },
   {
-    title: "Pessoas",
-    href: "/pessoas",
-    icon: Users,
-  },
+  title: "Clientes",
+  href: "/clientes",
+  icon: Users,
+},
   {
     title: "Financeiro",
     href: "/financeiro",
