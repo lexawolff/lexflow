@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ClientDetails } from "../../types";
+import { formatDate } from "@/lib/format/date";
 
 type OverviewTabProps = {
   client: ClientDetails;
@@ -48,7 +49,7 @@ export function OverviewTab({ client }: OverviewTabProps) {
             label="Nascimento"
             value={
               client.birthDate
-                ? client.birthDate.toLocaleDateString("pt-BR")
+                ? formatDate(client.birthDate)
                 : "-"
             }
           />
@@ -72,9 +73,9 @@ export function OverviewTab({ client }: OverviewTabProps) {
             value={
               client.income
                 ? Number(client.income).toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })
+                  style: "currency",
+                  currency: "BRL",
+                })
                 : "-"
             }
           />

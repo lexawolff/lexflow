@@ -3,7 +3,6 @@ import {
   Pencil,
   Plus,
   MessageCircle,
-  ShieldCheck,
   Phone,
   Mail,
   Briefcase,
@@ -55,7 +54,7 @@ export function ClientHeader({ client }: ClientHeaderProps) {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link href={`/nova-demanda?clientId=${client.id}`}>
+          <Link href={`/clientes/${client.id}/casos/novo`}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               Nova Demanda

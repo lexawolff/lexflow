@@ -4,6 +4,16 @@ export const clientDashboardInclude =
   Prisma.validator<Prisma.ClientDefaultArgs>()({
     include: {
       cases: {
+        select: {
+          id: true,
+          title: true,
+          practiceArea: true,
+          status: true,
+          number: true,
+          administrativeNumber: true,
+          nextDeadline: true,
+          createdAt: true,
+        },
         orderBy: {
           createdAt: "desc",
         },

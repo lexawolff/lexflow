@@ -11,6 +11,21 @@ datasource db {
 // ENUMS
 //
 
+enum CaseOrigin {
+  ADMINISTRATIVO
+  JUDICIAL
+  AMBOS
+}
+
+enum AdministrativeStatus {
+  NAO_APLICAVEL
+  REQUERIDO
+  EM_ANALISE
+  DEFERIDO
+  INDEFERIDO
+  RECURSO
+}
+
 enum TaskType {
   PRAZO_PROCESSUAL
   PRORROGACAO_BENEFICIO
@@ -292,27 +307,51 @@ model Case {
   workspaceId String
   clientId    String
 
-  title String
+  // Identificação
 
+  title        String
   practiceArea PracticeArea
+  subject      String?
+  benefitType  String?
 
-  subject String?
+  // Origem
 
-  number String?
+  origin               CaseOrigin           @default(JUDICIAL)
+  administrativeStatus AdministrativeStatus @default(NAO_APLICAVEL)
+
+  // Numeração
+
+  number                String?
+  administrativeNumber  String?
+  administrativeProcess String?
+
+  // Órgão julgador
 
   court     String?
   courtUnit String?
+  judge     String?
+  city      String?
+  state     String?
+
+  // Partes
 
   opposingParty String?
 
-  caseLink String?
+  // Financeiro
 
-  value Decimal?
+  claimValue Decimal?
+
+  // Situação
 
   status CaseStatus @default(ATENDIMENTO_INICIAL)
 
-  protocolDate DateTime?
-  nextDeadline DateTime?
+  // Datas
+
+  administrativeRequestDate DateTime?
+  distributionDate          DateTime?
+  nextDeadline              DateTime?
+
+  // Observações
 
   notes String?
 
@@ -320,8 +359,7 @@ model Case {
   updatedAt DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   documents   Document[]
   receivables Receivable[]
@@ -332,8 +370,10 @@ model Case {
   @@index([workspaceId])
   @@index([clientId])
   @@index([number])
+  @@index([administrativeNumber])
   @@index([status])
   @@index([practiceArea])
+  @@index([origin])
 }
 
 //

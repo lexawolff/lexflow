@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverviewTab } from "./tabs/overview-tab";
 import type { ClientDetails } from "../types";
 import { GovTab } from "./tabs/gov-tab";
+import { ClientCasesList } from "@/features/cases/components/client-cases-list";
 
 type ClientTabsProps = {
   client: ClientDetails;
@@ -26,7 +27,10 @@ export function ClientTabs({ client }: ClientTabsProps) {
       </TabsContent>
 
       <TabsContent value="cases">
-        <div className="rounded-xl border bg-card p-6">Aba Casos em construção.</div>
+        <ClientCasesList
+          clientId={client.id}
+          cases={client.cases}
+        />
       </TabsContent>
 
       <TabsContent value="documents">
