@@ -1,4 +1,13 @@
 -- CreateEnum
+CREATE TYPE "CaseOrigin" AS ENUM ('ADMINISTRATIVO', 'JUDICIAL', 'AMBOS');
+
+-- CreateEnum
+CREATE TYPE "AdministrativeStatus" AS ENUM ('NAO_APLICAVEL', 'REQUERIDO', 'EM_ANALISE', 'DEFERIDO', 'INDEFERIDO', 'RECURSO');
+
+-- CreateEnum
+CREATE TYPE "TaskType" AS ENUM ('PRAZO_PROCESSUAL', 'PRORROGACAO_BENEFICIO', 'ATENDIMENTO', 'AUDIENCIA', 'PERICIA', 'DOCUMENTO_PENDENTE', 'CONTATO_CLIENTE', 'RPV', 'OUTRO');
+
+-- CreateEnum
 CREATE TYPE "UserRole" AS ENUM ('OWNER', 'ADMIN', 'LAWYER', 'INTERN', 'FINANCIAL', 'VIEWER');
 
 -- CreateEnum
@@ -15,9 +24,6 @@ CREATE TYPE "RpvStatus" AS ENUM ('AGUARDANDO_EXPEDICAO', 'EXPEDIDA', 'AUTUADA', 
 
 -- CreateEnum
 CREATE TYPE "TaskStatus" AS ENUM ('PENDENTE', 'EM_ANDAMENTO', 'CONCLUIDA', 'CANCELADA', 'ATRASADA');
-
--- CreateEnum
-CREATE TYPE "TaskType" AS ENUM ('PRAZO_PROCESSUAL', 'PRORROGACAO_BENEFICIO', 'AUDIENCIA', 'PERICIA', 'DOCUMENTO_PENDENTE', 'CONTATO_CLIENTE', 'RPV', 'OUTRO');
 
 -- CreateEnum
 CREATE TYPE "ExtraServiceStatus" AS ENUM ('A_RECEBER', 'RECEBIDO', 'CANCELADO');
@@ -73,24 +79,27 @@ CREATE TABLE "Client" (
     "cpf" TEXT,
     "rg" TEXT,
     "birthDate" TIMESTAMP(3),
+    "motherName" TEXT,
+    "fatherName" TEXT,
     "gender" TEXT,
     "maritalStatus" TEXT,
     "nationality" TEXT,
     "education" TEXT,
     "profession" TEXT,
+    "income" DOUBLE PRECISION,
     "phone" TEXT,
     "whatsapp" TEXT,
     "email" TEXT,
     "cep" TEXT,
     "address" TEXT,
-    "number" TEXT,
+    "addressNumber" TEXT,
     "complement" TEXT,
     "neighborhood" TEXT,
     "city" TEXT,
     "state" TEXT,
     "pis" TEXT,
+    "govLogin" TEXT,
     "govPasswordEncrypted" TEXT,
-    "income" DECIMAL(65,30),
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -106,14 +115,22 @@ CREATE TABLE "Case" (
     "title" TEXT NOT NULL,
     "practiceArea" "PracticeArea" NOT NULL,
     "subject" TEXT,
+    "benefitType" TEXT,
+    "origin" "CaseOrigin" NOT NULL DEFAULT 'JUDICIAL',
+    "administrativeStatus" "AdministrativeStatus" NOT NULL DEFAULT 'NAO_APLICAVEL',
     "number" TEXT,
+    "administrativeNumber" TEXT,
+    "administrativeProcess" TEXT,
     "court" TEXT,
     "courtUnit" TEXT,
+    "judge" TEXT,
+    "city" TEXT,
+    "state" TEXT,
     "opposingParty" TEXT,
-    "caseLink" TEXT,
-    "value" DECIMAL(65,30),
+    "claimValue" DECIMAL(65,30),
     "status" "CaseStatus" NOT NULL DEFAULT 'ATENDIMENTO_INICIAL',
-    "protocolDate" TIMESTAMP(3),
+    "administrativeRequestDate" TIMESTAMP(3),
+    "distributionDate" TIMESTAMP(3),
     "nextDeadline" TIMESTAMP(3),
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -194,10 +211,11 @@ CREATE TABLE "Task" (
     "description" TEXT,
     "type" "TaskType" NOT NULL,
     "status" "TaskStatus" NOT NULL DEFAULT 'PENDENTE',
-    "priority" INTEGER NOT NULL DEFAULT 3,
     "startsAt" TIMESTAMP(3),
     "dueDate" TIMESTAMP(3) NOT NULL,
     "completedAt" TIMESTAMP(3),
+    "location" TEXT,
+    "googleEventId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -225,13 +243,12 @@ CREATE TABLE "ExtraService" (
 CREATE TABLE "Document" (
     "id" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
-    "clientId" TEXT,
-    "caseId" TEXT,
-    "name" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "originalName" TEXT NOT NULL,
     "category" "DocumentCategory",
-    "fileUrl" TEXT NOT NULL,
+    "storagePath" TEXT NOT NULL,
     "fileType" TEXT,
-    "size" INTEGER,
+    "size" INTEGER NOT NULL,
     "uploadedBy" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -296,10 +313,16 @@ CREATE INDEX "Case_clientId_idx" ON "Case"("clientId");
 CREATE INDEX "Case_number_idx" ON "Case"("number");
 
 -- CreateIndex
+CREATE INDEX "Case_administrativeNumber_idx" ON "Case"("administrativeNumber");
+
+-- CreateIndex
 CREATE INDEX "Case_status_idx" ON "Case"("status");
 
 -- CreateIndex
 CREATE INDEX "Case_practiceArea_idx" ON "Case"("practiceArea");
+
+-- CreateIndex
+CREATE INDEX "Case_origin_idx" ON "Case"("origin");
 
 -- CreateIndex
 CREATE INDEX "Payable_workspaceId_idx" ON "Payable"("workspaceId");
@@ -356,13 +379,16 @@ CREATE INDEX "Task_caseId_idx" ON "Task"("caseId");
 CREATE INDEX "Task_dueDate_idx" ON "Task"("dueDate");
 
 -- CreateIndex
+CREATE INDEX "Task_startsAt_idx" ON "Task"("startsAt");
+
+-- CreateIndex
 CREATE INDEX "Task_status_idx" ON "Task"("status");
 
 -- CreateIndex
 CREATE INDEX "Task_type_idx" ON "Task"("type");
 
 -- CreateIndex
-CREATE INDEX "Task_priority_idx" ON "Task"("priority");
+CREATE INDEX "Task_googleEventId_idx" ON "Task"("googleEventId");
 
 -- CreateIndex
 CREATE INDEX "ExtraService_workspaceId_idx" ON "ExtraService"("workspaceId");
@@ -378,9 +404,6 @@ CREATE INDEX "Document_workspaceId_idx" ON "Document"("workspaceId");
 
 -- CreateIndex
 CREATE INDEX "Document_clientId_idx" ON "Document"("clientId");
-
--- CreateIndex
-CREATE INDEX "Document_caseId_idx" ON "Document"("caseId");
 
 -- CreateIndex
 CREATE INDEX "Document_category_idx" ON "Document"("category");
@@ -447,9 +470,6 @@ ALTER TABLE "Document" ADD CONSTRAINT "Document_workspaceId_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "Document" ADD CONSTRAINT "Document_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Document" ADD CONSTRAINT "Document_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ClientEvent" ADD CONSTRAINT "ClientEvent_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;

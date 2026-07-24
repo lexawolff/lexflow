@@ -1,29 +1,24 @@
 import { prisma } from "@/lib/prisma";
-import { serializePrisma } from "@/lib/prisma/serialize";
-import { getDefaultWorkspace } from "@/lib/workspace";
 
-export async function getCase(clientId: string, caseId: string) {
-  const workspace = await getDefaultWorkspace();
+import {
+  caseDetailsInclude,
+  type CaseDetails,
+} from "../types";
 
-  const demand = await prisma.case.findFirst({
+type GetCaseInput = {
+  workspaceId: string;
+  caseId: string;
+};
+
+export async function getCase({
+  workspaceId,
+  caseId,
+}: GetCaseInput): Promise<CaseDetails | null> {
+  return prisma.case.findFirst({
     where: {
       id: caseId,
-      clientId,
-      workspaceId: workspace.id,
+      workspaceId,
     },
-    include: {
-      client: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
+    ...caseDetailsInclude,
   });
-
-  if (!demand) {
-    return null;
-  }
-
-  return serializePrisma(demand);
 }
