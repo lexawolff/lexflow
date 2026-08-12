@@ -23,6 +23,9 @@ export const demandSchema = z.object({
   nextAction: z.string().min(3),
 
   dueDate: z.coerce.date(),
+  installmentDueDates: z.array(
+    z.coerce.date()
+  ),
 });
 
 export type DemandSchema = z.infer<typeof demandSchema>;

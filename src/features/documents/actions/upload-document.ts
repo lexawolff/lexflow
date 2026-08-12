@@ -12,6 +12,7 @@ import { getDefaultWorkspace } from "@/lib/workspace";
 
 import { uploadDocumentSchema } from "../schemas/upload-document-schema";
 import { uploadFile } from "../services/upload-file";
+import { registerDocumentUploaded } from "@/features/timeline/lib/events/document-uploaded";
 
 export async function uploadDocument(
   formData: FormData
@@ -35,19 +36,27 @@ export async function uploadDocument(
       file,
     });
 
-    const document = await prisma.document.create({
-      data: {
-        workspaceId: workspace.id,
-        clientId,
-        originalName: uploaded.originalName,
-        storagePath: uploaded.storagePath,
-        fileType: uploaded.fileType,
-        size: uploaded.size,
-        category,
-      },
-    });
+   const document = await prisma.document.create({
+  data: {
+    workspaceId: workspace.id,
+    clientId,
+    originalName: uploaded.originalName,
+    storagePath: uploaded.storagePath,
+    fileType: uploaded.fileType,
+    size: uploaded.size,
+    category,
+  },
+});
 
-    revalidatePath(`/clients/${clientId}`);
+await registerDocumentUploaded({
+  workspaceId: workspace.id,
+  clientId,
+  documentId: document.id,
+  fileName: document.originalName,
+  category: document.category ?? "OUTROS",
+});
+
+revalidatePath(`/clients/${clientId}`);
 
     return {
       success: true,

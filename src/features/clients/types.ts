@@ -40,6 +40,12 @@ export const clientDashboardInclude =
         },
       },
 
+      timelineEvents: {
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+
       receivables: {
         orderBy: {
           createdAt: "desc",

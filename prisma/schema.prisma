@@ -145,6 +145,38 @@ enum PayableCategory {
   OUTRO
 }
 
+enum TimelineEntityType {
+  CLIENT
+  CASE
+  DOCUMENT
+  FINANCIAL
+  TASK
+  NOTE
+}
+
+enum TimelineEventType {
+  CLIENT_CREATED
+  CLIENT_UPDATED
+
+  CASE_CREATED
+  CASE_UPDATED
+  CASE_STATUS_CHANGED
+
+  DOCUMENT_UPLOADED
+  DOCUMENT_DELETED
+
+  FINANCIAL_CREATED
+  FINANCIAL_UPDATED
+  FINANCIAL_PAID
+
+  TASK_CREATED
+  TASK_COMPLETED
+
+  NOTE_CREATED
+
+  SYSTEM
+}
+
 //
 // USER
 //
@@ -215,6 +247,36 @@ model Membership {
 }
 
 //
+
+model TimelineEvent {
+  id          String            @id @default(cuid())
+  workspaceId String
+  clientId    String
+
+  type        TimelineEventType
+  title       String
+  description String?
+
+  entityType  TimelineEntityType?
+  entityId    String?
+
+  metadata    Json?
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  client      Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([clientId])
+  @@index([clientId, createdAt])
+  @@index([entityType, entityId])
+}
+
+
+
+//
+
 model Client {
   id          String @id @default(uuid())
   workspaceId String
@@ -291,6 +353,7 @@ model Client {
   receivables Receivable[]
   events      ClientEvent[]
   tasks       Task[]
+  timelineEvents TimelineEvent[]
 
   @@index([workspaceId])
   @@index([name])
@@ -442,6 +505,18 @@ model Receivable {
 
   notes String?
 
+  originalDueDate DateTime?
+
+  // ==========================
+  // Parcelamento
+  // ==========================
+
+  installmentGroupId String?
+
+  installmentNumber Int?
+
+  totalInstallments Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -454,9 +529,13 @@ model Receivable {
   @@index([workspaceId])
   @@index([clientId])
   @@index([caseId])
-  @@index([dueDate])
+
   @@index([status])
   @@index([type])
+
+  @@index([dueDate])
+
+  @@index([installmentGroupId])
 }
 
 //

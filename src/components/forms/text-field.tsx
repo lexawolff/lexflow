@@ -21,6 +21,7 @@ type TextFieldProps<TFieldValues extends FieldValues> = {
   disabled?: boolean;
   autoComplete?: string;
   transform?: (value: string) => string;
+  parse?: (value: string) => unknown;
 };
 
 export function TextField<TFieldValues extends FieldValues>({
@@ -32,6 +33,7 @@ export function TextField<TFieldValues extends FieldValues>({
   disabled = false,
   autoComplete,
   transform,
+  parse,
 }: TextFieldProps<TFieldValues>) {
   const { field, fieldState } = useController({
     control,
@@ -52,10 +54,14 @@ export function TextField<TFieldValues extends FieldValues>({
           autoComplete={autoComplete}
           value={field.value ?? ""}
           onChange={(e) => {
+            const value = e.target.value;
+
             field.onChange(
-              transform
-                ? transform(e.target.value)
-                : e.target.value
+              parse
+                ? parse(value)
+                : transform
+                  ? transform(value)
+                  : value,
             );
           }}
           className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"

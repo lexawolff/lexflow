@@ -1,14 +1,13 @@
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 import { ClientCasesList } from "@/features/cases/components/client-cases-list";
-
 import type { ClientDetails } from "../types";
-
 import { DocumentsTab } from "./tabs/documents-tab";
 import { GovTab } from "./tabs/gov-tab";
 import { OverviewTab } from "./tabs/overview-tab";
+import { TimelineTab } from "./tabs/timeline-tab";
+import { ClientFinancialTab } from "@/features/finance/components/client-financial-tab";
 
 type ClientTabsProps = {
   client: ClientDetails;
@@ -60,16 +59,12 @@ export function ClientTabs({
         <DocumentsTab client={client} />
       </TabsContent>
 
-      <TabsContent value="financial">
-        <div className="rounded-xl border bg-card p-6">
-          Aba Financeiro em construção.
-        </div>
+      <TabsContent value="financial" className="mt-6">
+        <ClientFinancialTab client={client} />
       </TabsContent>
 
       <TabsContent value="timeline">
-        <div className="rounded-xl border bg-card p-6">
-          Aba Timeline em construção.
-        </div>
+        <TimelineTab client={client} />
       </TabsContent>
 
       <TabsContent value="gov">
