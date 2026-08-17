@@ -13,14 +13,20 @@ function hasPayment({
   status,
 }: {
   paidAmount: {
-    greaterThan: (value: number) => boolean;
+    greaterThan: (
+      value: number,
+    ) => boolean;
   };
-  status: FinancialStatus;
+
+  status:
+    FinancialStatus;
 }) {
   return (
     paidAmount.greaterThan(0) ||
-    status === FinancialStatus.PAGO ||
-    status === FinancialStatus.PARCIAL
+    status ===
+      FinancialStatus.PAGO ||
+    status ===
+      FinancialStatus.PARCIAL
   );
 }
 
@@ -31,16 +37,20 @@ export async function removeReceivable(
     await getDefaultWorkspace();
 
   const parsed =
-    removeReceivableSchema.safeParse({
-      receivableId:
-        formData.get("receivableId"),
+    removeReceivableSchema.safeParse(
+      {
+        receivableId:
+          formData.get(
+            "receivableId",
+          ),
 
-      mode:
-        formData.get("mode"),
+        mode:
+          formData.get("mode"),
 
-      scope:
-        formData.get("scope"),
-    });
+        scope:
+          formData.get("scope"),
+      },
+    );
 
   if (!parsed.success) {
     console.error(
@@ -48,28 +58,40 @@ export async function removeReceivable(
     );
 
     throw new Error(
-      parsed.error.issues[0]?.message ??
+      parsed.error.issues[0]
+        ?.message ??
         "Dados inválidos.",
     );
   }
 
-  const data = parsed.data;
+  const data =
+    parsed.data;
 
   const receivable =
-    await prisma.receivable.findFirst({
-      where: {
-        id: data.receivableId,
-        workspaceId: workspace.id,
-      },
+    await prisma.receivable.findFirst(
+      {
+        where: {
+          id:
+            data.receivableId,
 
-      select: {
-        id: true,
-        clientId: true,
-        installmentGroupId: true,
-        paidAmount: true,
-        status: true,
+          workspaceId:
+            workspace.id,
+        },
+
+        select: {
+          id: true,
+
+          clientId: true,
+
+          installmentGroupId:
+            true,
+
+          paidAmount: true,
+
+          status: true,
+        },
       },
-    });
+    );
 
   if (!receivable) {
     throw new Error(
@@ -88,12 +110,15 @@ export async function removeReceivable(
    * CANCELAMENTO
    * ==========================
    */
-  if (data.mode === "CANCEL") {
+  if (
+    data.mode === "CANCEL"
+  ) {
     if (!useGroup) {
       if (
         hasPayment({
           paidAmount:
             receivable.paidAmount,
+
           status:
             receivable.status,
         })
@@ -112,19 +137,26 @@ export async function removeReceivable(
         );
       }
 
-      await prisma.receivable.update({
-        where: {
-          id: receivable.id,
-        },
+      await prisma.receivable.update(
+        {
+          where: {
+            id:
+              receivable.id,
+          },
 
-        data: {
-          status:
-            FinancialStatus.CANCELADO,
+          data: {
+            status:
+              FinancialStatus.CANCELADO,
+          },
         },
-      });
+      );
 
       revalidatePath(
         `/clientes/${receivable.clientId}`,
+      );
+
+      revalidatePath(
+        "/financeiro",
       );
 
       return {
@@ -132,37 +164,39 @@ export async function removeReceivable(
       };
     }
 
-    /*
-     * Ao cancelar todo o parcelamento,
-     * parcelas já pagas ou parcialmente
-     * pagas permanecem intactas.
-     */
-    await prisma.receivable.updateMany({
-      where: {
-        workspaceId: workspace.id,
+    await prisma.receivable.updateMany(
+      {
+        where: {
+          workspaceId:
+            workspace.id,
 
-        installmentGroupId:
-          receivable.installmentGroupId,
+          installmentGroupId:
+            receivable.installmentGroupId,
 
-        paidAmount: 0,
+          paidAmount: 0,
 
-        status: {
-          notIn: [
-            FinancialStatus.PAGO,
-            FinancialStatus.PARCIAL,
+          status: {
+            notIn: [
+              FinancialStatus.PAGO,
+              FinancialStatus.PARCIAL,
+              FinancialStatus.CANCELADO,
+            ],
+          },
+        },
+
+        data: {
+          status:
             FinancialStatus.CANCELADO,
-          ],
         },
       },
-
-      data: {
-        status:
-          FinancialStatus.CANCELADO,
-      },
-    });
+    );
 
     revalidatePath(
       `/clientes/${receivable.clientId}`,
+    );
+
+    revalidatePath(
+      "/financeiro",
     );
 
     return {
@@ -180,6 +214,7 @@ export async function removeReceivable(
       hasPayment({
         paidAmount:
           receivable.paidAmount,
+
         status:
           receivable.status,
       })
@@ -191,12 +226,17 @@ export async function removeReceivable(
 
     await prisma.receivable.delete({
       where: {
-        id: receivable.id,
+        id:
+          receivable.id,
       },
     });
 
     revalidatePath(
       `/clientes/${receivable.clientId}`,
+    );
+
+    revalidatePath(
+      "/financeiro",
     );
 
     return {
@@ -205,20 +245,25 @@ export async function removeReceivable(
   }
 
   const groupReceivables =
-    await prisma.receivable.findMany({
-      where: {
-        workspaceId: workspace.id,
+    await prisma.receivable.findMany(
+      {
+        where: {
+          workspaceId:
+            workspace.id,
 
-        installmentGroupId:
-          receivable.installmentGroupId,
-      },
+          installmentGroupId:
+            receivable.installmentGroupId,
+        },
 
-      select: {
-        id: true,
-        paidAmount: true,
-        status: true,
+        select: {
+          id: true,
+
+          paidAmount: true,
+
+          status: true,
+        },
       },
-    });
+    );
 
   const groupHasPayment =
     groupReceivables.some(
@@ -226,6 +271,7 @@ export async function removeReceivable(
         hasPayment({
           paidAmount:
             item.paidAmount,
+
           status:
             item.status,
         }),
@@ -237,17 +283,24 @@ export async function removeReceivable(
     );
   }
 
-  await prisma.receivable.deleteMany({
-    where: {
-      workspaceId: workspace.id,
+  await prisma.receivable.deleteMany(
+    {
+      where: {
+        workspaceId:
+          workspace.id,
 
-      installmentGroupId:
-        receivable.installmentGroupId,
+        installmentGroupId:
+          receivable.installmentGroupId,
+      },
     },
-  });
+  );
 
   revalidatePath(
     `/clientes/${receivable.clientId}`,
+  );
+
+  revalidatePath(
+    "/financeiro",
   );
 
   return {

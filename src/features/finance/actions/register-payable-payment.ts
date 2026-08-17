@@ -1,30 +1,37 @@
 "use server";
 
-import { FinancialStatus } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import {
+  FinancialStatus,
+} from "@prisma/client";
+
+import {
+  revalidatePath,
+} from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { getDefaultWorkspace } from "@/lib/workspace";
 
-import { registerReceivablePaymentSchema } from "../schemas/register-receivable-payment-schema";
+import {
+  registerPayablePaymentSchema,
+} from "../schemas/payable-actions-schema";
 
-export async function registerReceivablePayment(
+export async function registerPayablePayment(
   formData: FormData,
 ) {
   const workspace =
     await getDefaultWorkspace();
 
   const parsed =
-    registerReceivablePaymentSchema.safeParse(
+    registerPayablePaymentSchema.safeParse(
       {
-        receivableId:
+        payableId:
           formData.get(
-            "receivableId",
+            "payableId",
           ),
 
-        receivedAt:
+        paidAt:
           formData.get(
-            "receivedAt",
+            "paidAt",
           ),
 
         paymentMethod:
@@ -49,12 +56,12 @@ export async function registerReceivablePayment(
   const data =
     parsed.data;
 
-  const receivable =
-    await prisma.receivable.findFirst(
+  const payable =
+    await prisma.payable.findFirst(
       {
         where: {
           id:
-            data.receivableId,
+            data.payableId,
 
           workspaceId:
             workspace.id,
@@ -62,53 +69,44 @@ export async function registerReceivablePayment(
 
         select: {
           id: true,
-
-          clientId: true,
-
-          totalAmount: true,
-
-          paidAmount: true,
-
           status: true,
         },
       },
     );
 
-  if (!receivable) {
+  if (!payable) {
     throw new Error(
-      "Recebimento não encontrado.",
+      "Conta não encontrada.",
     );
   }
 
   if (
-    receivable.status ===
+    payable.status ===
     FinancialStatus.CANCELADO
   ) {
     throw new Error(
-      "Não é possível registrar pagamento em um recebimento cancelado.",
+      "Não é possível pagar uma conta cancelada.",
     );
   }
 
   if (
-    receivable.status ===
+    payable.status ===
     FinancialStatus.PAGO
   ) {
     throw new Error(
-      "Este recebimento já está marcado como pago.",
+      "Esta conta já está marcada como paga.",
     );
   }
 
-  await prisma.receivable.update({
+  await prisma.payable.update({
     where: {
-      id: receivable.id,
+      id:
+        payable.id,
     },
 
     data: {
-      paidAmount:
-        receivable.totalAmount,
-
-      receivedAt:
-        data.receivedAt,
+      paidAt:
+        data.paidAt,
 
       paymentMethod:
         data.paymentMethod,
@@ -117,10 +115,6 @@ export async function registerReceivablePayment(
         FinancialStatus.PAGO,
     },
   });
-
-  revalidatePath(
-    `/clientes/${receivable.clientId}`,
-  );
 
   revalidatePath(
     "/financeiro",

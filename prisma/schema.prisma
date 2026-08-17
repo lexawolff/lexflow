@@ -92,6 +92,11 @@ enum RpvStatus {
   CANCELADA
 }
 
+enum RpvType {
+  RPV
+  PRECATORIO
+}
+
 enum TaskStatus {
   PENDENTE
   EM_ANDAMENTO
@@ -482,39 +487,28 @@ model Receivable {
   id String @id @default(uuid())
 
   workspaceId String
-
   clientId String
-
   caseId String?
+  rpvId String?
 
   description String
-
   type ReceivableType @default(HONORARIO_CONTRATUAL)
 
   totalAmount Decimal
-
   paidAmount Decimal @default(0)
 
   dueDate DateTime?
-
   receivedAt DateTime?
 
   status FinancialStatus @default(PENDENTE)
 
   paymentMethod String?
-
   notes String?
 
   originalDueDate DateTime?
 
-  // ==========================
-  // Parcelamento
-  // ==========================
-
   installmentGroupId String?
-
   installmentNumber Int?
-
   totalInstallments Int?
 
   createdAt DateTime @default(now())
@@ -526,16 +520,18 @@ model Receivable {
 
   case Case? @relation(fields: [caseId], references: [id], onDelete: SetNull)
 
+  rpv Rpv? @relation(fields: [rpvId], references: [id], onDelete: Cascade)
+
   @@index([workspaceId])
   @@index([clientId])
   @@index([caseId])
-
+  @@index([rpvId])
   @@index([status])
   @@index([type])
-
   @@index([dueDate])
-
   @@index([installmentGroupId])
+
+  @@unique([rpvId, type])
 }
 
 //
@@ -548,6 +544,8 @@ model Rpv {
   workspaceId String
 
   caseId String
+
+  type RpvType @default(RPV)
 
   requisitionNumber String?
 
@@ -580,8 +578,11 @@ model Rpv {
 
   case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
+  receivables Receivable[]
+
   @@index([workspaceId])
   @@index([caseId])
+  @@index([type])
   @@index([expectedPaymentDate])
   @@index([status])
 }

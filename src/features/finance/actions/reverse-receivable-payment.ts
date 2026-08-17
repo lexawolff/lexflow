@@ -32,6 +32,7 @@ function getTodayDateKey(): string {
       {
         timeZone:
           "America/Sao_Paulo",
+
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -61,7 +62,11 @@ function getTodayDateKey(): string {
         part.type === "day",
     )?.value;
 
-  if (!year || !month || !day) {
+  if (
+    !year ||
+    !month ||
+    !day
+  ) {
     throw new Error(
       "Não foi possível determinar a data atual.",
     );
@@ -77,14 +82,9 @@ function getStatusAfterReversal(
     return FinancialStatus.PENDENTE;
   }
 
-  const dueDateKey =
-    getDateKey(dueDate);
-
-  const todayDateKey =
-    getTodayDateKey();
-
   if (
-    dueDateKey < todayDateKey
+    getDateKey(dueDate) <
+    getTodayDateKey()
   ) {
     return FinancialStatus.ATRASADO;
   }
@@ -120,26 +120,31 @@ export async function reverseReceivablePayment(
     );
   }
 
-  const { receivableId } =
-    parsed.data;
+  const {
+    receivableId,
+  } = parsed.data;
 
   const receivable =
     await prisma.receivable.findFirst(
       {
         where: {
           id: receivableId,
+
           workspaceId:
             workspace.id,
         },
 
         select: {
           id: true,
+
           clientId: true,
 
           status: true,
+
           paidAmount: true,
 
           dueDate: true,
+
           receivedAt: true,
         },
       },
@@ -193,6 +198,10 @@ export async function reverseReceivablePayment(
 
   revalidatePath(
     `/clientes/${receivable.clientId}`,
+  );
+
+  revalidatePath(
+    "/financeiro",
   );
 
   return {

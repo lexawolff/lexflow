@@ -19,23 +19,42 @@ export async function createReceivable(
 
   const parsed =
     createReceivableSchema.safeParse({
-      caseId: formData.get("caseId"),
+      caseId:
+        formData.get("caseId"),
+
       description:
-        formData.get("description"),
-      type: formData.get("type"),
+        formData.get(
+          "description",
+        ),
+
+      type:
+        formData.get("type"),
+
       totalAmount:
-        formData.get("totalAmount"),
-      dueDate: formData.get("dueDate"),
-      installmentDueDates: formData.get(
-        "installmentDueDates",
-      ),
-      isInstallment: formData.get(
-        "isInstallment",
-      ),
-      totalInstallments: formData.get(
-        "totalInstallments",
-      ),
-      notes: formData.get("notes"),
+        formData.get(
+          "totalAmount",
+        ),
+
+      dueDate:
+        formData.get("dueDate"),
+
+      installmentDueDates:
+        formData.get(
+          "installmentDueDates",
+        ),
+
+      isInstallment:
+        formData.get(
+          "isInstallment",
+        ),
+
+      totalInstallments:
+        formData.get(
+          "totalInstallments",
+        ),
+
+      notes:
+        formData.get("notes"),
     });
 
   if (!parsed.success) {
@@ -43,11 +62,9 @@ export async function createReceivable(
       parsed.error.flatten(),
     );
 
-    const firstIssue =
-      parsed.error.issues[0];
-
     throw new Error(
-      firstIssue?.message ??
+      parsed.error.issues[0]
+        ?.message ??
         "Dados inválidos.",
     );
   }
@@ -58,8 +75,11 @@ export async function createReceivable(
     await prisma.client.findFirst({
       where: {
         id: clientId,
-        workspaceId: workspace.id,
+
+        workspaceId:
+          workspace.id,
       },
+
       select: {
         id: true,
       },
@@ -76,9 +96,13 @@ export async function createReceivable(
       await prisma.case.findFirst({
         where: {
           id: data.caseId,
+
           clientId,
-          workspaceId: workspace.id,
+
+          workspaceId:
+            workspace.id,
         },
+
         select: {
           id: true,
         },
@@ -97,8 +121,8 @@ export async function createReceivable(
       : 1;
 
   if (
-    data.installmentDueDates.length !==
-    installments
+    data.installmentDueDates
+      .length !== installments
   ) {
     throw new Error(
       "A quantidade de vencimentos não corresponde à quantidade de parcelas.",
@@ -124,9 +148,13 @@ export async function createReceivable(
         index++
       ) {
         const installmentDueDate =
-          data.installmentDueDates[index];
+          data.installmentDueDates[
+            index
+          ];
 
-        if (!installmentDueDate) {
+        if (
+          !installmentDueDate
+        ) {
           throw new Error(
             `O vencimento da parcela ${
               index + 1
@@ -134,49 +162,63 @@ export async function createReceivable(
           );
         }
 
-        await transaction.receivable.create({
-          data: {
-            workspaceId: workspace.id,
-            clientId,
-            caseId: data.caseId,
+        await transaction.receivable.create(
+          {
+            data: {
+              workspaceId:
+                workspace.id,
 
-            description:
-              data.description,
+              clientId,
 
-            type: data.type,
+              caseId:
+                data.caseId,
 
-            totalAmount:
-              installmentValues[index],
+              description:
+                data.description,
 
-            paidAmount: 0,
+              type:
+                data.type,
 
-            dueDate:
-              installmentDueDate,
+              totalAmount:
+                installmentValues[
+                  index
+                ],
 
-            originalDueDate:
-              installmentDueDate,
+              paidAmount: 0,
 
-            installmentGroupId,
+              dueDate:
+                installmentDueDate,
 
-            installmentNumber:
-              installments > 1
-                ? index + 1
-                : null,
+              originalDueDate:
+                installmentDueDate,
 
-            totalInstallments:
-              installments > 1
-                ? installments
-                : null,
+              installmentGroupId,
 
-            notes: data.notes,
+              installmentNumber:
+                installments > 1
+                  ? index + 1
+                  : null,
+
+              totalInstallments:
+                installments > 1
+                  ? installments
+                  : null,
+
+              notes:
+                data.notes,
+            },
           },
-        });
+        );
       }
     },
   );
 
   revalidatePath(
     `/clientes/${clientId}`,
+  );
+
+  revalidatePath(
+    "/financeiro",
   );
 
   return {
