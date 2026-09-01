@@ -1,24 +1,59 @@
-import {
+import type {
   AdministrativeStatus,
   CaseOrigin,
   CaseStatus,
   PracticeArea,
 } from "@prisma/client";
 
-export const PRACTICE_AREA_OPTIONS = [
-  { label: "Previdenciário", value: "PREVIDENCIARIO" },
-  { label: "Cível", value: "CIVEL" },
-  { label: "Família", value: "FAMILIA" },
-  { label: "Consumidor", value: "CONSUMIDOR" },
-  { label: "Trabalhista", value: "TRABALHISTA" },
-  { label: "Administrativo", value: "ADMINISTRATIVO" },
-  { label: "Tributário", value: "TRIBUTARIO" },
-  { label: "Empresarial", value: "EMPRESARIAL" },
-  { label: "Criminal", value: "CRIMINAL" },
-  { label: "Outro", value: "OUTRO" },
-] as const;
+type Option<T extends string> = {
+  label: string;
+  value: T;
+};
 
-export const CASE_ORIGIN_OPTIONS = [
+export const PRACTICE_AREA_OPTIONS: Option<PracticeArea>[] = [
+  {
+    label: "Previdenciário",
+    value: "PREVIDENCIARIO",
+  },
+  {
+    label: "Cível",
+    value: "CIVEL",
+  },
+  {
+    label: "Família",
+    value: "FAMILIA",
+  },
+  {
+    label: "Consumidor",
+    value: "CONSUMIDOR",
+  },
+  {
+    label: "Trabalhista",
+    value: "TRABALHISTA",
+  },
+  {
+    label: "Administrativo",
+    value: "ADMINISTRATIVO",
+  },
+  {
+    label: "Tributário",
+    value: "TRIBUTARIO",
+  },
+  {
+    label: "Empresarial",
+    value: "EMPRESARIAL",
+  },
+  {
+    label: "Criminal",
+    value: "CRIMINAL",
+  },
+  {
+    label: "Outro",
+    value: "OUTRO",
+  },
+];
+
+export const CASE_ORIGIN_OPTIONS: Option<CaseOrigin>[] = [
   {
     label: "Administrativo",
     value: "ADMINISTRATIVO",
@@ -31,36 +66,37 @@ export const CASE_ORIGIN_OPTIONS = [
     label: "Administrativo + Judicial",
     value: "AMBOS",
   },
-] as const;
+];
 
-export const ADMINISTRATIVE_STATUS_OPTIONS = [
-  {
-    label: "Não se aplica",
-    value: "NAO_APLICAVEL",
-  },
-  {
-    label: "Requerido",
-    value: "REQUERIDO",
-  },
-  {
-    label: "Em análise",
-    value: "EM_ANALISE",
-  },
-  {
-    label: "Deferido",
-    value: "DEFERIDO",
-  },
-  {
-    label: "Indeferido",
-    value: "INDEFERIDO",
-  },
-  {
-    label: "Recurso",
-    value: "RECURSO",
-  },
-] as const;
+export const ADMINISTRATIVE_STATUS_OPTIONS: Option<AdministrativeStatus>[] =
+  [
+    {
+      label: "Não se aplica",
+      value: "NAO_APLICAVEL",
+    },
+    {
+      label: "Requerido",
+      value: "REQUERIDO",
+    },
+    {
+      label: "Em análise",
+      value: "EM_ANALISE",
+    },
+    {
+      label: "Deferido",
+      value: "DEFERIDO",
+    },
+    {
+      label: "Indeferido",
+      value: "INDEFERIDO",
+    },
+    {
+      label: "Recurso",
+      value: "RECURSO",
+    },
+  ];
 
-export const CASE_STATUS_OPTIONS = [
+export const CASE_STATUS_OPTIONS: Option<CaseStatus>[] = [
   {
     label: "Atendimento Inicial",
     value: "ATENDIMENTO_INICIAL",
@@ -109,13 +145,16 @@ export const CASE_STATUS_OPTIONS = [
     label: "Encerrado",
     value: "ENCERRADO",
   },
-] as const;
+];
 
 /* ===========================
    LABELS
 =========================== */
 
-export const PRACTICE_AREA_LABELS: Record<PracticeArea, string> = {
+export const PRACTICE_AREA_LABELS: Record<
+  PracticeArea,
+  string
+> = {
   PREVIDENCIARIO: "Previdenciário",
   CIVEL: "Cível",
   FAMILIA: "Família",
@@ -128,7 +167,10 @@ export const PRACTICE_AREA_LABELS: Record<PracticeArea, string> = {
   OUTRO: "Outro",
 };
 
-export const CASE_STATUS_LABELS: Record<CaseStatus, string> = {
+export const CASE_STATUS_LABELS: Record<
+  CaseStatus,
+  string
+> = {
   ATENDIMENTO_INICIAL: "Atendimento Inicial",
   DOCUMENTACAO_PENDENTE: "Documentação Pendente",
   ADMINISTRATIVO: "Administrativo",
@@ -143,7 +185,10 @@ export const CASE_STATUS_LABELS: Record<CaseStatus, string> = {
   ENCERRADO: "Encerrado",
 };
 
-export const CASE_ORIGIN_LABELS: Record<CaseOrigin, string> = {
+export const CASE_ORIGIN_LABELS: Record<
+  CaseOrigin,
+  string
+> = {
   ADMINISTRATIVO: "Administrativo",
   JUDICIAL: "Judicial",
   AMBOS: "Administrativo + Judicial",
@@ -159,4 +204,4 @@ export const ADMINISTRATIVE_STATUS_LABELS: Record<
   DEFERIDO: "Deferido",
   INDEFERIDO: "Indeferido",
   RECURSO: "Recurso",
-};  
+};

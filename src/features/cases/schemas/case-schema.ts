@@ -7,65 +7,125 @@ import {
 
 import { z } from "zod";
 
-const optionalText = z.string().trim().optional();
+const optionalText = z
+  .string()
+  .trim()
+  .optional();
 
 const optionalNumber = z.preprocess(
   (value) => {
-    if (value === "" || value === null || value === undefined) {
+    if (
+      value === "" ||
+      value === null ||
+      value === undefined
+    ) {
       return undefined;
     }
 
-    const number = Number(value);
+    const number =
+      Number(value);
 
-    return Number.isNaN(number) ? value : number;
+    return Number.isNaN(number)
+      ? value
+      : number;
   },
-  z.number().nonnegative().optional()
+  z
+    .number()
+    .nonnegative()
+    .optional(),
 );
 
 const optionalDate = z
   .string()
   .optional()
-  .transform((value) => value || undefined);
+  .transform(
+    (value) =>
+      value ||
+      undefined,
+  );
 
-export const caseSchema = z.object({
-  title: z
-    .string()
-    .trim()
-    .min(3, "Informe o título da demanda."),
+export const caseSchema =
+  z.object({
+    title: z
+      .string()
+      .trim()
+      .min(
+        3,
+        "Informe o título da demanda.",
+      ),
 
-  practiceArea: z.nativeEnum(PracticeArea),
+    practiceArea:
+      z.nativeEnum(
+        PracticeArea,
+      ),
 
-  subject: optionalText,
-  benefitType: optionalText,
+    subject:
+      optionalText,
 
-  origin: z.nativeEnum(CaseOrigin),
+    benefitType:
+      optionalText,
 
-  administrativeStatus: z.nativeEnum(
-    AdministrativeStatus
-  ),
+    origin:
+      z.nativeEnum(
+        CaseOrigin,
+      ),
 
-  number: optionalText,
-  administrativeNumber: optionalText,
-  administrativeProcess: optionalText,
+    administrativeStatus:
+      z.nativeEnum(
+        AdministrativeStatus,
+      ),
 
-  court: optionalText,
-  courtUnit: optionalText,
-  judge: optionalText,
-  city: optionalText,
-  state: optionalText,
+    number:
+      optionalText,
 
-  opposingParty: optionalText,
+    administrativeNumber:
+      optionalText,
 
-  claimValue: optionalNumber,
+    administrativeProcess:
+      optionalText,
 
-  status: z.nativeEnum(CaseStatus),
+    court:
+      optionalText,
 
-  administrativeRequestDate: optionalDate,
-  distributionDate: optionalDate,
-  nextDeadline: optionalDate,
+    courtUnit:
+      optionalText,
 
-  notes: optionalText,
-});
+    judge:
+      optionalText,
 
-export type CaseSchema = z.infer<typeof caseSchema>;
-export type CaseFormValues = z.input<typeof caseSchema>;
+    city:
+      optionalText,
+
+    state:
+      optionalText,
+
+    opposingParty:
+      optionalText,
+
+    claimValue:
+      optionalNumber,
+
+    status:
+      z.nativeEnum(
+        CaseStatus,
+      ),
+
+    administrativeRequestDate:
+      optionalDate,
+
+    distributionDate:
+      optionalDate,
+
+    notes:
+      optionalText,
+  });
+
+export type CaseSchema =
+  z.infer<
+    typeof caseSchema
+  >;
+
+export type CaseFormValues =
+  z.input<
+    typeof caseSchema
+  >;

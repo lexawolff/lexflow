@@ -1,301 +1,355 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  useForm,
+} from "react-hook-form";
 
 import {
-    caseSchema,
-    type CaseFormValues,
+  zodResolver,
+} from "@hookform/resolvers/zod";
+
+import {
+  caseSchema,
+  type CaseFormValues,
 } from "../schemas/case-schema";
 
-import { getCaseFormDefaultValues } from "../utils/get-case-form-default-values";
-
-import { createCase } from "../actions/create-case";
-import { updateCase } from "../actions/update-case";
-
-import { TextField } from "@/components/forms/text-field";
-import { TextareaField } from "@/components/forms/textarea-field";
-import { SelectField } from "@/components/forms/select-field";
+import {
+  getCaseFormDefaultValues,
+  type CaseFormSource,
+} from "../utils/get-case-form-default-values";
 
 import {
-    ADMINISTRATIVE_STATUS_OPTIONS,
-    CASE_ORIGIN_OPTIONS,
-    CASE_STATUS_OPTIONS,
-    PRACTICE_AREA_OPTIONS,
+  createCase,
+} from "../actions/create-case";
+
+import {
+  updateCase,
+} from "../actions/update-case";
+
+import {
+  TextField,
+} from "@/components/forms/text-field";
+
+import {
+  TextareaField,
+} from "@/components/forms/textarea-field";
+
+import {
+  SelectField,
+} from "@/components/forms/select-field";
+
+import {
+  ADMINISTRATIVE_STATUS_OPTIONS,
+  CASE_ORIGIN_OPTIONS,
+  CASE_STATUS_OPTIONS,
+  PRACTICE_AREA_OPTIONS,
 } from "../constants";
 
 type CaseFormProps = {
-    clientId: string;
+  clientId: string;
 
-    case?: {
-        id: string;
-
-        title: string;
-        practiceArea: string;
-
-        subject: string | null;
-        benefitType: string | null;
-
-        origin: string;
-        administrativeStatus: string;
-
-        number: string | null;
-        administrativeNumber: string | null;
-        administrativeProcess: string | null;
-
-        court: string | null;
-        courtUnit: string | null;
-        judge: string | null;
-        city: string | null;
-        state: string | null;
-
-        opposingParty: string | null;
-
-        claimValue: number | null;
-
-        status: string;
-
-        administrativeRequestDate: Date | null;
-        distributionDate: Date | null;
-        nextDeadline: Date | null;
-
-        notes: string | null;
+  case?:
+    CaseFormSource & {
+      id: string;
     };
 };
 
 export function CaseForm({
-    clientId,
-    case: caseData,
+  clientId,
+  case: caseData,
 }: CaseFormProps) {
-    const form = useForm<CaseFormValues>({
-        resolver: zodResolver(caseSchema),
-        defaultValues: getCaseFormDefaultValues(caseData),
+  const form =
+    useForm<CaseFormValues>({
+      resolver:
+        zodResolver(
+          caseSchema,
+        ),
+
+      defaultValues:
+        getCaseFormDefaultValues(
+          caseData,
+        ),
     });
 
-    const action = caseData
-        ? updateCase.bind(null, caseData.id)
-        : createCase.bind(null, clientId);
+  const action =
+    caseData
+      ? updateCase.bind(
+          null,
+          caseData.id,
+        )
+      : createCase.bind(
+          null,
+          clientId,
+        );
 
-    const { control } = form;
+  const {
+    control,
+  } = form;
 
-    return (
-        <form action={action} className="space-y-8">
+  return (
+    <form
+      action={
+        action
+      }
+      className="space-y-8"
+    >
+      {/* IDENTIFICAÇÃO */}
 
-            {/* Identificação */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">
+          📋 Identificação
+        </h2>
 
-            <section className="space-y-4">
-                <h2 className="text-lg font-semibold">
-                    📋 Identificação
-                </h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <TextField
+            control={
+              control
+            }
+            name="title"
+            label="Título da demanda"
+          />
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <SelectField
+            control={
+              control
+            }
+            name="practiceArea"
+            label="Área"
+            options={
+              PRACTICE_AREA_OPTIONS
+            }
+          />
 
-                    <TextField
-                        control={control}
-                        name="title"
-                        label="Título da demanda"
-                    />
+          <TextField
+            control={
+              control
+            }
+            name="benefitType"
+            label="Tipo da demanda"
+          />
 
-                    <SelectField
-                        control={control}
-                        name="practiceArea"
-                        label="Área"
-                        options={PRACTICE_AREA_OPTIONS}
-                    />
+          <TextField
+            control={
+              control
+            }
+            name="subject"
+            label="Objeto"
+          />
+        </div>
+      </section>
 
-                    <TextField
-                        control={control}
-                        name="benefitType"
-                        label="Tipo da demanda"
-                    />
+      {/* ORIGEM */}
 
-                    <TextField
-                        control={control}
-                        name="subject"
-                        label="Objeto"
-                    />
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">
+          ⚖️ Origem
+        </h2>
 
-                </div>
-            </section>
+        <div className="grid gap-4 md:grid-cols-3">
+          <SelectField
+            control={
+              control
+            }
+            name="origin"
+            label="Origem"
+            options={
+              CASE_ORIGIN_OPTIONS
+            }
+          />
 
-            {/* Origem */}
+          <SelectField
+            control={
+              control
+            }
+            name="administrativeStatus"
+            label="Situação Administrativa"
+            options={
+              ADMINISTRATIVE_STATUS_OPTIONS
+            }
+          />
 
-            <section className="space-y-4">
-                <h2 className="text-lg font-semibold">
-                    ⚖️ Origem
-                </h2>
+          <SelectField
+            control={
+              control
+            }
+            name="status"
+            label="Status"
+            options={
+              CASE_STATUS_OPTIONS
+            }
+          />
+        </div>
+      </section>
 
-                <div className="grid gap-4 md:grid-cols-3">
+      {/* NUMERAÇÃO */}
 
-                    <SelectField
-                        control={control}
-                        name="origin"
-                        label="Origem"
-                        options={CASE_ORIGIN_OPTIONS}
-                    />
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">
+          🔢 Numeração
+        </h2>
 
-                    <SelectField
-                        control={control}
-                        name="administrativeStatus"
-                        label="Situação Administrativa"
-                        options={ADMINISTRATIVE_STATUS_OPTIONS}
-                    />
+        <div className="grid gap-4 md:grid-cols-3">
+          <TextField
+            control={
+              control
+            }
+            name="number"
+            label="Processo Judicial"
+          />
 
-                    <SelectField
-                        control={control}
-                        name="status"
-                        label="Status"
-                        options={CASE_STATUS_OPTIONS}
-                    />
+          <TextField
+            control={
+              control
+            }
+            name="administrativeNumber"
+            label="NB"
+          />
 
-                </div>
-            </section>
+          <TextField
+            control={
+              control
+            }
+            name="administrativeProcess"
+            label="Processo Administrativo"
+          />
+        </div>
+      </section>
 
-            {/* Numeração */}
+      {/* ÓRGÃO JULGADOR */}
 
-            <section className="space-y-4">
-                <h2 className="text-lg font-semibold">
-                    🔢 Numeração
-                </h2>
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">
+          🏛️ Órgão Julgador
+        </h2>
 
-                <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <TextField
+            control={
+              control
+            }
+            name="court"
+            label="Tribunal"
+          />
 
-                    <TextField
-                        control={control}
-                        name="number"
-                        label="Processo Judicial"
-                    />
+          <TextField
+            control={
+              control
+            }
+            name="courtUnit"
+            label="Vara"
+          />
 
-                    <TextField
-                        control={control}
-                        name="administrativeNumber"
-                        label="NB"
-                    />
+          <TextField
+            control={
+              control
+            }
+            name="judge"
+            label="Juiz"
+          />
 
-                    <TextField
-                        control={control}
-                        name="administrativeProcess"
-                        label="Processo Administrativo"
-                    />
+          <TextField
+            control={
+              control
+            }
+            name="city"
+            label="Cidade"
+          />
 
-                </div>
-            </section>
+          <TextField
+            control={
+              control
+            }
+            name="state"
+            label="UF"
+          />
+        </div>
+      </section>
 
-            {/* Órgão Julgador */}
+      {/* PARTES */}
 
-            <section className="space-y-4">
-                <h2 className="text-lg font-semibold">
-                    🏛️ Órgão Julgador
-                </h2>
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">
+          👥 Partes
+        </h2>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextField
+            control={
+              control
+            }
+            name="opposingParty"
+            label="Parte Contrária"
+          />
+        </div>
+      </section>
 
-                    <TextField
-                        control={control}
-                        name="court"
-                        label="Tribunal"
-                    />
+      {/* FINANCEIRO */}
 
-                    <TextField
-                        control={control}
-                        name="courtUnit"
-                        label="Vara"
-                    />
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">
+          💰 Financeiro
+        </h2>
 
-                    <TextField
-                        control={control}
-                        name="judge"
-                        label="Juiz"
-                    />
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextField
+            control={
+              control
+            }
+            name="claimValue"
+            label="Valor da Causa"
+            type="number"
+          />
+        </div>
+      </section>
 
-                    <TextField
-                        control={control}
-                        name="city"
-                        label="Cidade"
-                    />
+      {/* DATAS */}
 
-                    <TextField
-                        control={control}
-                        name="state"
-                        label="UF"
-                    />
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">
+          📅 Datas
+        </h2>
 
-                </div>
-            </section>
-            {/* Partes */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextField
+            control={
+              control
+            }
+            name="administrativeRequestDate"
+            label="DER"
+            type="date"
+          />
 
-            <section className="space-y-4">
-                <h2 className="text-lg font-semibold">
-                    👥 Partes
-                </h2>
+          <TextField
+            control={
+              control
+            }
+            name="distributionDate"
+            label="Distribuição"
+            type="date"
+          />
+        </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                    <TextField
-                        control={control}
-                        name="opposingParty"
-                        label="Parte Contrária"
-                    />
-                </div>
-            </section>
-            {/* Financeiro */}
+        <p className="text-xs text-muted-foreground">
+          Prazos, perícias e audiências são cadastrados na Agenda do processo.
+        </p>
+      </section>
 
-            <section className="space-y-4">
-                <h2 className="text-lg font-semibold">
-                    💰 Financeiro
-                </h2>
+      <TextareaField
+        control={
+          control
+        }
+        name="notes"
+        label="Observações"
+      />
 
-                <div className="grid gap-4 md:grid-cols-2">
-                    <TextField
-                        control={control}
-                        name="claimValue"
-                        label="Valor da Causa"
-                        type="number"
-                    />
-                </div>
-            </section>
-            {/* Datas */}
-
-            <section className="space-y-4">
-                <h2 className="text-lg font-semibold">
-                    📅 Datas
-                </h2>
-
-                <div className="grid gap-4 md:grid-cols-3">
-
-                    <TextField
-                        control={control}
-                        name="administrativeRequestDate"
-                        label="DER"
-                        type="date"
-                    />
-
-                    <TextField
-                        control={control}
-                        name="distributionDate"
-                        label="Distribuição"
-                        type="date"
-                    />
-
-                    <TextField
-                        control={control}
-                        name="nextDeadline"
-                        label="Próximo Prazo"
-                        type="date"
-                    />
-
-                </div>
-            </section>
-            <TextareaField
-                control={control}
-                name="notes"
-                label="Observações"
-            />
-            <button
-                type="submit"
-                className="rounded-lg bg-primary px-6 py-3 text-white"
-            >
-                {caseData ? "Salvar Alterações" : "Salvar Demanda"}
-            </button>
-        </form>
-    );
+      <button
+        type="submit"
+        className="rounded-lg bg-primary px-6 py-3 text-white"
+      >
+        {caseData
+          ? "Salvar Alterações"
+          : "Salvar Demanda"}
+      </button>
+    </form>
+  );
 }

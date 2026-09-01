@@ -105,6 +105,11 @@ enum TaskStatus {
   ATRASADA
 }
 
+enum TaskSource {
+  LEXFLOW
+  GOOGLE_CALENDAR
+}
+
 enum ExtraServiceStatus {
   A_RECEBER
   RECEBIDO
@@ -196,6 +201,8 @@ model User {
   updatedAt DateTime @updatedAt
 
   memberships Membership[]
+
+  googleCalendarConnections GoogleCalendarConnection[]
 }
 
 //
@@ -227,6 +234,8 @@ model Workspace {
 
   clientEvents ClientEvent[]
   caseEvents   CaseEvent[]
+
+  googleCalendarConnections GoogleCalendarConnection[]
 }
 
 //
@@ -599,31 +608,129 @@ model Task {
 
   title       String
   description String?
-  type        TaskType
-  status      TaskStatus @default(PENDENTE)
 
-  startsAt    DateTime?
-  dueDate     DateTime
+  type   TaskType
+  status TaskStatus @default(PENDENTE)
+
+  // ==========================
+  // Agenda
+  // ==========================
+
+  startsAt DateTime?
+  endsAt   DateTime?
+  dueDate  DateTime
+
   completedAt DateTime?
 
-  location      String?
-  googleEventId String?
+  location String?
+
+  // ==========================
+  // Origem
+  // ==========================
+
+  source TaskSource @default(LEXFLOW)
+
+  // ==========================
+  // Google Calendar
+  // ==========================
+
+  googleConnectionId String?
+  googleCalendarId   String?
+  googleEventId      String?
+
+  // ==========================
+  // Controle
+  // ==========================
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  client    Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  case      Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  case Case? @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  googleConnection GoogleCalendarConnection? @relation(fields: [googleConnectionId],references: [id], onDelete: SetNull)
 
   @@index([workspaceId])
   @@index([clientId])
   @@index([caseId])
+
   @@index([dueDate])
   @@index([startsAt])
+  @@index([endsAt])
+
   @@index([status])
   @@index([type])
+  @@index([source])
+
+  @@index([googleConnectionId])
   @@index([googleEventId])
+
+  @@unique([googleConnectionId, googleEventId])
+}
+
+//
+// GOOGLE CALENDAR
+//
+
+model GoogleCalendarConnection {
+  id String @id @default(uuid())
+
+  workspaceId String
+  userId      String
+
+  // ==========================
+  // Conta Google
+  // ==========================
+
+  googleAccountEmail String?
+
+  calendarId String @default("primary")
+
+  // ==========================
+  // OAuth
+  // ==========================
+
+  refreshTokenEncrypted String @db.Text
+
+  // ==========================
+  // Sincronização
+  // ==========================
+
+  syncToken String? @db.Text
+
+  syncFromGoogle Boolean @default(true)
+  syncToGoogle   Boolean @default(true)
+
+  lastSyncedAt DateTime?
+
+  // ==========================
+  // Push Google -> LexFlow
+  // ==========================
+
+  watchChannelId  String?   @unique
+  watchResourceId String?
+  watchExpiresAt  DateTime?
+
+  // ==========================
+  // Controle
+  // ==========================
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tasks Task[]
+
+  @@unique([workspaceId, userId])
+
+  @@index([workspaceId])
+  @@index([userId])
 }
 
 //

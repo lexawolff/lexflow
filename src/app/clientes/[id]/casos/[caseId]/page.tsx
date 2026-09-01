@@ -1,64 +1,72 @@
-import { notFound } from "next/navigation";
+import {
+  notFound,
+} from "next/navigation";
 
-import { AppShell } from "@/components/app-shell/app-shell";
+import {
+  AppShell,
+} from "@/components/app-shell/app-shell";
 
-import { prisma } from "@/lib/prisma";
-import { serializePrisma } from "@/lib/prisma/serialize";
-import { getDefaultWorkspace } from "@/lib/workspace";
-import { caseDetailsInclude } from "@/features/cases/types";
-import { CaseHeader } from "@/features/cases/components/case-header";
-import { CaseTabs } from "@/features/cases/components/case-tabs";
-import { CaseSummaryCards } from "@/features/cases/components/case-summary-cards";
+import {
+  CaseView,
+} from "@/features/cases/components/case-view";
+
+import {
+  caseDetailsInclude,
+} from "@/features/cases/types";
+
+import {
+  prisma,
+} from "@/lib/prisma";
+
+import {
+  getDefaultWorkspace,
+} from "@/lib/workspace";
 
 type PageProps = {
-    params: Promise<{
-        id: string;
-        caseId: string;
-    }>;
+  params: Promise<{
+    id: string;
+    caseId: string;
+  }>;
 };
 
 export default async function CasePage({
-    params,
+  params,
 }: PageProps) {
-    const { id, caseId } = await params;
+  const {
+    id: clientId,
+    caseId,
+  } =
+    await params;
 
-    const workspace = await getDefaultWorkspace();
+  const workspace =
+    await getDefaultWorkspace();
 
-    const demand = await prisma.case.findFirst({
-        where: {
-            id: caseId,
-            clientId: id,
-            workspaceId: workspace.id,
-        },
-        ...caseDetailsInclude,
+  const demand =
+    await prisma.case.findFirst({
+      where: {
+        id:
+          caseId,
+
+        clientId,
+
+        workspaceId:
+          workspace.id,
+      },
+
+      ...caseDetailsInclude,
     });
 
-    if (!demand) {
-        notFound();
-    }
+  if (!demand) {
+    notFound();
+  }
 
-    const data = serializePrisma(demand);
-
-    return (
-        <AppShell>
-            <div className="space-y-6">
-
-                <CaseHeader
-                    title={data.title}
-                    clientName={data.client.name}
-                    practiceArea={data.practiceArea}
-                    status={data.status}
-                />
-
-                <CaseSummaryCards
-                    caseData={data}
-                />
-
-                <CaseTabs
-                    caseData={data}
-                />
-
-            </div>
-        </AppShell>
-    );
+  return (
+    <AppShell>
+      <CaseView
+        caseData={
+          demand
+        }
+      />
+    </AppShell>
+  );
 }

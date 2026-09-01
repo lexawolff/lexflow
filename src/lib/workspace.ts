@@ -1,14 +1,40 @@
-import { prisma } from "@/lib/prisma";
+import "server-only";
+
+import {
+  prisma,
+} from "@/lib/prisma";
+
+import {
+  requireCurrentUser,
+} from "@/lib/auth";
 
 export async function getDefaultWorkspace() {
-  const existing = await prisma.workspace.findFirst();
+  const user =
+    await requireCurrentUser();
 
-  if (existing) return existing;
+  const membership =
+    await prisma.membership.findFirst({
+      where: {
+        userId:
+          user.id,
+      },
 
-  return prisma.workspace.create({
-    data: {
-      name: "Roza Advocacia",
-      slug: "roza-advocacia",
-    },
-  });
+      include: {
+        workspace:
+          true,
+      },
+
+      orderBy: {
+        createdAt:
+          "asc",
+      },
+    });
+
+  if (!membership) {
+    throw new Error(
+      "O usuário não possui vínculo com nenhum escritório.",
+    );
+  }
+
+  return membership.workspace;
 }

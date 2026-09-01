@@ -1,71 +1,146 @@
-import type { CaseSchema } from "../schemas/case-schema";
+import type {
+  AdministrativeStatus,
+  CaseOrigin,
+  CaseStatus,
+  PracticeArea,
+} from "@prisma/client";
 
-type CaseFormSource = {
+import type {
+  DefaultValues,
+} from "react-hook-form";
+
+import type {
+  CaseFormValues,
+} from "../schemas/case-schema";
+
+export type CaseFormSource = {
   title: string;
-  practiceArea: string;
+
+  practiceArea: PracticeArea;
 
   subject: string | null;
   benefitType: string | null;
 
-  origin: string;
-  administrativeStatus: string;
+  origin: CaseOrigin;
+
+  administrativeStatus:
+    AdministrativeStatus;
 
   number: string | null;
-  administrativeNumber: string | null;
-  administrativeProcess: string | null;
+
+  administrativeNumber:
+    string | null;
+
+  administrativeProcess:
+    string | null;
 
   court: string | null;
-  courtUnit: string | null;
+
+  courtUnit:
+    string | null;
+
   judge: string | null;
+
   city: string | null;
+
   state: string | null;
 
-  opposingParty: string | null;
+  opposingParty:
+    string | null;
 
-  claimValue: number | null;
+  claimValue:
+    number | null;
 
-  status: string;
+  status:
+    CaseStatus;
 
-  administrativeRequestDate: Date | null;
-  distributionDate: Date | null;
-  nextDeadline: Date | null;
+  administrativeRequestDate:
+    Date | null;
 
-  notes: string | null;
+  distributionDate:
+    Date | null;
+
+  notes:
+    string | null;
 };
 
 export function getCaseFormDefaultValues(
-  data?: CaseFormSource
-): CaseSchema {
+  data?: CaseFormSource,
+): DefaultValues<CaseFormValues> {
   return {
-    title: data?.title ?? "",
+    title:
+      data?.title ??
+      "",
 
-    practiceArea: data?.practiceArea ?? "",
+    /*
+     * Em criação deixamos a área
+     * sem valor inicial.
+     *
+     * Não usamos "" porque o schema
+     * exige um PracticeArea válido.
+     */
+    practiceArea:
+      data?.practiceArea,
 
-    subject: data?.subject ?? "",
-    benefitType: data?.benefitType ?? "",
+    subject:
+      data?.subject ??
+      "",
 
-    origin: data?.origin ?? "JUDICIAL",
+    benefitType:
+      data?.benefitType ??
+      "",
+
+    origin:
+      data?.origin ??
+      "JUDICIAL",
+
     administrativeStatus:
-      data?.administrativeStatus ?? "NAO_APLICAVEL",
+      data?.administrativeStatus ??
+      "NAO_APLICAVEL",
 
-    number: data?.number ?? "",
+    number:
+      data?.number ??
+      "",
+
     administrativeNumber:
-      data?.administrativeNumber ?? "",
+      data?.administrativeNumber ??
+      "",
+
     administrativeProcess:
-      data?.administrativeProcess ?? "",
+      data?.administrativeProcess ??
+      "",
 
-    court: data?.court ?? "",
-    courtUnit: data?.courtUnit ?? "",
-    judge: data?.judge ?? "",
-    city: data?.city ?? "",
-    state: data?.state ?? "",
+    court:
+      data?.court ??
+      "",
 
-    opposingParty: data?.opposingParty ?? "",
+    courtUnit:
+      data?.courtUnit ??
+      "",
 
-    claimValue: data?.claimValue ?? undefined,
+    judge:
+      data?.judge ??
+      "",
+
+    city:
+      data?.city ??
+      "",
+
+    state:
+      data?.state ??
+      "",
+
+    opposingParty:
+      data?.opposingParty ??
+      "",
+
+    claimValue:
+      data?.claimValue ??
+      undefined,
 
     status:
-      data?.status ?? "ATENDIMENTO_INICIAL",
+      data?.status ??
+      "ATENDIMENTO_INICIAL",
 
     administrativeRequestDate:
       data?.administrativeRequestDate
@@ -81,13 +156,8 @@ export function getCaseFormDefaultValues(
             .split("T")[0]
         : "",
 
-    nextDeadline:
-      data?.nextDeadline
-        ? data.nextDeadline
-            .toISOString()
-            .split("T")[0]
-        : "",
-
-    notes: data?.notes ?? "",
+    notes:
+      data?.notes ??
+      "",
   };
 }

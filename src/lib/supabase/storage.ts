@@ -1,5 +1,12 @@
-import { supabaseAdmin } from "./admin";
+import "server-only";
+
+import {
+  createAdminClient,
+} from "./admin";
 
 export function getStorage() {
-  return supabaseAdmin.storage;
+  const supabase =
+    createAdminClient();
+
+  return supabase.storage;
 }

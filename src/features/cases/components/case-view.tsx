@@ -1,27 +1,114 @@
-import type { CaseDetails } from "../types";
+import type {
+  CaseDetails,
+} from "../types";
 
-import { CaseTabs } from "./case-tabs";
+import {
+  getCaseAgendaData,
+} from "../services/get-case-agenda-data";
+
+import {
+  CaseAgendaSection,
+} from "./case-agenda-section";
+
+import {
+  CaseHeader,
+} from "./case-header";
+
+import {
+  CaseSummaryCards,
+} from "./case-summary-cards";
+
+import {
+  CaseTabs,
+} from "./case-tabs";
 
 type CaseViewProps = {
-  caseData: CaseDetails;
+  caseData:
+    CaseDetails;
 };
 
-export function CaseView({
+export async function CaseView({
   caseData,
 }: CaseViewProps) {
+  const agendaData =
+    await getCaseAgendaData({
+      workspaceId:
+        caseData.workspaceId,
+
+      caseId:
+        caseData.id,
+    });
+
+  const caseNumber =
+    caseData.number ??
+    caseData.administrativeNumber ??
+    null;
+
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold">
-          {caseData.title}
-        </h1>
+      {/* ==========================
+          CABEÇALHO
+      ========================== */}
 
-        <p className="text-muted-foreground">
-          {caseData.client?.name}
-        </p>
-      </header>
+      <CaseHeader
+        caseData={
+          caseData
+        }
+      />
 
-      <CaseTabs caseData={caseData} />
+      {/* ==========================
+          RESUMO
+      ========================== */}
+
+      <CaseSummaryCards
+        caseData={
+          caseData
+        }
+        tasks={
+          agendaData.tasks
+        }
+        todayKey={
+          agendaData.todayKey
+        }
+      />
+
+      {/* ==========================
+          AGENDA
+      ========================== */}
+
+      <CaseAgendaSection
+        clientId={
+          caseData.clientId
+        }
+        clientName={
+          caseData.client.name
+        }
+        caseId={
+          caseData.id
+        }
+        caseTitle={
+          caseData.title
+        }
+        caseNumber={
+          caseNumber
+        }
+        todayKey={
+          agendaData.todayKey
+        }
+        tasks={
+          agendaData.tasks
+        }
+      />
+
+      {/* ==========================
+          DADOS / HISTÓRICO
+      ========================== */}
+
+      <CaseTabs
+        caseData={
+          caseData
+        }
+      />
     </div>
   );
 }

@@ -1,94 +1,194 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import {
+  redirect,
+} from "next/navigation";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  prisma,
+} from "@/lib/prisma";
 
-import { caseSchema } from "../schemas/case-schema";
-import { createCaseEvent } from "../services/create-case-event";
+import {
+  getDefaultWorkspace,
+} from "@/lib/workspace";
+
+import {
+  caseSchema,
+} from "../schemas/case-schema";
+
+import {
+  createCaseEvent,
+} from "../services/create-case-event";
 
 export async function createCase(
-  clientId: string,
-  formData: FormData
+  clientId:
+    string,
+
+  formData:
+    FormData,
 ) {
-  const workspace = await getDefaultWorkspace();
+  const workspace =
+    await getDefaultWorkspace();
 
-  const parsed = caseSchema.safeParse({
-    title: formData.get("title"),
+  const parsed =
+    caseSchema.safeParse({
+      title:
+        formData.get(
+          "title",
+        ),
 
-    practiceArea: formData.get("practiceArea"),
-    subject: formData.get("subject"),
-    benefitType: formData.get("benefitType"),
+      practiceArea:
+        formData.get(
+          "practiceArea",
+        ),
 
-    origin: formData.get("origin"),
-    administrativeStatus: formData.get("administrativeStatus"),
+      subject:
+        formData.get(
+          "subject",
+        ),
 
-    number: formData.get("number"),
-    administrativeNumber: formData.get("administrativeNumber"),
-    administrativeProcess: formData.get("administrativeProcess"),
+      benefitType:
+        formData.get(
+          "benefitType",
+        ),
 
-    court: formData.get("court"),
-    courtUnit: formData.get("courtUnit"),
-    judge: formData.get("judge"),
-    city: formData.get("city"),
-    state: formData.get("state"),
+      origin:
+        formData.get(
+          "origin",
+        ),
 
-    opposingParty: formData.get("opposingParty"),
+      administrativeStatus:
+        formData.get(
+          "administrativeStatus",
+        ),
 
-    claimValue: formData.get("claimValue") || undefined,
+      number:
+        formData.get(
+          "number",
+        ),
 
-    status: formData.get("status"),
+      administrativeNumber:
+        formData.get(
+          "administrativeNumber",
+        ),
 
-    administrativeRequestDate:
-      formData.get("administrativeRequestDate") || undefined,
+      administrativeProcess:
+        formData.get(
+          "administrativeProcess",
+        ),
 
-    distributionDate:
-      formData.get("distributionDate") || undefined,
+      court:
+        formData.get(
+          "court",
+        ),
 
-    nextDeadline:
-      formData.get("nextDeadline") || undefined,
+      courtUnit:
+        formData.get(
+          "courtUnit",
+        ),
 
-    notes: formData.get("notes"),
-  });
+      judge:
+        formData.get(
+          "judge",
+        ),
 
-  if (!parsed.success) {
-    console.error(parsed.error.flatten());
-    throw new Error("Dados inválidos.");
+      city:
+        formData.get(
+          "city",
+        ),
+
+      state:
+        formData.get(
+          "state",
+        ),
+
+      opposingParty:
+        formData.get(
+          "opposingParty",
+        ),
+
+      claimValue:
+        formData.get(
+          "claimValue",
+        ) || undefined,
+
+      status:
+        formData.get(
+          "status",
+        ),
+
+      administrativeRequestDate:
+        formData.get(
+          "administrativeRequestDate",
+        ) || undefined,
+
+      distributionDate:
+        formData.get(
+          "distributionDate",
+        ) || undefined,
+
+      notes:
+        formData.get(
+          "notes",
+        ),
+    });
+
+  if (
+    !parsed.success
+  ) {
+    console.error(
+      parsed.error.flatten(),
+    );
+
+    throw new Error(
+      "Dados inválidos.",
+    );
   }
 
   const data = {
     ...parsed.data,
 
     administrativeRequestDate:
-      parsed.data.administrativeRequestDate
-        ? new Date(parsed.data.administrativeRequestDate)
+      parsed.data
+        .administrativeRequestDate
+        ? new Date(
+            parsed.data.administrativeRequestDate,
+          )
         : null,
 
     distributionDate:
-      parsed.data.distributionDate
-        ? new Date(parsed.data.distributionDate)
-        : null,
-
-    nextDeadline:
-      parsed.data.nextDeadline
-        ? new Date(parsed.data.nextDeadline)
+      parsed.data
+        .distributionDate
+        ? new Date(
+            parsed.data.distributionDate,
+          )
         : null,
   };
 
-  const createdCase = await prisma.case.create({
-    data: {
-      workspaceId: workspace.id,
-      clientId,
-      ...data,
-    },
-  });
-  
+  const createdCase =
+    await prisma.case.create({
+      data: {
+        workspaceId:
+          workspace.id,
+
+        clientId,
+
+        ...data,
+      },
+    });
+
   await createCaseEvent({
-    caseId: createdCase.id,
-    title: "Demanda cadastrada",
-    content: "A demanda foi cadastrada no sistema.",
+    caseId:
+      createdCase.id,
+
+    title:
+      "Demanda cadastrada",
+
+    content:
+      "A demanda foi cadastrada no sistema.",
   });
 
-  redirect(`/clientes/${clientId}/casos/${createdCase.id}`);
+  redirect(
+    `/clientes/${clientId}/casos/${createdCase.id}`,
+  );
 }
