@@ -48,12 +48,15 @@ import type {
 
 type Props = {
   receivables:
-    OfficeReceivable[];
+  OfficeReceivable[];
 
   clients:
-    OfficeFinancialClient[];
+  OfficeFinancialClient[];
 
   todayKey: string;
+
+  canWriteFinance:
+  boolean;
 };
 
 type StatusFilter =
@@ -71,52 +74,52 @@ type PeriodFilter =
 
 type DisplayUnit =
   | {
-      kind: "single";
+    kind: "single";
 
-      key: string;
+    key: string;
 
-      receivable:
-        OfficeReceivable;
-    }
+    receivable:
+    OfficeReceivable;
+  }
   | {
-      kind: "group";
+    kind: "group";
 
-      key: string;
+    key: string;
 
-      receivables:
-        OfficeReceivable[];
-    };
+    receivables:
+    OfficeReceivable[];
+  };
 
 const statusOptions: {
   value: StatusFilter;
 
   label: string;
 }[] = [
-  {
-    value: "TODOS",
-    label: "Todos",
-  },
+    {
+      value: "TODOS",
+      label: "Todos",
+    },
 
-  {
-    value: "PENDENTE",
-    label: "A receber",
-  },
+    {
+      value: "PENDENTE",
+      label: "A receber",
+    },
 
-  {
-    value: "ATRASADO",
-    label: "Atrasados",
-  },
+    {
+      value: "ATRASADO",
+      label: "Atrasados",
+    },
 
-  {
-    value: "PAGO",
-    label: "Pagos",
-  },
+    {
+      value: "PAGO",
+      label: "Pagos",
+    },
 
-  {
-    value: "CANCELADO",
-    label: "Cancelados",
-  },
-];
+    {
+      value: "CANCELADO",
+      label: "Cancelados",
+    },
+  ];
 
 function formatMoney(
   value: number,
@@ -240,16 +243,16 @@ function matchesPeriod(
   const thirtyDays =
     todayTimestamp +
     30 *
-      24 *
-      60 *
-      60 *
-      1000;
+    24 *
+    60 *
+    60 *
+    1000;
 
   return (
     dueTimestamp >=
-      todayTimestamp &&
+    todayTimestamp &&
     dueTimestamp <=
-      thirtyDays
+    thirtyDays
   );
 }
 
@@ -301,16 +304,16 @@ function buildDisplayUnits(
 
   const units:
     DisplayUnit[] =
-      singles.map(
-        (receivable) => ({
-          kind: "single",
+    singles.map(
+      (receivable) => ({
+        kind: "single",
 
-          key:
-            receivable.id,
+        key:
+          receivable.id,
 
-          receivable,
-        }),
-      );
+        receivable,
+      }),
+    );
 
   for (
     const [
@@ -443,6 +446,7 @@ export function OfficeReceivablesList({
   receivables,
   clients,
   todayKey,
+  canWriteFinance,
 }: Props) {
   const [
     statusFilter,
@@ -486,9 +490,9 @@ export function OfficeReceivablesList({
           (receivable) => {
             if (
               clientFilter !==
-                "TODOS" &&
+              "TODOS" &&
               receivable.clientId !==
-                clientFilter
+              clientFilter
             ) {
               return false;
             }
@@ -521,10 +525,10 @@ export function OfficeReceivablesList({
                 receivable.description,
 
                 receivable.caseTitle ??
-                  "",
+                "",
 
                 receivable.caseNumber ??
-                  "",
+                "",
               ]
                 .join(" ")
                 .toLocaleLowerCase(
@@ -607,11 +611,11 @@ export function OfficeReceivablesList({
 
   const hasFilters =
     clientFilter !==
-      "TODOS" ||
+    "TODOS" ||
     statusFilter !==
-      "TODOS" ||
+    "TODOS" ||
     periodFilter !==
-      "TODOS" ||
+    "TODOS" ||
     Boolean(search);
 
   return (
@@ -660,7 +664,7 @@ export function OfficeReceivablesList({
                     .value,
                 )
               }
-              placeholder="Buscar por cliente, cobrança ou processo..."
+              placeholder="Buscar por cliente, cobrança ou caso..."
               className="h-10 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
             />
           </div>
@@ -764,7 +768,7 @@ export function OfficeReceivablesList({
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
           {displayUnits.length ===
-          1
+            1
             ? "1 resultado"
             : `${displayUnits.length} resultados`}
         </p>
@@ -795,7 +799,7 @@ export function OfficeReceivablesList({
       </div>
 
       {displayUnits.length ===
-      0 ? (
+        0 ? (
         <div className="rounded-2xl border border-dashed p-10 text-center">
           <div className="mx-auto flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
             <Search className="size-5" />
@@ -830,6 +834,9 @@ export function OfficeReceivablesList({
                     clients={
                       clients
                     }
+                    canWriteFinance={
+                      canWriteFinance
+                    }
                   />
                 );
               }
@@ -844,6 +851,9 @@ export function OfficeReceivablesList({
                   }
                   clients={
                     clients
+                  }
+                  canWriteFinance={
+                    canWriteFinance
                   }
                 />
               );
@@ -866,10 +876,10 @@ function FilterSelect({
   value: string;
 
   onChange:
-    (value: string) => void;
+  (value: string) => void;
 
   children:
-    React.ReactNode;
+  React.ReactNode;
 }) {
   return (
     <label className="space-y-1.5">
@@ -897,12 +907,16 @@ function FilterSelect({
 function OfficeReceivableCard({
   receivable,
   clients,
+  canWriteFinance,
 }: {
   receivable:
-    OfficeReceivable;
+  OfficeReceivable;
 
   clients:
-    OfficeFinancialClient[];
+  OfficeFinancialClient[];
+
+  canWriteFinance:
+  boolean;
 }) {
   const status =
     getEffectiveFinancialStatus(
@@ -913,7 +927,7 @@ function OfficeReceivableCard({
   const remaining =
     Math.max(
       receivable.totalAmount -
-        receivable.paidAmount,
+      receivable.paidAmount,
       0,
     );
 
@@ -939,19 +953,17 @@ function OfficeReceivableCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border bg-card p-4 transition hover:shadow-sm ${
-        status === "ATRASADO"
-          ? "border-red-200 bg-red-50/20 dark:border-red-900 dark:bg-red-950/10"
-          : status === "PAGO"
-            ? "border-emerald-200/70 dark:border-emerald-900"
-            : status === "PARCIAL"
-              ? "border-blue-200 dark:border-blue-900"
-              : "border-border"
-      } ${
-        isCanceled
+      className={`relative overflow-hidden rounded-2xl border bg-card p-4 transition hover:shadow-sm ${status === "ATRASADO"
+        ? "border-rose-200 bg-rose-50/20 dark:border-rose-900 dark:bg-rose-950/10"
+        : status === "PAGO"
+          ? "border-emerald-200/70 dark:border-emerald-900"
+          : status === "PARCIAL"
+            ? "border-blue-200 dark:border-blue-900"
+            : "border-border"
+        } ${isCanceled
           ? "opacity-70"
           : ""
-      }`}
+        }`}
     >
       <div
         className={`absolute inset-y-0 left-0 w-1 ${statusConfig.accent}`}
@@ -965,7 +977,7 @@ function OfficeReceivableCard({
                 <UserRound className="size-3.5 text-muted-foreground" />
 
                 <Link
-                  href={`/clientes/${receivable.clientId}`}
+                  href={`/clientes/${receivable.clientId}/casos/${receivable.caseId}`}
                   className="font-semibold hover:underline"
                 >
                   {
@@ -975,7 +987,7 @@ function OfficeReceivableCard({
               </div>
 
               {receivable.installmentNumber &&
-              receivable.totalInstallments ? (
+                receivable.totalInstallments ? (
                 <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                   Parcela{" "}
                   {
@@ -990,11 +1002,10 @@ function OfficeReceivableCard({
             </div>
 
             <p
-              className={`mt-2 text-sm font-medium ${
-                isCanceled
-                  ? "line-through"
-                  : ""
-              }`}
+              className={`mt-2 text-sm font-medium ${isCanceled
+                ? "line-through"
+                : ""
+                }`}
             >
               {
                 receivable.description
@@ -1002,9 +1013,9 @@ function OfficeReceivableCard({
             </p>
 
             {receivable.caseId &&
-            receivable.caseTitle ? (
+              receivable.caseTitle ? (
               <Link
-                href={`/casos/${receivable.caseId}`}
+                href={`/clientes/${receivable.clientId}/casos/${receivable.caseId}`}
                 className="mt-1 inline-block text-xs text-muted-foreground transition hover:text-foreground hover:underline"
               >
                 {
@@ -1021,15 +1032,14 @@ function OfficeReceivableCard({
           <div className="flex shrink-0 items-start gap-3">
             <div className="text-right">
               <p
-                className={`text-lg font-bold ${
-                  status ===
+                className={`text-lg font-bold ${status ===
                   "ATRASADO"
-                    ? "text-red-700 dark:text-red-300"
-                    : status ===
-                        "PAGO"
-                      ? "text-emerald-700 dark:text-emerald-300"
-                      : ""
-                }`}
+                  ? "text-rose-700 dark:text-rose-300"
+                  : status ===
+                    "PAGO"
+                    ? "text-emerald-700 dark:text-emerald-300"
+                    : ""
+                  }`}
               >
                 {formatMoney(
                   status ===
@@ -1041,7 +1051,7 @@ function OfficeReceivableCard({
 
               <p className="text-xs text-muted-foreground">
                 {status ===
-                "PAGO"
+                  "PAGO"
                   ? "recebido"
                   : "saldo"}
               </p>
@@ -1055,25 +1065,26 @@ function OfficeReceivableCard({
               }
             </span>
 
-            <ReceivableActionsMenu
-              receivable={
-                editableReceivable
-              }
-              caseOptions={
-                caseOptions
-              }
-            />
+            {canWriteFinance ? (
+              <ReceivableActionsMenu
+                receivable={
+                  editableReceivable
+                }
+                caseOptions={
+                  caseOptions
+                }
+              />
+            ) : null}
           </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t pt-3 text-xs text-muted-foreground">
           <span
-            className={`inline-flex items-center gap-1.5 ${
-              status ===
+            className={`inline-flex items-center gap-1.5 ${status ===
               "ATRASADO"
-                ? "font-medium text-red-700 dark:text-red-300"
-                : ""
-            }`}
+              ? "font-medium text-rose-700 dark:text-rose-300"
+              : ""
+              }`}
           >
             <CalendarDays className="size-3.5" />
 
@@ -1100,12 +1111,16 @@ function OfficeReceivableCard({
 function OfficeInstallmentGroup({
   receivables,
   clients,
+  canWriteFinance,
 }: {
   receivables:
-    OfficeReceivable[];
+  OfficeReceivable[];
 
   clients:
-    OfficeFinancialClient[];
+  OfficeFinancialClient[];
+
+  canWriteFinance:
+  boolean;
 }) {
   const [
     expanded,
@@ -1198,29 +1213,27 @@ function OfficeInstallmentGroup({
   const progress =
     total > 0
       ? Math.min(
+        100,
+        Math.max(
+          0,
+          (received / total) *
           100,
-          Math.max(
-            0,
-            (received / total) *
-              100,
-          ),
-        )
+        ),
+      )
       : 0;
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border bg-card ${
-        overdueCount > 0
-          ? "border-red-200 dark:border-red-900"
-          : "border-emerald-200/70 dark:border-emerald-900"
-      }`}
+      className={`relative overflow-hidden rounded-2xl border bg-card ${overdueCount > 0
+        ? "border-rose-200 dark:border-rose-900"
+        : "border-emerald-200/70 dark:border-emerald-900"
+        }`}
     >
       <div
-        className={`absolute inset-y-0 left-0 w-1 ${
-          overdueCount > 0
-            ? "bg-red-500"
-            : "bg-emerald-500"
-        }`}
+        className={`absolute inset-y-0 left-0 w-1 ${overdueCount > 0
+          ? "bg-rose-500"
+          : "bg-emerald-500"
+          }`}
       />
 
       <div className="p-5 pl-6">
@@ -1228,17 +1241,16 @@ function OfficeInstallmentGroup({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <div
-                className={`flex size-8 items-center justify-center rounded-lg ${
-                  overdueCount > 0
-                    ? "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300"
-                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300"
-                }`}
+                className={`flex size-8 items-center justify-center rounded-lg ${overdueCount > 0
+                  ? "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300"
+                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300"
+                  }`}
               >
                 <Layers3 className="size-4" />
               </div>
 
               <Link
-                href={`/clientes/${first.clientId}`}
+                href={`/clientes/${first.clientId}/casos/${first.caseId}`}
                 className="font-semibold hover:underline"
               >
                 {
@@ -1258,9 +1270,9 @@ function OfficeInstallmentGroup({
             </p>
 
             {first.caseId &&
-            first.caseTitle ? (
+              first.caseTitle ? (
               <Link
-                href={`/casos/${first.caseId}`}
+                href={`/clientes/${first.clientId}/casos/${first.caseId}`}
                 className="mt-1 inline-block text-xs text-muted-foreground hover:text-foreground hover:underline"
               >
                 {
@@ -1283,10 +1295,10 @@ function OfficeInstallmentGroup({
               </span>
 
               {overdueCount > 0 ? (
-                <span className="rounded-full bg-red-50 px-2.5 py-1 font-medium text-red-700 dark:bg-red-950/30 dark:text-red-300">
+                <span className="rounded-full bg-rose-50 px-2.5 py-1 font-medium text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
                   {overdueCount}{" "}
                   {overdueCount ===
-                  1
+                    1
                     ? "atrasada"
                     : "atrasadas"}
                 </span>
@@ -1296,7 +1308,7 @@ function OfficeInstallmentGroup({
                 <span className="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
                   {canceledCount}{" "}
                   {canceledCount ===
-                  1
+                    1
                     ? "cancelada"
                     : "canceladas"}
                 </span>
@@ -1306,11 +1318,10 @@ function OfficeInstallmentGroup({
 
           <div className="text-left lg:text-right">
             <p
-              className={`text-xl font-bold ${
-                overdueCount > 0
-                  ? "text-red-700 dark:text-red-300"
-                  : "text-emerald-700 dark:text-emerald-300"
-              }`}
+              className={`text-xl font-bold ${overdueCount > 0
+                ? "text-rose-700 dark:text-rose-300"
+                : "text-emerald-700 dark:text-emerald-300"
+                }`}
             >
               {formatMoney(
                 remaining,
@@ -1422,6 +1433,9 @@ function OfficeInstallmentGroup({
                 clients={
                   clients
                 }
+                canWriteFinance={
+                  canWriteFinance
+                }
               />
             ),
           )}
@@ -1441,10 +1455,10 @@ function GroupMetric({
   value: string;
 
   tone:
-    | "neutral"
-    | "income"
-    | "open"
-    | "danger";
+  | "neutral"
+  | "income"
+  | "open"
+  | "danger";
 }) {
   const styles = {
     neutral:
@@ -1457,7 +1471,7 @@ function GroupMetric({
       "bg-blue-50/70 dark:bg-blue-950/20",
 
     danger:
-      "bg-red-50/70 dark:bg-red-950/20",
+      "bg-rose-50/70 dark:bg-rose-950/20",
   };
 
   const valueStyles = {
@@ -1470,7 +1484,7 @@ function GroupMetric({
       "text-blue-700 dark:text-blue-300",
 
     danger:
-      "text-red-700 dark:text-red-300",
+      "text-rose-700 dark:text-rose-300",
   };
 
   return (
@@ -1511,10 +1525,10 @@ function getStatusConfig(
         label: "Atrasado",
 
         className:
-          "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300",
+          "bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300",
 
         accent:
-          "bg-red-500",
+          "bg-rose-500",
       };
 
     case "PARCIAL":

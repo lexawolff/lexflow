@@ -8,8 +8,13 @@ import {
   revalidatePath,
 } from "next/cache";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
 
 import {
   syncRpvReceivables,
@@ -36,51 +41,34 @@ function revalidateFinance({
   caseId,
 }: {
   clientId: string;
-
   caseId: string;
 }) {
-  revalidatePath(
-    "/financeiro",
-  );
-
-  revalidatePath(
-    "/financeiro/recebimentos",
-  );
-
-  revalidatePath(
-    "/financeiro/fluxo-de-caixa",
-  );
-
-  revalidatePath(
-    "/financeiro/rpvs-e-precatorios",
-  );
-
-  revalidatePath(
-    `/clientes/${clientId}`,
-  );
-
-  revalidatePath(
-    `/casos/${caseId}`,
-  );
+  revalidatePath("/dashboard");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/recebimentos");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/financeiro/rpvs-e-precatorios");
+  revalidatePath(`/clientes/${clientId}`);
+  revalidatePath(`/clientes/${clientId}/casos/${caseId}`);
 }
 
 export async function createRpv(
   formData: FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     createRpvSchema.safeParse({
       caseId:
-        formData.get(
-          "caseId",
-        ),
+        formData.get("caseId"),
 
       type:
-        formData.get(
-          "type",
-        ),
+        formData.get("type"),
 
       requisitionNumber:
         formData.get(
@@ -88,9 +76,7 @@ export async function createRpv(
         ),
 
       court:
-        formData.get(
-          "court",
-        ),
+        formData.get("court"),
 
       grossAmount:
         formData.get(
@@ -118,24 +104,16 @@ export async function createRpv(
         ),
 
       paidAt:
-        formData.get(
-          "paidAt",
-        ),
+        formData.get("paidAt"),
 
       bank:
-        formData.get(
-          "bank",
-        ),
+        formData.get("bank"),
 
       status:
-        formData.get(
-          "status",
-        ),
+        formData.get("status"),
 
       notes:
-        formData.get(
-          "notes",
-        ),
+        formData.get("notes"),
     });
 
   if (!parsed.success) {
@@ -170,7 +148,7 @@ export async function createRpv(
 
   if (!clientCase) {
     throw new Error(
-      "Processo não encontrado.",
+      "Caso não encontrado.",
     );
   }
 
@@ -178,10 +156,8 @@ export async function createRpv(
     data.contractualFeeValue;
 
   if (
-    contractualFeeValue ===
-      null &&
-    data.contractualFeeRate !==
-      null
+    contractualFeeValue === null &&
+    data.contractualFeeRate !== null
   ) {
     contractualFeeValue =
       roundMoney(
@@ -192,8 +168,7 @@ export async function createRpv(
   }
 
   if (
-    contractualFeeValue !==
-      null &&
+    contractualFeeValue !== null &&
     contractualFeeValue >
       data.grossAmount
   ) {
@@ -206,8 +181,7 @@ export async function createRpv(
     roundMoney(
       Math.max(
         data.grossAmount -
-          (contractualFeeValue ??
-            0),
+          (contractualFeeValue ?? 0),
         0,
       ),
     );
@@ -239,24 +213,21 @@ export async function createRpv(
                 ),
 
               contractualFeeRate:
-                data.contractualFeeRate ===
-                null
+                data.contractualFeeRate === null
                   ? null
                   : new Prisma.Decimal(
                       data.contractualFeeRate,
                     ),
 
               contractualFeeValue:
-                contractualFeeValue ===
-                null
+                contractualFeeValue === null
                   ? null
                   : new Prisma.Decimal(
                       contractualFeeValue,
                     ),
 
               sucumbencyFeeValue:
-                data.sucumbencyFeeValue ===
-                null
+                data.sucumbencyFeeValue === null
                   ? null
                   : new Prisma.Decimal(
                       data.sucumbencyFeeValue,
@@ -290,19 +261,15 @@ export async function createRpv(
 
         return syncRpvReceivables({
           tx,
-
           workspaceId:
             workspace.id,
-
           rpvId:
             rpv.id,
         });
       },
     );
 
-  revalidateFinance(
-    result,
-  );
+  revalidateFinance(result);
 
   return {
     success: true,

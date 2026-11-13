@@ -484,7 +484,7 @@ export function OfficeFinancialDashboard({
               projectedResult >=
               0
                 ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20"
-                : "border-red-200 bg-red-50/70 dark:border-red-900 dark:bg-red-950/20"
+                : "border-rose-200 bg-rose-50/70 dark:border-rose-900 dark:bg-rose-950/20"
             }`}
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -494,7 +494,7 @@ export function OfficeFinancialDashboard({
                     projectedResult >=
                     0
                       ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300"
-                      : "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300"
+                      : "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300"
                   }`}
                 >
                   {projectedResult >=
@@ -525,7 +525,7 @@ export function OfficeFinancialDashboard({
                     projectedResult >=
                     0
                       ? "text-emerald-700 dark:text-emerald-300"
-                      : "text-red-700 dark:text-red-300"
+                      : "text-rose-700 dark:text-rose-300"
                   }`}
                 >
                   {formatSignedMoney(
@@ -994,19 +994,19 @@ function getSummaryToneStyles(
     case "negative":
       return {
         container:
-          "border-red-200 bg-red-50/60 dark:border-red-900 dark:bg-red-950/20",
+          "border-rose-200 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/20",
 
         accent:
-          "bg-red-500",
+          "bg-rose-500",
 
         title:
-          "text-red-800 dark:text-red-300",
+          "text-rose-800 dark:text-rose-300",
 
         value:
-          "text-red-700 dark:text-red-300",
+          "text-rose-700 dark:text-rose-300",
 
         icon:
-          "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300",
+          "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300",
       };
 
     case "projection":

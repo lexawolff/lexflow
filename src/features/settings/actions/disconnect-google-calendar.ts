@@ -5,6 +5,10 @@ import {
 } from "next/cache";
 
 import {
+  requireCurrentUser,
+} from "@/lib/auth";
+
+import {
   decryptSecret,
 } from "@/lib/crypto";
 
@@ -13,23 +17,30 @@ import {
 } from "@/lib/google-calendar";
 
 import {
+  getCurrentWorkspaceAccess,
+} from "@/lib/permissions";
+
+import {
   prisma,
 } from "@/lib/prisma";
 
-import {
-  requireCurrentUser,
-} from "@/lib/auth";
+export type DisconnectGoogleCalendarResult =
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      error: string;
+    };
 
-import {
-  getDefaultWorkspace,
-} from "@/lib/workspace";
-
-export async function disconnectGoogleCalendar() {
+export async function disconnectGoogleCalendarAction(): Promise<DisconnectGoogleCalendarResult> {
   const user =
     await requireCurrentUser();
 
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await getCurrentWorkspaceAccess();
 
   const connection =
     await prisma.googleCalendarConnection.findUnique({
@@ -50,43 +61,100 @@ export async function disconnectGoogleCalendar() {
     };
   }
 
+  /*
+   * Tentamos revogar a autorização
+   * também no próprio Google.
+   *
+   * Uma falha no Google não deve
+   * impedir a desconexão local.
+   */
   try {
     const refreshToken =
       decryptSecret(
-        connection.refreshTokenEncrypted,
+        connection
+          .refreshTokenEncrypted,
       );
 
     const oauthClient =
       createGoogleOAuthClient();
 
-    /*
-     * Revogamos também no Google.
-     * Se o token já estiver inválido,
-     * ainda assim eliminamos nossa
-     * conexão local.
-     */
     await oauthClient.revokeToken(
       refreshToken,
     );
   } catch (error) {
-    console.error(
-      "Erro ao revogar Google Calendar:",
+    console.warn(
+      "Não foi possível revogar o token no Google. A integração será desativada localmente:",
       error,
     );
   }
 
-  await prisma.googleCalendarConnection.delete({
-    where: {
-      id:
-        connection.id,
-    },
-  });
+  /*
+   * Preservamos o registro da conexão
+   * porque tarefas sincronizadas podem
+   * manter googleConnectionId e
+   * googleEventId.
+   *
+   * Isso também reduz o risco de
+   * duplicação após uma reconexão.
+   */
+  try {
+    await prisma.googleCalendarConnection.update({
+      where: {
+        id:
+          connection.id,
+      },
 
-  revalidatePath(
-    "/configuracoes/integracoes",
-  );
+      data: {
+        syncFromGoogle:
+          false,
 
-  return {
-    success: true,
-  };
+        syncToGoogle:
+          false,
+
+        syncToken:
+          null,
+
+        watchChannelId:
+          null,
+
+        watchResourceId:
+          null,
+
+        watchExpiresAt:
+          null,
+      },
+    });
+
+    revalidatePath(
+      "/configuracoes",
+    );
+
+    revalidatePath(
+      "/configuracoes/integracoes",
+    );
+
+    revalidatePath(
+      "/agenda",
+    );
+
+    revalidatePath(
+      "/dashboard",
+    );
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error(
+      "Erro ao desconectar Google Agenda:",
+      error,
+    );
+
+    return {
+      success: false,
+
+      error:
+        "Não foi possível desconectar o Google Agenda.",
+    };
+  }
 }

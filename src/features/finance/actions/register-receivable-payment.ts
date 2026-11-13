@@ -1,18 +1,35 @@
 "use server";
 
-import { FinancialStatus } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import {
+  FinancialStatus,
+} from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  revalidatePath,
+} from "next/cache";
 
-import { registerReceivablePaymentSchema } from "../schemas/register-receivable-payment-schema";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
+
+import {
+  registerReceivablePaymentSchema,
+} from "../schemas/register-receivable-payment-schema";
 
 export async function registerReceivablePayment(
-  formData: FormData,
+  formData:
+    FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     registerReceivablePaymentSchema.safeParse(
@@ -61,15 +78,20 @@ export async function registerReceivablePayment(
         },
 
         select: {
-          id: true,
+          id:
+            true,
 
-          clientId: true,
+          clientId:
+            true,
 
-          totalAmount: true,
+          totalAmount:
+            true,
 
-          paidAmount: true,
+          paidAmount:
+            true,
 
-          status: true,
+          status:
+            true,
         },
       },
     );
@@ -100,7 +122,8 @@ export async function registerReceivablePayment(
 
   await prisma.receivable.update({
     where: {
-      id: receivable.id,
+      id:
+        receivable.id,
     },
 
     data: {
@@ -126,7 +149,16 @@ export async function registerReceivablePayment(
     "/financeiro",
   );
 
+  revalidatePath(
+  "/financeiro/recebimentos",
+);
+
+revalidatePath(
+  "/financeiro/fluxo-de-caixa",
+);
+
   return {
-    success: true,
+    success:
+      true,
   };
 }

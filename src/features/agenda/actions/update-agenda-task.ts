@@ -5,16 +5,12 @@ import {
 } from "next/cache";
 
 import {
-  requireCurrentUser,
-} from "@/lib/auth";
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
 import {
   prisma,
 } from "@/lib/prisma";
-
-import {
-  getDefaultWorkspace,
-} from "@/lib/workspace";
 
 import {
   updateAgendaTaskSchema,
@@ -83,12 +79,9 @@ function revalidateAgenda({
     );
   }
 
-  if (
-    clientId &&
-    caseId
-  ) {
+  if (caseId) {
     revalidatePath(
-      `/clientes/${clientId}/casos/${caseId}`,
+      `/casos/${caseId}`,
     );
   }
 }
@@ -96,11 +89,13 @@ function revalidateAgenda({
 export async function updateAgendaTask(
   formData: FormData,
 ) {
-  const user =
-    await requireCurrentUser();
-
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    user,
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "AGENDA_EDIT",
+    );
 
   const parsed =
     updateAgendaTaskSchema.safeParse({
@@ -173,9 +168,7 @@ export async function updateAgendaTask(
 
       select: {
         id: true,
-
         clientId: true,
-
         caseId: true,
       },
     });
@@ -208,7 +201,7 @@ export async function updateAgendaTask(
 
     if (!clientCase) {
       throw new Error(
-        "Processo não encontrado.",
+        "Caso não encontrado.",
       );
     }
 
@@ -239,10 +232,6 @@ export async function updateAgendaTask(
     }
   }
 
-  /*
-   * Atualizamos primeiro a fonte
-   * de verdade: a Task do LexFlow.
-   */
   await prisma.task.update({
     where: {
       id:
@@ -280,13 +269,6 @@ export async function updateAgendaTask(
     },
   });
 
-  /*
-   * Depois sincronizamos.
-   *
-   * Se a Task já possuir
-   * googleEventId, o serviço
-   * atualiza o MESMO evento.
-   */
   const googleSync =
     await syncTaskToGoogleCalendar({
       taskId:
@@ -306,14 +288,6 @@ export async function updateAgendaTask(
     );
   }
 
-  /*
-   * Revalidamos tanto o vínculo
-   * antigo quanto o novo.
-   *
-   * Isso é importante caso o
-   * compromisso seja transferido
-   * para outro cliente/processo.
-   */
   revalidateAgenda({
     clientId:
       existing.clientId,

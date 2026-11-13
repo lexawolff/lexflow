@@ -1,4 +1,5 @@
 import type {
+  ElementType,
   ReactNode,
 } from "react";
 
@@ -50,7 +51,9 @@ function formatDateKey(
     month,
     day,
   ] =
-    dateKey.split("-");
+    dateKey.split(
+      "-",
+    );
 
   return `${day}/${month}/${year}`;
 }
@@ -99,7 +102,9 @@ function getAppointmentLabel(
   type:
     TaskType,
 ): string {
-  switch (type) {
+  switch (
+    type
+  ) {
     case TaskType.PERICIA:
       return "Perícia";
 
@@ -114,13 +119,7 @@ function getAppointmentLabel(
   }
 }
 
-function SummaryCard({
-  title,
-  value,
-  description,
-  icon,
-  className = "",
-}: {
+type SummaryCardProps = {
   title:
     string;
 
@@ -131,31 +130,125 @@ function SummaryCard({
     ReactNode;
 
   icon:
-    ReactNode;
+    ElementType;
 
-  className?:
-    string;
-}) {
+  tone:
+    "neutral" |
+    "blue" |
+    "amber" |
+    "rose" |
+    "emerald";
+};
+
+function SummaryCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  tone,
+}: SummaryCardProps) {
+  const styles = {
+    neutral: {
+      container:
+        "border-slate-200 bg-card dark:border-slate-800",
+
+      accent:
+        "bg-slate-300 dark:bg-slate-700",
+
+      icon:
+        "bg-muted text-muted-foreground",
+
+      value:
+        "text-foreground",
+    },
+
+    blue: {
+      container:
+        "border-blue-200 bg-blue-50/20 dark:border-blue-900 dark:bg-blue-950/10",
+
+      accent:
+        "bg-blue-400 dark:bg-blue-700",
+
+      icon:
+        "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+
+      value:
+        "text-blue-950 dark:text-blue-100",
+    },
+
+    amber: {
+      container:
+        "border-amber-200 bg-amber-50/20 dark:border-amber-900 dark:bg-amber-950/10",
+
+      accent:
+        "bg-amber-400 dark:bg-amber-700",
+
+      icon:
+        "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+
+      value:
+        "text-amber-950 dark:text-amber-100",
+    },
+
+    rose: {
+      container:
+        "border-rose-200 bg-rose-50/30 dark:border-rose-900 dark:bg-rose-950/10",
+
+      accent:
+        "bg-rose-500 dark:bg-rose-700",
+
+      icon:
+        "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
+
+      value:
+        "text-rose-700 dark:text-rose-300",
+    },
+
+    emerald: {
+      container:
+        "border-emerald-200 bg-emerald-50/20 dark:border-emerald-900 dark:bg-emerald-950/10",
+
+      accent:
+        "bg-emerald-400 dark:bg-emerald-700",
+
+      icon:
+        "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+
+      value:
+        "text-emerald-800 dark:text-emerald-200",
+    },
+  }[
+    tone
+  ];
+
   return (
     <div
-      className={`rounded-2xl border bg-card p-5 ${className}`}
+      className={`relative overflow-hidden rounded-2xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${styles.container}`}
     >
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 shrink-0">
-          {icon}
+      <div
+        className={`absolute inset-x-0 top-0 h-1 ${styles.accent}`}
+      />
+
+      <div className="flex items-start gap-4">
+        <div
+          className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${styles.icon}`}
+        >
+          <Icon className="size-5" />
         </div>
 
         <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm font-medium text-muted-foreground">
             {title}
           </p>
 
-          <div className="mt-1 break-words font-semibold">
+          <div
+            className={`mt-1.5 break-words text-lg font-bold tracking-tight ${styles.value}`}
+          >
             {value}
           </div>
 
           {description ? (
-            <div className="mt-1 text-xs text-muted-foreground">
+            <div className="mt-1 text-xs leading-5 text-muted-foreground">
               {description}
             </div>
           ) : null}
@@ -172,11 +265,14 @@ export function CaseSummaryCards({
 }: Props) {
   /*
    * Primeiro prazo processual
-   * ativo do processo.
+   * ativo do caso.
    */
+
   const nextDeadline =
     tasks.find(
-      (task) =>
+      (
+        task,
+      ) =>
         task.type ===
         TaskType.PRAZO_PROCESSUAL,
     ) ??
@@ -186,9 +282,12 @@ export function CaseSummaryCards({
    * Próxima perícia,
    * audiência ou atendimento.
    */
+
   const nextAppointment =
     tasks.find(
-      (task) => {
+      (
+        task,
+      ) => {
         const dateKey =
           task.dueDate.slice(
             0,
@@ -211,7 +310,8 @@ export function CaseSummaryCards({
       ? nextDeadline.dueDate.slice(
           0,
           10,
-        ) < todayKey
+        ) <
+        todayKey
       : false;
 
   const currency =
@@ -235,6 +335,10 @@ export function CaseSummaryCards({
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {/* ==========================
+          PRAZO
+      ========================== */}
+
       <SummaryCard
         title={
           deadlineIsOverdue
@@ -242,15 +346,14 @@ export function CaseSummaryCards({
             : "Próximo prazo"
         }
         icon={
-          deadlineIsOverdue ? (
-            <div className="flex size-10 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
-              <ClockAlert className="size-5" />
-            </div>
-          ) : (
-            <div className="flex size-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-              <CalendarClock className="size-5" />
-            </div>
-          )
+          deadlineIsOverdue
+            ? ClockAlert
+            : CalendarClock
+        }
+        tone={
+          deadlineIsOverdue
+            ? "rose"
+            : "amber"
         }
         value={
           nextDeadline
@@ -264,20 +367,18 @@ export function CaseSummaryCards({
             ?.title ??
           "Nenhum prazo ativo"
         }
-        className={
-          deadlineIsOverdue
-            ? "border-rose-200 bg-rose-50/30 dark:border-rose-900 dark:bg-rose-950/10"
-            : "border-amber-200 bg-amber-50/30 dark:border-amber-900 dark:bg-amber-950/10"
-        }
       />
+
+      {/* ==========================
+          COMPROMISSO
+      ========================== */}
 
       <SummaryCard
         title="Próximo compromisso"
         icon={
-          <div className="flex size-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-            <CalendarClock className="size-5" />
-          </div>
+          CalendarClock
         }
+        tone="blue"
         value={
           nextAppointment
             ? formatDateKey(
@@ -288,9 +389,11 @@ export function CaseSummaryCards({
         description={
           nextAppointment ? (
             <>
-              {getAppointmentLabel(
-                nextAppointment.type,
-              )}
+              {
+                getAppointmentLabel(
+                  nextAppointment.type,
+                )
+              }
 
               {nextAppointment.startsAt
                 ? ` • ${formatTime(
@@ -302,16 +405,18 @@ export function CaseSummaryCards({
             "Nenhum compromisso futuro"
           )
         }
-        className="border-blue-200 bg-blue-50/30 dark:border-blue-900 dark:bg-blue-950/10"
       />
+
+      {/* ==========================
+          IDENTIFICAÇÃO
+      ========================== */}
 
       <SummaryCard
         title="Identificação"
         icon={
-          <div className="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-            <FileText className="size-5" />
-          </div>
+          FileText
         }
+        tone="neutral"
         value={
           caseData.number ??
           caseData.administrativeNumber ??
@@ -329,17 +434,20 @@ export function CaseSummaryCards({
         }
       />
 
+      {/* ==========================
+          VALOR
+      ========================== */}
+
       <SummaryCard
         title="Valor da causa"
         icon={
-          <div className="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-            <Scale className="size-5" />
-          </div>
+          Scale
         }
+        tone="emerald"
         value={
           currency
         }
-        description="Valor cadastrado na demanda"
+        description="Valor cadastrado no caso"
       />
     </div>
   );

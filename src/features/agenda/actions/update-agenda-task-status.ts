@@ -9,16 +9,12 @@ import {
 } from "next/cache";
 
 import {
-  requireCurrentUser,
-} from "@/lib/auth";
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
 import {
   prisma,
 } from "@/lib/prisma";
-
-import {
-  getDefaultWorkspace,
-} from "@/lib/workspace";
 
 import {
   agendaTaskStatusActionSchema,
@@ -52,12 +48,9 @@ function revalidateAgenda({
     );
   }
 
-  if (
-    clientId &&
-    caseId
-  ) {
+  if (caseId) {
     revalidatePath(
-      `/clientes/${clientId}/casos/${caseId}`,
+      `/casos/${caseId}`,
     );
   }
 }
@@ -65,11 +58,13 @@ function revalidateAgenda({
 export async function updateAgendaTaskStatus(
   formData: FormData,
 ) {
-  const user =
-    await requireCurrentUser();
-
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    user,
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "AGENDA_EDIT",
+    );
 
   const parsed =
     agendaTaskStatusActionSchema.safeParse({
@@ -110,11 +105,8 @@ export async function updateAgendaTaskStatus(
 
       select: {
         id: true,
-
         status: true,
-
         clientId: true,
-
         caseId: true,
       },
     });
@@ -201,16 +193,6 @@ export async function updateAgendaTaskStatus(
     });
   }
 
-  /*
-   * START e COMPLETE mantêm
-   * o compromisso no Google.
-   *
-   * CANCEL remove o evento.
-   *
-   * REOPEN volta a criar o evento
-   * caso ele tenha sido removido
-   * quando a Task foi cancelada.
-   */
   const googleSync =
     await syncTaskToGoogleCalendar({
       taskId:

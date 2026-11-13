@@ -16,11 +16,6 @@ export async function getCurrentAuthUser() {
   const supabase =
     await createClient();
 
-  /*
-   * getUser() consulta o servidor
-   * de Auth e devolve o usuário
-   * autenticado atual.
-   */
   const {
     data,
     error,
@@ -37,18 +32,42 @@ export async function getCurrentAuthUser() {
   return data.user;
 }
 
-export async function getCurrentUser() {
-  const authUser =
-    await getCurrentAuthUser();
+export async function getCurrentAuthUserId() {
+  const supabase =
+    await createClient();
 
-  if (!authUser) {
+  const {
+    data,
+    error,
+  } =
+    await supabase.auth.getClaims();
+
+  const userId =
+    data?.claims?.sub;
+
+  if (
+    error ||
+    typeof userId !== "string" ||
+    !userId
+  ) {
+    return null;
+  }
+
+  return userId;
+}
+
+export async function getCurrentUser() {
+  const userId =
+    await getCurrentAuthUserId();
+
+  if (!userId) {
     return null;
   }
 
   return prisma.user.findUnique({
     where: {
       id:
-        authUser.id,
+        userId,
     },
   });
 }

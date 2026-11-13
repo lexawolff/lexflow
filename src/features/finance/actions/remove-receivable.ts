@@ -1,12 +1,24 @@
 "use server";
 
-import { FinancialStatus } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import {
+  FinancialStatus,
+} from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  revalidatePath,
+} from "next/cache";
 
-import { removeReceivableSchema } from "../schemas/remove-receivable-schema";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
+
+import {
+  removeReceivableSchema,
+} from "../schemas/remove-receivable-schema";
 
 function hasPayment({
   paidAmount,
@@ -14,7 +26,8 @@ function hasPayment({
 }: {
   paidAmount: {
     greaterThan: (
-      value: number,
+      value:
+        number,
     ) => boolean;
   };
 
@@ -22,7 +35,9 @@ function hasPayment({
     FinancialStatus;
 }) {
   return (
-    paidAmount.greaterThan(0) ||
+    paidAmount.greaterThan(
+      0,
+    ) ||
     status ===
       FinancialStatus.PAGO ||
     status ===
@@ -31,10 +46,15 @@ function hasPayment({
 }
 
 export async function removeReceivable(
-  formData: FormData,
+  formData:
+    FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     removeReceivableSchema.safeParse(
@@ -45,10 +65,14 @@ export async function removeReceivable(
           ),
 
         mode:
-          formData.get("mode"),
+          formData.get(
+            "mode",
+          ),
 
         scope:
-          formData.get("scope"),
+          formData.get(
+            "scope",
+          ),
       },
     );
 
@@ -79,16 +103,20 @@ export async function removeReceivable(
         },
 
         select: {
-          id: true,
+          id:
+            true,
 
-          clientId: true,
+          clientId:
+            true,
 
           installmentGroupId:
             true,
 
-          paidAmount: true,
+          paidAmount:
+            true,
 
-          status: true,
+          status:
+            true,
         },
       },
     );
@@ -100,18 +128,18 @@ export async function removeReceivable(
   }
 
   const useGroup =
-    data.scope === "GROUP" &&
+    data.scope ===
+      "GROUP" &&
     Boolean(
       receivable.installmentGroupId,
     );
 
   /*
-   * ==========================
    * CANCELAMENTO
-   * ==========================
    */
   if (
-    data.mode === "CANCEL"
+    data.mode ===
+    "CANCEL"
   ) {
     if (!useGroup) {
       if (
@@ -159,8 +187,17 @@ export async function removeReceivable(
         "/financeiro",
       );
 
+      revalidatePath(
+  "/financeiro/recebimentos",
+);
+
+revalidatePath(
+  "/financeiro/fluxo-de-caixa",
+);
+
       return {
-        success: true,
+        success:
+          true,
       };
     }
 
@@ -173,7 +210,8 @@ export async function removeReceivable(
           installmentGroupId:
             receivable.installmentGroupId,
 
-          paidAmount: 0,
+          paidAmount:
+            0,
 
           status: {
             notIn: [
@@ -199,15 +237,22 @@ export async function removeReceivable(
       "/financeiro",
     );
 
+    revalidatePath(
+  "/financeiro/recebimentos",
+);
+
+revalidatePath(
+  "/financeiro/fluxo-de-caixa",
+);
+
     return {
-      success: true,
+      success:
+        true,
     };
   }
 
   /*
-   * ==========================
    * EXCLUSÃO DEFINITIVA
-   * ==========================
    */
   if (!useGroup) {
     if (
@@ -239,8 +284,17 @@ export async function removeReceivable(
       "/financeiro",
     );
 
+    revalidatePath(
+  "/financeiro/recebimentos",
+);
+
+revalidatePath(
+  "/financeiro/fluxo-de-caixa",
+);
+
     return {
-      success: true,
+      success:
+        true,
     };
   }
 
@@ -256,18 +310,23 @@ export async function removeReceivable(
         },
 
         select: {
-          id: true,
+          id:
+            true,
 
-          paidAmount: true,
+          paidAmount:
+            true,
 
-          status: true,
+          status:
+            true,
         },
       },
     );
 
   const groupHasPayment =
     groupReceivables.some(
-      (item) =>
+      (
+        item,
+      ) =>
         hasPayment({
           paidAmount:
             item.paidAmount,
@@ -277,7 +336,9 @@ export async function removeReceivable(
         }),
     );
 
-  if (groupHasPayment) {
+  if (
+    groupHasPayment
+  ) {
     throw new Error(
       "Não é possível excluir todo o parcelamento porque existem parcelas com pagamento registrado. Você pode excluir individualmente apenas as parcelas ainda sem pagamento.",
     );
@@ -303,7 +364,16 @@ export async function removeReceivable(
     "/financeiro",
   );
 
+  revalidatePath(
+  "/financeiro/recebimentos",
+);
+
+revalidatePath(
+  "/financeiro/fluxo-de-caixa",
+);
+
   return {
-    success: true,
+    success:
+      true,
   };
 }

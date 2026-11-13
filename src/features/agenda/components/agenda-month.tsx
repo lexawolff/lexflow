@@ -24,7 +24,9 @@ import {
   ChevronRight,
   Clock3,
   FileClock,
+  Filter,
   MapPin,
+  RotateCcw,
   Search,
   UsersRound,
 } from "lucide-react";
@@ -45,6 +47,27 @@ import {
 type Props = {
   data:
     AgendaData;
+
+  showCompleted:
+    boolean;
+
+  defaultStatusFilter:
+    string;
+
+  itemsPerDay:
+    number;
+
+  showAttention:
+    boolean;
+
+  canCreateAgenda:
+    boolean;
+
+  canEditAgenda:
+    boolean;
+
+  canDeleteAgenda:
+    boolean;
 };
 
 type TypeFilter =
@@ -56,7 +79,8 @@ type StatusFilter =
   | "PENDENTE"
   | "EM_ANDAMENTO"
   | "ATRASADA"
-  | "CONCLUIDA";
+  | "CONCLUIDA"
+  | "CANCELADA";
 
 const weekDays = [
   "Seg",
@@ -68,10 +92,11 @@ const weekDays = [
   "Dom",
 ];
 
-const typeLabels: Record<
-  TaskType,
-  string
-> = {
+const typeLabels:
+  Record<
+    TaskType,
+    string
+  > = {
   PRAZO_PROCESSUAL:
     "Prazo",
 
@@ -101,8 +126,11 @@ const typeLabels: Record<
 };
 
 function shiftMonth(
-  monthKey: string,
-  amount: number,
+  monthKey:
+    string,
+
+  amount:
+    number,
 ): string {
   const [
     year,
@@ -110,14 +138,17 @@ function shiftMonth(
   ] =
     monthKey
       .split("-")
-      .map(Number);
+      .map(
+        Number,
+      );
 
   const date =
     new Date(
       Date.UTC(
         year,
-        month - 1 +
-          amount,
+        month -
+        1 +
+        amount,
         1,
         12,
       ),
@@ -128,17 +159,22 @@ function shiftMonth(
 
     String(
       date.getUTCMonth() +
-        1,
+      1,
     ).padStart(
       2,
       "0",
     ),
-  ].join("-");
+  ].join(
+    "-",
+  );
 }
 
 function shiftDate(
-  dateKey: string,
-  amount: number,
+  dateKey:
+    string,
+
+  amount:
+    number,
 ): string {
   const [
     year,
@@ -147,14 +183,18 @@ function shiftDate(
   ] =
     dateKey
       .split("-")
-      .map(Number);
+      .map(
+        Number,
+      );
 
   const date =
     new Date(
       Date.UTC(
         year,
-        month - 1,
-        day + amount,
+        month -
+        1,
+        day +
+        amount,
         12,
       ),
     );
@@ -164,7 +204,7 @@ function shiftDate(
 
     String(
       date.getUTCMonth() +
-        1,
+      1,
     ).padStart(
       2,
       "0",
@@ -176,11 +216,14 @@ function shiftDate(
       2,
       "0",
     ),
-  ].join("-");
+  ].join(
+    "-",
+  );
 }
 
 function getMonthGridDates(
-  monthKey: string,
+  monthKey:
+    string,
 ): string[] {
   const [
     year,
@@ -188,21 +231,26 @@ function getMonthGridDates(
   ] =
     monthKey
       .split("-")
-      .map(Number);
+      .map(
+        Number,
+      );
 
   const firstDate =
     new Date(
       Date.UTC(
         year,
-        month - 1,
+        month -
+        1,
         1,
         12,
       ),
     );
 
   const mondayOffset =
-    (firstDate.getUTCDay() +
-      6) %
+    (
+      firstDate.getUTCDay() +
+      6
+    ) %
     7;
 
   const firstDateKey =
@@ -221,7 +269,8 @@ function getMonthGridDates(
 
   return Array.from(
     {
-      length: 42,
+      length:
+        42,
     },
 
     (
@@ -236,7 +285,8 @@ function getMonthGridDates(
 }
 
 function formatMonth(
-  monthKey: string,
+  monthKey:
+    string,
 ): string {
   const [
     year,
@@ -244,13 +294,16 @@ function formatMonth(
   ] =
     monthKey
       .split("-")
-      .map(Number);
+      .map(
+        Number,
+      );
 
   const date =
     new Date(
       Date.UTC(
         year,
-        month - 1,
+        month -
+        1,
         1,
         12,
       ),
@@ -274,18 +327,23 @@ function formatMonth(
     );
 
   return (
-    label
-      .charAt(0)
-      .toUpperCase() +
-    label.slice(1)
+    label.charAt(
+      0,
+    ).toUpperCase() +
+    label.slice(
+      1,
+    )
   );
 }
 
 function getSaoPauloDateKey(
-  value: string,
+  value:
+    string,
 ): string {
   const date =
-    new Date(value);
+    new Date(
+      value,
+    );
 
   const formatter =
     new Intl.DateTimeFormat(
@@ -312,21 +370,27 @@ function getSaoPauloDateKey(
 
   const year =
     parts.find(
-      (part) =>
+      (
+        part,
+      ) =>
         part.type ===
         "year",
     )?.value;
 
   const month =
     parts.find(
-      (part) =>
+      (
+        part,
+      ) =>
         part.type ===
         "month",
     )?.value;
 
   const day =
     parts.find(
-      (part) =>
+      (
+        part,
+      ) =>
         part.type ===
         "day",
     )?.value;
@@ -340,7 +404,7 @@ function getTaskDateKey(
 ): string {
   return getSaoPauloDateKey(
     task.startsAt ??
-      task.dueDate,
+    task.dueDate,
   );
 }
 
@@ -357,7 +421,9 @@ function getTaskTime(
   task:
     AgendaTask,
 ): string | null {
-  if (!task.startsAt) {
+  if (
+    !task.startsAt
+  ) {
     return null;
   }
 
@@ -392,9 +458,9 @@ function getEffectiveStatus(
 ): TaskStatus {
   if (
     task.status ===
-      "CONCLUIDA" ||
+    "CONCLUIDA" ||
     task.status ===
-      "CANCELADA"
+    "CANCELADA"
   ) {
     return task.status;
   }
@@ -402,7 +468,8 @@ function getEffectiveStatus(
   if (
     getDueDateKey(
       task,
-    ) < todayKey
+    ) <
+    todayKey
   ) {
     return "ATRASADA";
   }
@@ -421,21 +488,30 @@ function matchesStatus(
     string,
 ): boolean {
   if (
-    filter === "TODOS"
+    filter ===
+    "TODOS"
   ) {
-    return true;
+    return (
+      getEffectiveStatus(
+        task,
+        todayKey,
+      ) !==
+      "CANCELADA"
+    );
   }
 
   return (
     getEffectiveStatus(
       task,
       todayKey,
-    ) === filter
+    ) ===
+    filter
   );
 }
 
 function getDayNumber(
-  dateKey: string,
+  dateKey:
+    string,
 ): number {
   return Number(
     dateKey.slice(
@@ -446,7 +522,8 @@ function getDayNumber(
 }
 
 function getLongDateLabel(
-  dateKey: string,
+  dateKey:
+    string,
 ): string {
   const [
     year,
@@ -455,43 +532,65 @@ function getLongDateLabel(
   ] =
     dateKey
       .split("-")
-      .map(Number);
+      .map(
+        Number,
+      );
 
-  return new Intl.DateTimeFormat(
-    "pt-BR",
-    {
-      weekday:
-        "long",
+  const label =
+    new Intl.DateTimeFormat(
+      "pt-BR",
+      {
+        weekday:
+          "long",
 
-      day:
-        "2-digit",
+        day:
+          "2-digit",
 
-      month:
-        "long",
+        month:
+          "long",
 
-      timeZone:
-        "UTC",
-    },
-  ).format(
-    new Date(
-      Date.UTC(
-        year,
-        month - 1,
-        day,
-        12,
+        timeZone:
+          "UTC",
+      },
+    ).format(
+      new Date(
+        Date.UTC(
+          year,
+          month -
+          1,
+          day,
+          12,
+        ),
       ),
-    ),
+    );
+
+  return (
+    label.charAt(
+      0,
+    ).toUpperCase() +
+    label.slice(
+      1,
+    )
   );
 }
 
 export function AgendaMonth({
   data,
+  showCompleted,
+  defaultStatusFilter,
+  itemsPerDay,
+  showAttention,
+  canCreateAgenda,
+  canEditAgenda,
+  canDeleteAgenda,
 }: Props) {
   const [
     search,
     setSearch,
   ] =
-    useState("");
+    useState(
+      "",
+    );
 
   const [
     typeFilter,
@@ -506,7 +605,7 @@ export function AgendaMonth({
     setStatusFilter,
   ] =
     useState<StatusFilter>(
-      "TODOS",
+      defaultStatusFilter as StatusFilter,
     );
 
   const [
@@ -521,7 +620,9 @@ export function AgendaMonth({
     taskDialogOpen,
     setTaskDialogOpen,
   ] =
-    useState(false);
+    useState(
+      false,
+    );
 
   function openTask(
     task:
@@ -533,6 +634,20 @@ export function AgendaMonth({
 
     setTaskDialogOpen(
       true,
+    );
+  }
+
+  function clearFilters() {
+    setSearch(
+      "",
+    );
+
+    setTypeFilter(
+      "TODOS",
+    );
+
+    setStatusFilter(
+      "TODOS",
     );
   }
 
@@ -558,12 +673,22 @@ export function AgendaMonth({
     useMemo(
       () =>
         data.tasks.filter(
-          (task) => {
+          (
+            task,
+          ) => {
+            if (
+              !showCompleted &&
+              task.status ===
+                "CONCLUIDA"
+            ) {
+              return false;
+            }
+
             if (
               typeFilter !==
-                "TODOS" &&
+              "TODOS" &&
               task.type !==
-                typeFilter
+              typeFilter
             ) {
               return false;
             }
@@ -586,23 +711,20 @@ export function AgendaMonth({
 
             return [
               task.title,
-
               task.description ??
-                "",
-
+              "",
               task.clientName ??
-                "",
-
+              "",
               task.caseTitle ??
-                "",
-
+              "",
               task.caseNumber ??
-                "",
-
+              "",
               task.location ??
-                "",
+              "",
             ]
-              .join(" ")
+              .join(
+                " ",
+              )
               .toLocaleLowerCase(
                 "pt-BR",
               )
@@ -615,55 +737,63 @@ export function AgendaMonth({
         data.tasks,
         data.todayKey,
         normalizedSearch,
+        showCompleted,
         statusFilter,
         typeFilter,
       ],
     );
 
   const tasksByDate =
-    useMemo(() => {
-      const map =
-        new Map<
-          string,
-          AgendaTask[]
-        >();
+    useMemo(
+      () => {
+        const map =
+          new Map<
+            string,
+            AgendaTask[]
+          >();
 
-      for (
-        const task of
-        filteredTasks
-      ) {
-        const dateKey =
-          getTaskDateKey(
-            task,
-          );
-
-        const existing =
-          map.get(
-            dateKey,
-          );
-
-        if (existing) {
-          existing.push(
-            task,
-          );
-        } else {
-          map.set(
-            dateKey,
-            [
+        for (
+          const task of
+          filteredTasks
+        ) {
+          const dateKey =
+            getTaskDateKey(
               task,
-            ],
-          );
-        }
-      }
+            );
 
-      return map;
-    }, [
-      filteredTasks,
-    ]);
+          const existing =
+            map.get(
+              dateKey,
+            );
+
+          if (
+            existing
+          ) {
+            existing.push(
+              task,
+            );
+          } else {
+            map.set(
+              dateKey,
+              [
+                task,
+              ],
+            );
+          }
+        }
+
+        return map;
+      },
+      [
+        filteredTasks,
+      ],
+    );
 
   const selectedMonthTasks =
     data.tasks.filter(
-      (task) =>
+      (
+        task,
+      ) =>
         getTaskDateKey(
           task,
         ).startsWith(
@@ -671,9 +801,20 @@ export function AgendaMonth({
         ),
     );
 
-  const pendingCount =
+  const selectedMonthActiveTasks =
     selectedMonthTasks.filter(
-      (task) => {
+      (
+        task,
+      ) =>
+        task.status !==
+        "CANCELADA",
+    );
+
+  const pendingCount =
+    selectedMonthActiveTasks.filter(
+      (
+        task,
+      ) => {
         const status =
           getEffectiveStatus(
             task,
@@ -682,36 +823,42 @@ export function AgendaMonth({
 
         return (
           status ===
-            "PENDENTE" ||
+          "PENDENTE" ||
           status ===
-            "EM_ANDAMENTO" ||
+          "EM_ANDAMENTO" ||
           status ===
-            "ATRASADA"
+          "ATRASADA"
         );
       },
     ).length;
 
   const deadlinesCount =
-    selectedMonthTasks.filter(
-      (task) =>
+    selectedMonthActiveTasks.filter(
+      (
+        task,
+      ) =>
         task.type ===
         "PRAZO_PROCESSUAL",
     ).length;
 
   const appointmentsCount =
-    selectedMonthTasks.filter(
-      (task) =>
+    selectedMonthActiveTasks.filter(
+      (
+        task,
+      ) =>
         task.type ===
-          "AUDIENCIA" ||
+        "AUDIENCIA" ||
         task.type ===
-          "PERICIA" ||
+        "PERICIA" ||
         task.type ===
-          "ATENDIMENTO",
+        "ATENDIMENTO",
     ).length;
 
   const completedCount =
-    selectedMonthTasks.filter(
-      (task) =>
+    selectedMonthActiveTasks.filter(
+      (
+        task,
+      ) =>
         task.status ===
         "CONCLUIDA",
     ).length;
@@ -719,11 +866,20 @@ export function AgendaMonth({
   const todayTasks =
     data.tasks
       .filter(
-        (task) =>
+        (
+          task,
+        ) =>
+          task.status !==
+            "CANCELADA" &&
+          (
+            showCompleted ||
+            task.status !==
+              "CONCLUIDA"
+          ) &&
           getTaskDateKey(
             task,
           ) ===
-          data.todayKey,
+            data.todayKey,
       )
       .sort(
         sortTasks,
@@ -738,38 +894,91 @@ export function AgendaMonth({
       7,
     );
 
+  const hasFilters =
+    Boolean(
+      search.trim() ||
+      typeFilter !==
+      "TODOS" ||
+      statusFilter !==
+      "TODOS",
+    );
+
   return (
     <>
-      <div className="space-y-8">
-        <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
-              <CalendarDays className="size-5" />
+      <div className="space-y-6">
+        {/* ==========================
+            CABEÇALHO
+        ========================== */}
+
+        <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <div className="flex flex-col gap-5 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                <CalendarDays className="size-6" />
+              </div>
+
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Organização do escritório
+                </p>
+
+                <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+                  Agenda
+                </h1>
+
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                  Centralize prazos, audiências,
+                  perícias, atendimentos e demais
+                  tarefas do escritório.
+                </p>
+              </div>
             </div>
 
-            <div>
-              <h2 className="text-xl font-semibold">
-                Agenda
-              </h2>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Prazos, audiências,
-                perícias, atendimentos
-                e tarefas do escritório
-                em um só lugar.
-              </p>
-            </div>
+            {canCreateAgenda ? (
+              <div className="shrink-0">
+                <CreateAgendaTaskDialog
+                  clients={
+                    data.clients
+                  }
+                  todayKey={
+                    data.todayKey
+                  }
+                />
+              </div>
+            ) : null}
           </div>
 
-          <CreateAgendaTaskDialog
-            clients={
-              data.clients
-            }
-            todayKey={
-              data.todayKey
-            }
-          />
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t bg-muted/10 px-5 py-3 text-xs text-muted-foreground sm:px-6">
+            <span>
+              Mês em exibição:{" "}
+              <strong className="font-medium text-foreground">
+                {
+                  formatMonth(
+                    data.monthKey,
+                  )
+                }
+              </strong>
+            </span>
+
+            <span className="hidden sm:inline">
+              •
+            </span>
+
+            <span>
+              {
+                selectedMonthActiveTasks.length
+              }{" "}
+              {selectedMonthActiveTasks.length ===
+                1
+                ? "item cadastrado"
+                : "itens cadastrados"}
+            </span>
+          </div>
         </section>
+
+        {/* ==========================
+            INDICADORES
+        ========================== */}
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
@@ -793,7 +1002,7 @@ export function AgendaMonth({
             icon={
               <FileClock className="size-5" />
             }
-            tone="red"
+            tone="rose"
           />
 
           <SummaryCard
@@ -821,10 +1030,17 @@ export function AgendaMonth({
           />
         </section>
 
-        {(overdueTasks.length >
-          0 ||
+        {/* ==========================
+            ATENÇÃO
+        ========================== */}
+
+        {showAttention &&
+        (
+          overdueTasks.length >
+            0 ||
           todayTasks.length >
-            0) ? (
+            0
+        ) ? (
           <section className="grid gap-4 xl:grid-cols-2">
             <AttentionCard
               title="Atrasadas"
@@ -868,24 +1084,33 @@ export function AgendaMonth({
           </section>
         ) : null}
 
-        <section className="overflow-hidden rounded-2xl border bg-card">
-          <div className="flex flex-col gap-4 border-b bg-muted/20 p-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-2">
+        {/* ==========================
+            CALENDÁRIO
+        ========================== */}
+
+        <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          {/* NAVEGAÇÃO DO MÊS */}
+
+          <div className="flex flex-col gap-4 border-b bg-muted/20 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
               <Link
                 href={`/agenda?month=${shiftMonth(
                   data.monthKey,
                   -1,
                 )}`}
-                className="flex size-9 items-center justify-center rounded-lg border bg-background transition hover:bg-muted"
+                aria-label="Mês anterior"
+                className="flex size-9 items-center justify-center rounded-xl border bg-background transition hover:bg-muted"
               >
                 <ChevronLeft className="size-4" />
               </Link>
 
-              <div className="min-w-44 text-center">
+              <div className="min-w-44 px-2 text-center">
                 <p className="font-semibold">
-                  {formatMonth(
-                    data.monthKey,
-                  )}
+                  {
+                    formatMonth(
+                      data.monthKey,
+                    )
+                  }
                 </p>
               </div>
 
@@ -894,26 +1119,29 @@ export function AgendaMonth({
                   data.monthKey,
                   1,
                 )}`}
-                className="flex size-9 items-center justify-center rounded-lg border bg-background transition hover:bg-muted"
+                aria-label="Próximo mês"
+                className="flex size-9 items-center justify-center rounded-xl border bg-background transition hover:bg-muted"
               >
                 <ChevronRight className="size-4" />
               </Link>
 
               {data.monthKey !==
-              currentMonth ? (
+                currentMonth ? (
                 <Link
                   href="/agenda"
-                  className="ml-1 rounded-lg border bg-background px-3 py-2 text-sm font-medium transition hover:bg-muted"
+                  className="ml-1 inline-flex h-9 items-center rounded-xl border bg-background px-3 text-sm font-medium transition hover:bg-muted"
                 >
                   Hoje
                 </Link>
               ) : null}
             </div>
 
-            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {/* LEGENDA */}
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
               <Legend
                 label="Prazo"
-                className="bg-red-500"
+                className="bg-rose-500"
               />
 
               <Legend
@@ -932,125 +1160,198 @@ export function AgendaMonth({
               />
 
               <Legend
+                label="RPV"
+                className="bg-violet-500"
+              />
+
+              <Legend
                 label="Outras"
                 className="bg-slate-400"
               />
             </div>
           </div>
 
-          <div className="grid gap-3 border-b p-4 lg:grid-cols-[1fr_220px_220px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          {/* ==========================
+              FILTROS
+          ========================== */}
 
-              <input
-                type="search"
+          <div className="border-b px-4 py-4 sm:px-5">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <Filter className="size-4" />
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium">
+                    Filtrar agenda
+                  </p>
+
+                  <p className="text-xs text-muted-foreground">
+                    Refine os itens exibidos no calendário.
+                  </p>
+                </div>
+              </div>
+
+              {hasFilters ? (
+                <button
+                  type="button"
+                  onClick={
+                    clearFilters
+                  }
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:bg-muted"
+                >
+                  <RotateCcw className="size-3.5" />
+
+                  Limpar filtros
+                </button>
+              ) : null}
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
+                <input
+                  type="search"
+                  value={
+                    search
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setSearch(
+                      event.target.value,
+                    )
+                  }
+                  placeholder="Buscar tarefa, cliente, caso ou local..."
+                  className="h-10 w-full rounded-xl border bg-background pl-10 pr-3 text-sm outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
+
+              <select
                 value={
-                  search
+                  typeFilter
                 }
                 onChange={(
                   event,
                 ) =>
-                  setSearch(
+                  setTypeFilter(
                     event.target
-                      .value,
+                      .value as TypeFilter,
                   )
                 }
-                placeholder="Buscar tarefa, cliente, processo ou local..."
-                className="h-10 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-              />
+                className="h-10 rounded-xl border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              >
+                <option value="TODOS">
+                  Todos os tipos
+                </option>
+
+                {Object.entries(
+                  typeLabels,
+                ).map(
+                  ([
+                    value,
+                    label,
+                  ]) => (
+                    <option
+                      key={
+                        value
+                      }
+                      value={
+                        value
+                      }
+                    >
+                      {
+                        label
+                      }
+                    </option>
+                  ),
+                )}
+              </select>
+
+              <select
+                value={
+                  statusFilter
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setStatusFilter(
+                    event.target
+                      .value as StatusFilter,
+                  )
+                }
+                className="h-10 rounded-xl border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              >
+                <option value="TODOS">
+                  Todas as situações
+                </option>
+
+                <option value="PENDENTE">
+                  Pendentes
+                </option>
+
+                <option value="EM_ANDAMENTO">
+                  Em andamento
+                </option>
+
+                <option value="ATRASADA">
+                  Atrasadas
+                </option>
+
+                <option value="CANCELADA">
+                  Canceladas
+                </option>
+              </select>
             </div>
 
-            <select
-              value={
-                typeFilter
-              }
-              onChange={(
-                event,
-              ) =>
-                setTypeFilter(
-                  event.target
-                    .value as TypeFilter,
-                )
-              }
-              className="h-10 rounded-lg border bg-background px-3 text-sm outline-none"
-            >
-              <option value="TODOS">
-                Todos os tipos
-              </option>
+            {hasFilters ? (
+              <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                <Filter className="size-3.5" />
 
-              {Object.entries(
-                typeLabels,
-              ).map(
-                ([
-                  value,
-                  label,
-                ]) => (
-                  <option
-                    key={
-                      value
-                    }
-                    value={
-                      value
-                    }
-                  >
-                    {label}
-                  </option>
-                ),
-              )}
-            </select>
-
-            <select
-              value={
-                statusFilter
-              }
-              onChange={(
-                event,
-              ) =>
-                setStatusFilter(
-                  event.target
-                    .value as StatusFilter,
-                )
-              }
-              className="h-10 rounded-lg border bg-background px-3 text-sm outline-none"
-            >
-              <option value="TODOS">
-                Todas as situações
-              </option>
-
-              <option value="PENDENTE">
-                Pendentes
-              </option>
-
-              <option value="EM_ANDAMENTO">
-                Em andamento
-              </option>
-
-              <option value="ATRASADA">
-                Atrasadas
-              </option>
-
-              <option value="CONCLUIDA">
-                Concluídas
-              </option>
-            </select>
+                <span>
+                  {
+                    filteredTasks.length
+                  }{" "}
+                  {filteredTasks.length ===
+                    1
+                    ? "item corresponde"
+                    : "itens correspondem"}{" "}
+                  aos filtros atuais.
+                </span>
+              </div>
+            ) : null}
           </div>
+
+          {/* ==========================
+              GRADE
+          ========================== */}
 
           <div className="overflow-x-auto">
             <div className="min-w-[980px]">
-              <div className="grid grid-cols-7 border-b">
+              {/* DIAS DA SEMANA */}
+
+              <div className="grid grid-cols-7 border-b bg-muted/10">
                 {weekDays.map(
-                  (day) => (
+                  (
+                    day,
+                  ) => (
                     <div
                       key={
                         day
                       }
-                      className="border-r px-3 py-2 text-center text-xs font-semibold text-muted-foreground last:border-r-0"
+                      className="border-r px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground last:border-r-0"
                     >
-                      {day}
+                      {
+                        day
+                      }
                     </div>
                   ),
                 )}
               </div>
+
+              {/* DIAS */}
 
               <div className="grid grid-cols-7">
                 {gridDates.map(
@@ -1100,10 +1401,15 @@ export function AgendaMonth({
                           isToday
                         }
                         isLastColumn={
-                          (index +
-                            1) %
-                            7 ===
+                          (
+                            index +
+                            1
+                          ) %
+                          7 ===
                           0
+                        }
+                        itemsPerDay={
+                          itemsPerDay
                         }
                         onTaskClick={
                           openTask
@@ -1131,6 +1437,12 @@ export function AgendaMonth({
         onOpenChange={
           setTaskDialogOpen
         }
+        canEditAgenda={
+          canEditAgenda
+        }
+        canDeleteAgenda={
+          canDeleteAgenda
+        }
       />
     </>
   );
@@ -1143,57 +1455,65 @@ function CalendarDay({
   isSelectedMonth,
   isToday,
   isLastColumn,
+  itemsPerDay,
   onTaskClick,
 }: {
-  dayNumber: number;
+  dayNumber:
+  number;
 
   tasks:
-    AgendaTask[];
+  AgendaTask[];
 
-  todayKey: string;
+  todayKey:
+  string;
 
   isSelectedMonth:
-    boolean;
+  boolean;
 
-  isToday: boolean;
+  isToday:
+  boolean;
 
   isLastColumn:
     boolean;
 
+  itemsPerDay:
+    number;
+
   onTaskClick:
-    (
-      task:
-        AgendaTask,
-    ) => void;
+  (
+    task:
+      AgendaTask,
+  ) => void;
 }) {
   return (
     <div
-      className={`min-h-40 border-b p-2 ${
-        isLastColumn
+      className={`min-h-40 border-b p-2.5 ${isLastColumn
           ? ""
           : "border-r"
-      } ${
-        isSelectedMonth
-          ? "bg-card"
+        } ${isSelectedMonth
+          ? isToday
+            ? "bg-blue-50/20 dark:bg-blue-950/10"
+            : "bg-card"
           : "bg-muted/20"
-      }`}
+        }`}
     >
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2.5 flex items-center justify-between">
         <span
-          className={`flex size-7 items-center justify-center rounded-full text-xs font-semibold ${
-            isToday
-              ? "bg-primary text-primary-foreground"
+          className={`flex size-7 items-center justify-center rounded-full text-xs font-semibold ${isToday
+              ? "bg-primary text-primary-foreground shadow-sm"
               : isSelectedMonth
                 ? "text-foreground"
-                : "text-muted-foreground"
-          }`}
+                : "text-muted-foreground/60"
+            }`}
         >
-          {dayNumber}
+          {
+            dayNumber
+          }
         </span>
 
         {tasks.length >
-        0 ? (
-          <span className="text-[10px] text-muted-foreground">
+          0 ? (
+          <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
             {
               tasks.length
             }
@@ -1205,10 +1525,12 @@ function CalendarDay({
         {tasks
           .slice(
             0,
-            4,
+            itemsPerDay,
           )
           .map(
-            (task) => (
+            (
+              task,
+            ) => (
               <CalendarTask
                 key={
                   task.id
@@ -1229,11 +1551,13 @@ function CalendarDay({
           )}
 
         {tasks.length >
-        4 ? (
-          <p className="px-1 text-[11px] font-medium text-muted-foreground">
+          itemsPerDay ? (
+          <p className="px-1 pt-0.5 text-[11px] font-medium text-muted-foreground">
             +{" "}
-            {tasks.length -
-              4}{" "}
+            {
+              tasks.length -
+              itemsPerDay
+            }{" "}
             compromissos
           </p>
         ) : null}
@@ -1248,13 +1572,13 @@ function CalendarTask({
   onClick,
 }: {
   task:
-    AgendaTask;
+  AgendaTask;
 
   todayKey:
-    string;
+  string;
 
   onClick:
-    () => void;
+  () => void;
 }) {
   const styles =
     getTaskStyle(
@@ -1283,16 +1607,20 @@ function CalendarTask({
         task.clientName,
         task.location,
       ]
-        .filter(Boolean)
-        .join(" • ")}
-      className={`relative block w-full overflow-hidden rounded-md border px-2 py-1.5 text-left text-[11px] transition hover:brightness-95 dark:hover:brightness-110 ${
-        styles.container
-      } ${
-        status ===
-        "CONCLUIDA"
+        .filter(
+          Boolean,
+        )
+        .join(
+          " • ",
+        )}
+      className={`relative block w-full overflow-hidden rounded-lg border px-2 py-1.5 text-left text-[11px] shadow-sm transition hover:-translate-y-px hover:shadow ${styles.container
+        } ${status ===
+          "CONCLUIDA" ||
+          status ===
+          "CANCELADA"
           ? "opacity-60"
           : ""
-      }`}
+        }`}
     >
       <div
         className={`absolute inset-y-0 left-0 w-0.5 ${styles.accent}`}
@@ -1302,17 +1630,20 @@ function CalendarTask({
         <div className="flex items-center gap-1">
           {time ? (
             <span className="shrink-0 font-semibold">
-              {time}
+              {
+                time
+              }
             </span>
           ) : null}
 
           <p
-            className={`truncate font-semibold ${
-              status ===
-              "CONCLUIDA"
+            className={`truncate font-semibold ${status ===
+                "CONCLUIDA" ||
+                status ===
+                "CANCELADA"
                 ? "line-through"
                 : ""
-            }`}
+              }`}
           >
             {
               task.title
@@ -1329,9 +1660,16 @@ function CalendarTask({
         ) : null}
 
         {status ===
-        "ATRASADA" ? (
-          <p className="mt-0.5 font-semibold text-red-700 dark:text-red-300">
+          "ATRASADA" ? (
+          <p className="mt-0.5 font-semibold text-rose-700 dark:text-rose-300">
             Atrasada
+          </p>
+        ) : null}
+
+        {status ===
+          "CANCELADA" ? (
+          <p className="mt-0.5 font-semibold text-muted-foreground">
+            Cancelada
           </p>
         ) : null}
       </div>
@@ -1348,27 +1686,30 @@ function AttentionCard({
   tone,
   onTaskClick,
 }: {
-  title: string;
+  title:
+  string;
 
-  description: string;
+  description:
+  string;
 
   icon:
-    ReactNode;
+  ReactNode;
 
   tasks:
-    AgendaTask[];
+  AgendaTask[];
 
-  todayKey: string;
+  todayKey:
+  string;
 
   tone:
-    | "danger"
-    | "today";
+  | "danger"
+  | "today";
 
   onTaskClick:
-    (
-      task:
-        AgendaTask,
-    ) => void;
+  (
+    task:
+      AgendaTask,
+  ) => void;
 }) {
   const danger =
     tone ===
@@ -1376,69 +1717,111 @@ function AttentionCard({
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border bg-card ${
-        danger
-          ? "border-red-200 dark:border-red-900"
+      className={`overflow-hidden rounded-2xl border bg-card shadow-sm ${danger
+          ? "border-rose-200 dark:border-rose-900"
           : "border-blue-200 dark:border-blue-900"
-      }`}
+        }`}
     >
       <div
-        className={`border-b p-4 ${
-          danger
-            ? "bg-red-50/50 dark:bg-red-950/15"
-            : "bg-blue-50/50 dark:bg-blue-950/15"
-        }`}
+        className={`border-b px-5 py-4 ${danger
+            ? "border-rose-100 bg-rose-50/40 dark:border-rose-900 dark:bg-rose-950/10"
+            : "border-blue-100 bg-blue-50/40 dark:border-blue-900 dark:bg-blue-950/10"
+          }`}
       >
         <div className="flex items-center gap-3">
           <div
-            className={`flex size-10 items-center justify-center rounded-xl ${
-              danger
-                ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
-                : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-            }`}
+            className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${danger
+                ? "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
+                : "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
+              }`}
           >
-            {icon}
+            {
+              icon
+            }
           </div>
 
-          <div>
-            <h3 className="font-semibold">
-              {title}
-            </h3>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-semibold">
+                {
+                  title
+                }
+              </h3>
 
-            <p className="text-xs text-muted-foreground">
-              {description}
+              <span
+                className={`inline-flex min-w-6 items-center justify-center rounded-full border bg-background px-2 py-0.5 text-xs font-medium ${danger
+                    ? "border-rose-200 text-rose-700 dark:border-rose-900 dark:text-rose-300"
+                    : "border-blue-200 text-blue-700 dark:border-blue-900 dark:text-blue-300"
+                  }`}
+              >
+                {
+                  tasks.length
+                }
+              </span>
+            </div>
+
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {
+                description
+              }
             </p>
           </div>
         </div>
       </div>
 
-      <div className="divide-y">
-        {tasks
-          .slice(
-            0,
-            5,
-          )
-          .map(
-            (task) => (
-              <AttentionTask
-                key={
-                  task.id
-                }
-                task={
-                  task
-                }
-                todayKey={
-                  todayKey
-                }
-                onClick={() =>
-                  onTaskClick(
-                    task,
-                  )
-                }
-              />
-            ),
-          )}
-      </div>
+      {tasks.length ===
+        0 ? (
+        <div className="px-5 py-6 text-sm text-muted-foreground">
+          Nenhum item.
+        </div>
+      ) : (
+        <div className="divide-y">
+          {tasks
+            .slice(
+              0,
+              5,
+            )
+            .map(
+              (
+                task,
+              ) => (
+                <AttentionTask
+                  key={
+                    task.id
+                  }
+                  task={
+                    task
+                  }
+                  todayKey={
+                    todayKey
+                  }
+                  onClick={() =>
+                    onTaskClick(
+                      task,
+                    )
+                  }
+                />
+              ),
+            )}
+        </div>
+      )}
+
+      {tasks.length >
+        5 ? (
+        <div className="border-t bg-muted/10 px-5 py-3 text-xs text-muted-foreground">
+          Mais{" "}
+          {
+            tasks.length -
+            5
+          }{" "}
+          {tasks.length -
+            5 ===
+            1
+            ? "item"
+            : "itens"}{" "}
+          nesta categoria.
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1449,13 +1832,13 @@ function AttentionTask({
   onClick,
 }: {
   task:
-    AgendaTask;
+  AgendaTask;
 
   todayKey:
-    string;
+  string;
 
   onClick:
-    () => void;
+  () => void;
 }) {
   const time =
     getTaskTime(
@@ -1474,28 +1857,30 @@ function AttentionTask({
       onClick={
         onClick
       }
-      className="flex w-full items-start justify-between gap-4 p-4 text-left transition hover:bg-muted/30"
+      className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition hover:bg-muted/30"
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="font-medium">
+          <p className="break-words font-medium">
             {
               task.title
             }
           </p>
 
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
             {
               typeLabels[
-                task.type
+              task.type
               ]
             }
           </span>
         </div>
 
-        {(task.clientName ||
-          task.caseTitle) ? (
-          <p className="mt-1 text-xs text-muted-foreground">
+        {(
+          task.clientName ||
+          task.caseTitle
+        ) ? (
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
             {
               task.clientName
             }
@@ -1507,7 +1892,7 @@ function AttentionTask({
         ) : null}
 
         {task.location ? (
-          <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
             <MapPin className="size-3" />
 
             {
@@ -1520,19 +1905,27 @@ function AttentionTask({
       <div className="shrink-0 text-right">
         {time ? (
           <p className="font-semibold">
-            {time}
+            {
+              time
+            }
           </p>
         ) : null}
 
         {status ===
-        "ATRASADA" ? (
-          <p className="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">
-            {getDueDateKey(
-              task,
-            )
-              .split("-")
-              .reverse()
-              .join("/")}
+          "ATRASADA" ? (
+          <p className="mt-1 text-xs font-semibold text-rose-700 dark:text-rose-300">
+            {
+              getDueDateKey(
+                task,
+              )
+                .split(
+                  "-",
+                )
+                .reverse()
+                .join(
+                  "/",
+                )
+            }
           </p>
         ) : null}
       </div>
@@ -1547,110 +1940,121 @@ function SummaryCard({
   icon,
   tone,
 }: {
-  title: string;
+  title:
+  string;
 
-  value: number;
+  value:
+  number;
 
-  description: string;
+  description:
+  string;
 
   icon:
-    ReactNode;
+  ReactNode;
 
   tone:
-    | "amber"
-    | "red"
-    | "blue"
-    | "emerald";
+  | "amber"
+  | "rose"
+  | "blue"
+  | "emerald";
 }) {
   const styles = {
     amber: {
       container:
-        "border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/15",
+        "border-amber-200 bg-amber-50/20 dark:border-amber-900 dark:bg-amber-950/10",
 
       accent:
-        "bg-amber-500",
+        "bg-amber-400 dark:bg-amber-700",
 
       text:
-        "text-amber-800 dark:text-amber-300",
+        "text-amber-900 dark:text-amber-200",
 
       icon:
-        "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+        "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
     },
 
-    red: {
+    rose: {
       container:
-        "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/15",
+        "border-rose-200 bg-rose-50/20 dark:border-rose-900 dark:bg-rose-950/10",
 
       accent:
-        "bg-red-500",
+        "bg-rose-500 dark:bg-rose-700",
 
       text:
-        "text-red-800 dark:text-red-300",
+        "text-rose-900 dark:text-rose-200",
 
       icon:
-        "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+        "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
     },
 
     blue: {
       container:
-        "border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/15",
+        "border-blue-200 bg-blue-50/20 dark:border-blue-900 dark:bg-blue-950/10",
 
       accent:
-        "bg-blue-500",
+        "bg-blue-400 dark:bg-blue-700",
 
       text:
-        "text-blue-800 dark:text-blue-300",
+        "text-blue-900 dark:text-blue-200",
 
       icon:
-        "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+        "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
     },
 
     emerald: {
       container:
-        "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/15",
+        "border-emerald-200 bg-emerald-50/20 dark:border-emerald-900 dark:bg-emerald-950/10",
 
       accent:
-        "bg-emerald-500",
+        "bg-emerald-400 dark:bg-emerald-700",
 
       text:
-        "text-emerald-800 dark:text-emerald-300",
+        "text-emerald-900 dark:text-emerald-200",
 
       icon:
-        "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+        "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
     },
-  }[tone];
+  }[
+    tone
+  ];
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border p-5 ${styles.container}`}
+      className={`relative overflow-hidden rounded-2xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${styles.container}`}
     >
       <div
         className={`absolute inset-x-0 top-0 h-1 ${styles.accent}`}
       />
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p
-            className={`text-sm font-semibold ${styles.text}`}
-          >
-            {title}
+          <p className="text-sm font-medium text-muted-foreground">
+            {
+              title
+            }
           </p>
 
           <p
-            className={`mt-3 text-3xl font-bold ${styles.text}`}
+            className={`mt-2 text-3xl font-bold tracking-tight ${styles.text}`}
           >
-            {value}
+            {
+              value
+            }
           </p>
 
-          <p className="mt-1 text-xs text-muted-foreground">
-            {description}
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            {
+              description
+            }
           </p>
         </div>
 
         <div
-          className={`flex size-10 items-center justify-center rounded-xl ${styles.icon}`}
+          className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${styles.icon}`}
         >
-          {icon}
+          {
+            icon
+          }
         </div>
       </div>
     </div>
@@ -1661,10 +2065,11 @@ function Legend({
   label,
   className,
 }: {
-  label: string;
+  label:
+  string;
 
   className:
-    string;
+  string;
 }) {
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -1672,7 +2077,9 @@ function Legend({
         className={`size-2 rounded-full ${className}`}
       />
 
-      {label}
+      {
+        label
+      }
     </span>
   );
 }
@@ -1720,14 +2127,16 @@ function getTaskStyle(
   type:
     TaskType,
 ) {
-  switch (type) {
+  switch (
+  type
+  ) {
     case "PRAZO_PROCESSUAL":
       return {
         container:
-          "border-red-200 bg-red-50/70 dark:border-red-900 dark:bg-red-950/20",
+          "border-rose-200 bg-rose-50/70 dark:border-rose-900 dark:bg-rose-950/20",
 
         accent:
-          "bg-red-500",
+          "bg-rose-500",
       };
 
     case "AUDIENCIA":
@@ -1787,10 +2196,10 @@ function getTaskStyle(
     case "RPV":
       return {
         container:
-          "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20",
+          "border-violet-200 bg-violet-50/70 dark:border-violet-900 dark:bg-violet-950/20",
 
         accent:
-          "bg-emerald-500",
+          "bg-violet-500",
       };
 
     default:

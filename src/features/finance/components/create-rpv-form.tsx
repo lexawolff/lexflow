@@ -1,9 +1,22 @@
 "use client";
 
+import type {
+  ElementType,
+  ReactNode,
+} from "react";
+
 import {
   useState,
   useTransition,
 } from "react";
+
+import {
+  CheckCircle2,
+  CircleDollarSign,
+  FileText,
+  Landmark,
+  Scale,
+} from "lucide-react";
 
 import {
   RpvStatus,
@@ -227,7 +240,9 @@ export function CreateRpvForm({
 
   const caseOptions =
     cases.map(
-      (clientCase) => ({
+      (
+        clientCase,
+      ) => ({
         label:
           clientCase.label,
 
@@ -238,7 +253,9 @@ export function CreateRpvForm({
 
   const submit =
     handleSubmit(
-      (values) => {
+      (
+        values,
+      ) => {
         setErrorMessage(
           null,
         );
@@ -340,7 +357,9 @@ export function CreateRpvForm({
               );
 
               onSuccess?.();
-            } catch (error) {
+            } catch (
+              error
+            ) {
               console.error(
                 error,
               );
@@ -362,154 +381,216 @@ export function CreateRpvForm({
       onSubmit={
         submit
       }
-      className="space-y-6"
+      className="space-y-5 px-6 pt-5"
     >
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="md:col-span-2">
+      <FormSection
+        icon={
+          Scale
+        }
+        title="Vínculo e identificação"
+        description="Vincule a requisição à caso e informe seus dados principais."
+        tone="violet"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <SelectField
+              control={
+                control
+              }
+              name="caseId"
+              label="Caso"
+              options={
+                caseOptions
+              }
+            />
+          </div>
+
           <SelectField
             control={
               control
             }
-            name="caseId"
-            label="Processo"
+            name="type"
+            label="Tipo"
             options={
-              caseOptions
+              typeOptions
             }
           />
-        </div>
 
-        <SelectField
-          control={
-            control
-          }
-          name="type"
-          label="Tipo"
-          options={
-            typeOptions
-          }
-        />
+          <SelectField
+            control={
+              control
+            }
+            name="status"
+            label="Situação"
+            options={
+              statusOptions
+            }
+          />
 
-        <SelectField
-          control={
-            control
-          }
-          name="status"
-          label="Situação"
-          options={
-            statusOptions
-          }
-        />
-
-        <TextField
-          control={
-            control
-          }
-          name="requisitionNumber"
-          label="Número da requisição"
-          placeholder="Número da RPV ou precatório"
-        />
-
-        <TextField
-          control={
-            control
-          }
-          name="court"
-          label="Tribunal"
-          placeholder="Ex.: TRF2, TJES"
-        />
-
-        <CurrencyField
-          control={
-            control
-          }
-          name="grossAmount"
-          label="Valor bruto"
-        />
-
-        <TextField
-          control={
-            control
-          }
-          name="contractualFeeRate"
-          label="Honorários contratuais (%)"
-          type="number"
-        />
-
-        <CurrencyField
-          control={
-            control
-          }
-          name="contractualFeeValue"
-          label="Honorários contratuais (valor)"
-        />
-
-        <CurrencyField
-          control={
-            control
-          }
-          name="sucumbencyFeeValue"
-          label="Honorários sucumbenciais"
-        />
-
-        <TextField
-          control={
-            control
-          }
-          name="expectedPaymentDate"
-          label="Previsão de pagamento"
-          type="date"
-        />
-
-        {status ===
-        RpvStatus.PAGA ? (
           <TextField
             control={
               control
             }
-            name="paidAt"
-            label="Data do pagamento"
+            name="requisitionNumber"
+            label="Número da requisição"
+            placeholder="Número da RPV ou precatório"
+          />
+
+          <TextField
+            control={
+              control
+            }
+            name="court"
+            label="Tribunal"
+            placeholder="Ex.: TRF2, TJES"
+          />
+        </div>
+      </FormSection>
+
+      <FormSection
+        icon={
+          CircleDollarSign
+        }
+        title="Crédito e honorários"
+        description="Informe o crédito bruto e os honorários relacionados à requisição."
+        tone="violet"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <CurrencyField
+            control={
+              control
+            }
+            name="grossAmount"
+            label="Valor bruto"
+          />
+
+          <TextField
+            control={
+              control
+            }
+            name="contractualFeeRate"
+            label="Honorários contratuais (%)"
+            type="number"
+          />
+
+          <CurrencyField
+            control={
+              control
+            }
+            name="contractualFeeValue"
+            label="Honorários contratuais (valor)"
+          />
+
+          <CurrencyField
+            control={
+              control
+            }
+            name="sucumbencyFeeValue"
+            label="Honorários sucumbenciais"
+          />
+        </div>
+
+        <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/60 px-4 py-3 text-sm leading-6 text-violet-900 dark:border-violet-900 dark:bg-violet-950/20 dark:text-violet-200">
+          Se você informar apenas o
+          percentual dos honorários
+          contratuais, o LexFlow calculará
+          o valor automaticamente. Se
+          informar também um valor
+          específico, esse valor será
+          utilizado.
+        </div>
+      </FormSection>
+
+      <FormSection
+        icon={
+          Landmark
+        }
+        title="Previsão e pagamento"
+        description="Acompanhe quando e por qual instituição o crédito será disponibilizado."
+        tone="blue"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextField
+            control={
+              control
+            }
+            name="expectedPaymentDate"
+            label="Previsão de pagamento"
             type="date"
           />
-        ) : null}
 
-        <TextField
+          <TextField
+            control={
+              control
+            }
+            name="bank"
+            label="Banco"
+            placeholder="Banco responsável pelo pagamento"
+          />
+        </div>
+
+        {status ===
+        RpvStatus.PAGA ? (
+          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900 dark:bg-emerald-950/15">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">
+                <CheckCircle2 className="size-4" />
+              </div>
+
+              <div>
+                <p className="font-semibold text-emerald-900 dark:text-emerald-200">
+                  Pagamento realizado
+                </p>
+
+                <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                  Informe a data em que o
+                  crédito foi efetivamente
+                  pago.
+                </p>
+              </div>
+            </div>
+
+            <TextField
+              control={
+                control
+              }
+              name="paidAt"
+              label="Data do pagamento"
+              type="date"
+            />
+          </div>
+        ) : null}
+      </FormSection>
+
+      <FormSection
+        icon={
+          FileText
+        }
+        title="Observações"
+        description="Registre informações internas relevantes sobre a requisição."
+        tone="neutral"
+      >
+        <TextareaField
           control={
             control
           }
-          name="bank"
-          label="Banco"
-          placeholder="Banco responsável pelo pagamento"
+          name="notes"
+          label="Observações"
         />
-      </div>
-
-      <TextareaField
-        control={
-          control
-        }
-        name="notes"
-        label="Observações"
-      />
-
-      <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-200">
-        Se você informar apenas o
-        percentual dos honorários
-        contratuais, o LexFlow
-        calculará o valor
-        automaticamente. Se informar
-        também um valor específico,
-        esse valor será utilizado.
-      </div>
+      </FormSection>
 
       {errorMessage ? (
         <div
           role="alert"
-          className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
         >
-          {errorMessage}
+          {
+            errorMessage
+          }
         </div>
       ) : null}
 
-      <div className="flex justify-end gap-3">
+      <div className="sticky bottom-0 -mx-6 mt-6 flex flex-col-reverse gap-3 border-t bg-background/95 px-6 py-4 backdrop-blur sm:flex-row sm:justify-end">
         <button
           type="button"
           disabled={
@@ -518,7 +599,7 @@ export function CreateRpvForm({
           onClick={
             handleCancel
           }
-          className="rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:opacity-50"
+          className={secondaryButtonClass}
         >
           Cancelar
         </button>
@@ -528,7 +609,7 @@ export function CreateRpvForm({
           disabled={
             isPending
           }
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
+          className={violetButtonClass}
         >
           {isPending
             ? "Salvando..."
@@ -538,3 +619,109 @@ export function CreateRpvForm({
     </form>
   );
 }
+
+function FormSection({
+  icon: Icon,
+  title,
+  description,
+  tone,
+  children,
+}: {
+  icon:
+    ElementType;
+
+  title:
+    string;
+
+  description:
+    string;
+
+  tone:
+    | "violet"
+    | "blue"
+    | "neutral";
+
+  children:
+    ReactNode;
+}) {
+  const styles = {
+    violet: {
+      border:
+        "border-violet-200/80 dark:border-violet-900",
+
+      header:
+        "bg-violet-50/50 dark:bg-violet-950/15",
+
+      icon:
+        "bg-violet-100 text-violet-700 dark:bg-violet-900/60 dark:text-violet-300",
+    },
+
+    blue: {
+      border:
+        "border-blue-200/80 dark:border-blue-900",
+
+      header:
+        "bg-blue-50/50 dark:bg-blue-950/15",
+
+      icon:
+        "bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300",
+    },
+
+    neutral: {
+      border:
+        "border-border",
+
+      header:
+        "bg-muted/20",
+
+      icon:
+        "bg-muted text-muted-foreground",
+    },
+  }[
+    tone
+  ];
+
+  return (
+    <section
+      className={`overflow-hidden rounded-2xl border bg-card ${styles.border}`}
+    >
+      <div
+        className={`border-b px-4 py-3.5 ${styles.header}`}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${styles.icon}`}
+          >
+            <Icon className="size-4" />
+          </div>
+
+          <div>
+            <h3 className="font-semibold">
+              {
+                title
+              }
+            </h3>
+
+            <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+              {
+                description
+              }
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4">
+        {
+          children
+        }
+      </div>
+    </section>
+  );
+}
+
+const secondaryButtonClass =
+  "inline-flex h-10 items-center justify-center rounded-xl border border-input bg-background px-4 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50";
+
+const violetButtonClass =
+  "inline-flex h-10 items-center justify-center rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-violet-500";

@@ -30,6 +30,9 @@ type Props = {
   receivables: ReceivableItem[];
 
   caseOptions?: ReceivableCaseOption[];
+
+  canWriteFinance:
+    boolean;
 };
 
 type GroupStatus =
@@ -191,6 +194,7 @@ function getNextOpenReceivable(
 export function InstallmentGroupCard({
   receivables,
   caseOptions = [],
+  canWriteFinance,
 }: Props) {
   const [expanded, setExpanded] =
     useState(false);
@@ -618,6 +622,9 @@ export function InstallmentGroupCard({
                   }
                   caseOptions={
                     caseOptions
+                  }
+                  canWriteFinance={
+                    canWriteFinance
                   }
                 />
               ),

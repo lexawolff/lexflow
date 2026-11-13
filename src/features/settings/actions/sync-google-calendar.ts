@@ -9,12 +9,13 @@ import {
 } from "@/lib/auth";
 
 import {
-  prisma,
-} from "@/lib/prisma";
+  getCurrentWorkspaceAccess,
+  hasPermission,
+} from "@/lib/permissions";
 
 import {
-  getDefaultWorkspace,
-} from "@/lib/workspace";
+  prisma,
+} from "@/lib/prisma";
 
 import {
   syncGoogleCalendar,
@@ -50,8 +51,40 @@ export async function syncGoogleCalendarAction(): Promise<SyncGoogleCalendarActi
   const user =
     await requireCurrentUser();
 
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+    membership,
+  } =
+    await getCurrentWorkspaceAccess();
+
+  const canCreateAgenda =
+    hasPermission(
+      membership.role,
+      "AGENDA_CREATE",
+    );
+
+  const canEditAgenda =
+    hasPermission(
+      membership.role,
+      "AGENDA_EDIT",
+    );
+
+  /*
+   * A sincronização pode importar
+   * novos compromissos e também
+   * atualizar/cancelar existentes.
+   */
+  if (
+    !canCreateAgenda ||
+    !canEditAgenda
+  ) {
+    return {
+      success: false,
+
+      error:
+        "Você não possui permissão para sincronizar compromissos com a Agenda.",
+    };
+  }
 
   const connection =
     await prisma.googleCalendarConnection.findUnique({

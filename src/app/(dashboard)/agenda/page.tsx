@@ -10,6 +10,15 @@ import {
   getAgendaData,
 } from "@/features/agenda/services/get-agenda-data";
 
+import {
+  hasPermission,
+  requireWorkspacePagePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
+
 type Props = {
   searchParams: Promise<{
     month?: string;
@@ -19,6 +28,60 @@ type Props = {
 export default async function AgendaPage({
   searchParams,
 }: Props) {
+  const {
+    membership,
+  } =
+    await requireWorkspacePagePermission(
+      "AGENDA_VIEW",
+    );
+
+  const canCreateAgenda =
+    hasPermission(
+      membership.role,
+      "AGENDA_CREATE",
+    );
+
+  const canEditAgenda =
+    hasPermission(
+      membership.role,
+      "AGENDA_EDIT",
+    );
+
+  const canDeleteAgenda =
+    hasPermission(
+      membership.role,
+      "AGENDA_DELETE",
+    );
+
+  /*
+   * O helper de permissões retorna
+   * somente id e role do membership.
+   *
+   * As preferências pessoais da Agenda
+   * são buscadas separadamente.
+   */
+  const agendaPreferences =
+    await prisma.membership.findUniqueOrThrow({
+      where: {
+        id:
+          membership.id,
+      },
+
+      select: {
+        agendaShowCompleted:
+          true,
+
+        agendaDefaultStatus:
+          true,
+
+        agendaItemsPerDay:
+          true,
+
+        agendaShowAttention:
+          true,
+      },
+    });
+
   const params =
     await searchParams;
 
@@ -29,23 +92,32 @@ export default async function AgendaPage({
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">
-            Agenda
-          </h1>
-
-          <p className="mt-1 text-muted-foreground">
-            Organize prazos,
-            compromissos e tarefas
-            do escritório.
-          </p>
-        </div>
-
-        <AgendaMonth
-          data={data}
-        />
-      </div>
+      <AgendaMonth
+        data={
+          data
+        }
+        showCompleted={
+          agendaPreferences.agendaShowCompleted
+        }
+        defaultStatusFilter={
+          agendaPreferences.agendaDefaultStatus
+        }
+        itemsPerDay={
+          agendaPreferences.agendaItemsPerDay
+        }
+        showAttention={
+          agendaPreferences.agendaShowAttention
+        }
+        canCreateAgenda={
+          canCreateAgenda
+        }
+        canEditAgenda={
+          canEditAgenda
+        }
+        canDeleteAgenda={
+          canDeleteAgenda
+        }
+      />
     </AppShell>
   );
 }

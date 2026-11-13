@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 import {
-  disconnectGoogleCalendar,
+  disconnectGoogleCalendarAction as disconnectGoogleCalendar,
 } from "../actions/disconnect-google-calendar";
 
 import {

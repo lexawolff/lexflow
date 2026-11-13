@@ -8,8 +8,13 @@ import {
   revalidatePath,
 } from "next/cache";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
 
 import {
   syncRpvReceivables,
@@ -36,51 +41,34 @@ function revalidateFinance({
   caseId,
 }: {
   clientId: string;
-
   caseId: string;
 }) {
-  revalidatePath(
-    "/financeiro",
-  );
-
-  revalidatePath(
-    "/financeiro/recebimentos",
-  );
-
-  revalidatePath(
-    "/financeiro/fluxo-de-caixa",
-  );
-
-  revalidatePath(
-    "/financeiro/rpvs-e-precatorios",
-  );
-
-  revalidatePath(
-    `/clientes/${clientId}`,
-  );
-
-  revalidatePath(
-    `/casos/${caseId}`,
-  );
+  revalidatePath("/dashboard");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/recebimentos");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/financeiro/rpvs-e-precatorios");
+  revalidatePath(`/clientes/${clientId}`);
+  revalidatePath(`/clientes/${clientId}/casos/${caseId}`);
 }
 
 export async function updateRpv(
   formData: FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     updateRpvSchema.safeParse({
       rpvId:
-        formData.get(
-          "rpvId",
-        ),
+        formData.get("rpvId"),
 
       type:
-        formData.get(
-          "type",
-        ),
+        formData.get("type"),
 
       requisitionNumber:
         formData.get(
@@ -88,9 +76,7 @@ export async function updateRpv(
         ),
 
       court:
-        formData.get(
-          "court",
-        ),
+        formData.get("court"),
 
       grossAmount:
         formData.get(
@@ -118,14 +104,10 @@ export async function updateRpv(
         ),
 
       bank:
-        formData.get(
-          "bank",
-        ),
+        formData.get("bank"),
 
       notes:
-        formData.get(
-          "notes",
-        ),
+        formData.get("notes"),
     });
 
   if (!parsed.success) {
@@ -147,10 +129,8 @@ export async function updateRpv(
     data.contractualFeeValue;
 
   if (
-    contractualFeeValue ===
-      null &&
-    data.contractualFeeRate !==
-      null
+    contractualFeeValue === null &&
+    data.contractualFeeRate !== null
   ) {
     contractualFeeValue =
       roundMoney(
@@ -161,8 +141,7 @@ export async function updateRpv(
   }
 
   if (
-    contractualFeeValue !==
-      null &&
+    contractualFeeValue !== null &&
     contractualFeeValue >
       data.grossAmount
   ) {
@@ -175,8 +154,7 @@ export async function updateRpv(
     roundMoney(
       Math.max(
         data.grossAmount -
-          (contractualFeeValue ??
-            0),
+          (contractualFeeValue ?? 0),
         0,
       ),
     );
@@ -227,24 +205,21 @@ export async function updateRpv(
               ),
 
             contractualFeeRate:
-              data.contractualFeeRate ===
-              null
+              data.contractualFeeRate === null
                 ? null
                 : new Prisma.Decimal(
                     data.contractualFeeRate,
                   ),
 
             contractualFeeValue:
-              contractualFeeValue ===
-              null
+              contractualFeeValue === null
                 ? null
                 : new Prisma.Decimal(
                     contractualFeeValue,
                   ),
 
             sucumbencyFeeValue:
-              data.sucumbencyFeeValue ===
-              null
+              data.sucumbencyFeeValue === null
                 ? null
                 : new Prisma.Decimal(
                     data.sucumbencyFeeValue,
@@ -268,19 +243,15 @@ export async function updateRpv(
 
         return syncRpvReceivables({
           tx,
-
           workspaceId:
             workspace.id,
-
           rpvId:
             existing.id,
         });
       },
     );
 
-  revalidateFinance(
-    result,
-  );
+  revalidateFinance(result);
 
   return {
     success: true,

@@ -1,0 +1,16 @@
+-- AlterTable
+ALTER TABLE "Workspace" ADD COLUMN     "address" TEXT,
+ADD COLUMN     "addressNumber" TEXT,
+ADD COLUMN     "cep" TEXT,
+ADD COLUMN     "city" TEXT,
+ADD COLUMN     "cnpj" TEXT,
+ADD COLUMN     "complement" TEXT,
+ADD COLUMN     "email" TEXT,
+ADD COLUMN     "legalName" TEXT,
+ADD COLUMN     "neighborhood" TEXT,
+ADD COLUMN     "oabRegistration" TEXT,
+ADD COLUMN     "oabState" TEXT,
+ADD COLUMN     "phone" TEXT,
+ADD COLUMN     "state" TEXT,
+ADD COLUMN     "website" TEXT,
+ADD COLUMN     "whatsapp" TEXT;

@@ -1,21 +1,46 @@
-import { AppShell } from "@/components/app-shell/app-shell";
-import { ClientForm } from "@/features/clients/components/client-form";
+import {
+  AppShell,
+} from "@/components/app-shell/app-shell";
 
-export default function NovoClientePage() {
+import {
+  ClientForm,
+} from "@/features/clients/components/client-form";
+
+import {
+  hasPermission,
+  requireWorkspacePagePermission,
+} from "@/lib/permissions";
+
+export default async function NovoClientePage() {
+  const {
+    membership,
+  } =
+    await requireWorkspacePagePermission(
+      "CLIENT_CREATE",
+    );
+
+  const canWriteFinance =
+    hasPermission(
+      membership.role,
+      "FINANCE_WRITE",
+    );
+
+  const canManageGov =
+    hasPermission(
+      membership.role,
+      "GOV_MANAGE",
+    );
+
   return (
     <AppShell>
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Novo Cliente</h1>
-          <p className="mt-2 text-muted-foreground">
-            Cadastre um novo cliente no sistema.
-          </p>
-        </div>
-
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <ClientForm />
-        </div>
-      </div>
+      <ClientForm
+        canWriteFinance={
+          canWriteFinance
+        }
+        canManageGov={
+          canManageGov
+        }
+      />
     </AppShell>
   );
 }

@@ -8,18 +8,28 @@ import {
   revalidatePath,
 } from "next/cache";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
 
 import {
   removePayableSchema,
 } from "../schemas/payable-actions-schema";
 
 export async function removePayable(
-  formData: FormData,
+  formData:
+    FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     removePayableSchema.safeParse({
@@ -38,7 +48,7 @@ export async function removePayable(
     throw new Error(
       parsed.error.issues[0]
         ?.message ??
-        "Dados inválidos.",
+      "Dados inválidos.",
     );
   }
 
@@ -57,9 +67,14 @@ export async function removePayable(
         },
 
         select: {
-          id: true,
-          status: true,
-          paidAt: true,
+          id:
+            true,
+
+          status:
+            true,
+
+          paidAt:
+            true,
         },
       },
     );
@@ -71,13 +86,14 @@ export async function removePayable(
   }
 
   if (
-    data.mode === "CANCEL"
+    data.mode ===
+    "CANCEL"
   ) {
     if (
       payable.status ===
-        FinancialStatus.PAGO ||
+      FinancialStatus.PAGO ||
       payable.status ===
-        FinancialStatus.PARCIAL
+      FinancialStatus.PARCIAL
     ) {
       throw new Error(
         "Não é possível cancelar uma conta que possui pagamento registrado.",
@@ -110,15 +126,16 @@ export async function removePayable(
     );
 
     return {
-      success: true,
+      success:
+        true,
     };
   }
 
   if (
     payable.status ===
-      FinancialStatus.PAGO ||
+    FinancialStatus.PAGO ||
     payable.status ===
-      FinancialStatus.PARCIAL ||
+    FinancialStatus.PARCIAL ||
     payable.paidAt
   ) {
     throw new Error(
@@ -136,8 +153,16 @@ export async function removePayable(
   revalidatePath(
     "/financeiro",
   );
+  revalidatePath(
+    "/financeiro/contas-a-pagar",
+  );
+
+  revalidatePath(
+    "/financeiro/fluxo-de-caixa",
+  );
 
   return {
-    success: true,
+    success:
+      true,
   };
 }

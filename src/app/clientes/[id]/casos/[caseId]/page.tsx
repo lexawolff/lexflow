@@ -15,12 +15,12 @@ import {
 } from "@/features/cases/types";
 
 import {
-  prisma,
-} from "@/lib/prisma";
+  requireWorkspacePagePermission,
+} from "@/lib/permissions";
 
 import {
-  getDefaultWorkspace,
-} from "@/lib/workspace";
+  prisma,
+} from "@/lib/prisma";
 
 type PageProps = {
   params: Promise<{
@@ -38,8 +38,12 @@ export default async function CasePage({
   } =
     await params;
 
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePagePermission(
+      "CASE_VIEW",
+    );
 
   const demand =
     await prisma.case.findFirst({

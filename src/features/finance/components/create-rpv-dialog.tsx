@@ -5,6 +5,7 @@ import {
 } from "react";
 
 import {
+  Landmark,
   Plus,
 } from "lucide-react";
 
@@ -44,7 +45,9 @@ export function CreateRpvDialog({
 
   return (
     <Dialog
-      open={open}
+      open={
+        open
+      }
       onOpenChange={
         setOpen
       }
@@ -59,12 +62,33 @@ export function CreateRpvDialog({
         }
       />
 
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>
-            Nova RPV ou precatório
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-3xl">
+        <div className="border-b bg-violet-50/50 px-6 py-5 dark:bg-violet-950/15">
+          <DialogHeader>
+            <div className="flex items-start gap-3">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-900/60 dark:text-violet-300">
+                <Landmark className="size-5" />
+              </div>
+
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-violet-700 dark:text-violet-300">
+                  Crédito judicial
+                </p>
+
+                <DialogTitle>
+                  Nova RPV ou precatório
+                </DialogTitle>
+
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Cadastre a requisição,
+                  acompanhe sua tramitação e
+                  controle os honorários
+                  vinculados ao crédito.
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+        </div>
 
         <CreateRpvForm
           cases={

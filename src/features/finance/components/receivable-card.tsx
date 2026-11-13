@@ -1,7 +1,10 @@
 import type {
   FinancialStatus,
-  Receivable,
 } from "@prisma/client";
+
+import type {
+  ClientDetails,
+} from "@/features/clients/types";
 
 import {
   Ban,
@@ -10,9 +13,17 @@ import {
   CircleDollarSign,
 } from "lucide-react";
 
-import type { ReceivableCaseOption } from "./create-receivable-form";
-import type { EditableReceivable } from "./edit-receivable-form";
-import { ReceivableActionsMenu } from "./receivable-actions-menu";
+import type {
+  ReceivableCaseOption,
+} from "./create-receivable-form";
+
+import type {
+  EditableReceivable,
+} from "./edit-receivable-form";
+
+import {
+  ReceivableActionsMenu,
+} from "./receivable-actions-menu";
 
 import {
   formatReceivableDate,
@@ -21,21 +32,7 @@ import {
 } from "../lib/receivable-display";
 
 type ReceivableWithSerializableDates =
-  Omit<
-    Receivable,
-    | "dueDate"
-    | "receivedAt"
-  > & {
-    dueDate:
-      | Date
-      | string
-      | null;
-
-    receivedAt:
-      | Date
-      | string
-      | null;
-  };
+  ClientDetails["receivables"][number];
 
 type Props = {
   receivable:
@@ -43,6 +40,9 @@ type Props = {
 
   caseOptions?:
     ReceivableCaseOption[];
+
+  canWriteFinance:
+    boolean;
 };
 
 const statusMap = {
@@ -118,6 +118,7 @@ function formatMoney(
 export function ReceivableCard({
   receivable,
   caseOptions = [],
+  canWriteFinance,
 }: Props) {
   const effectiveStatus =
     getEffectiveFinancialStatus(
@@ -171,12 +172,6 @@ export function ReceivableCard({
       notes:
         receivable.notes ?? "",
 
-      /*
-       * Usamos o status visual para
-       * que uma cobrança vencida
-       * também se comporte como
-       * ATRASADO no menu.
-       */
       status:
         effectiveStatus,
 
@@ -288,14 +283,16 @@ export function ReceivableCard({
             {status.label}
           </span>
 
-          <ReceivableActionsMenu
-            receivable={
-              editableReceivable
-            }
-            caseOptions={
-              caseOptions
-            }
-          />
+          {canWriteFinance ? (
+            <ReceivableActionsMenu
+              receivable={
+                editableReceivable
+              }
+              caseOptions={
+                caseOptions
+              }
+            />
+          ) : null}
         </div>
       </div>
 

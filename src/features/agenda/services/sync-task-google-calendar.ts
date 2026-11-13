@@ -18,6 +18,11 @@ import {
 } from "@/lib/google-calendar";
 
 import {
+  GOOGLE_REAUTH_MESSAGE,
+  isGoogleReauthRequired,
+} from "@/lib/google-oauth-error";
+
+import {
   prisma,
 } from "@/lib/prisma";
 
@@ -76,6 +81,10 @@ export type TaskGoogleSyncResult =
       success: false;
 
       synced: false;
+
+      reason:
+        | "reauth-required"
+        | "google-error";
 
       error: string;
     };
@@ -744,9 +753,26 @@ export async function syncTaskToGoogleCalendar({
       error,
     );
 
+    if (
+      isGoogleReauthRequired(
+        error,
+      )
+    ) {
+      return {
+        success: false,
+        synced: false,
+        reason:
+          "reauth-required",
+        error:
+          GOOGLE_REAUTH_MESSAGE,
+      };
+    }
+
     return {
       success: false,
       synced: false,
+      reason:
+        "google-error",
 
       error:
         error instanceof Error
@@ -871,9 +897,26 @@ export async function deleteTaskFromGoogleCalendar({
       error,
     );
 
+    if (
+      isGoogleReauthRequired(
+        error,
+      )
+    ) {
+      return {
+        success: false,
+        synced: false,
+        reason:
+          "reauth-required",
+        error:
+          GOOGLE_REAUTH_MESSAGE,
+      };
+    }
+
     return {
       success: false,
       synced: false,
+      reason:
+        "google-error",
 
       error:
         error instanceof Error

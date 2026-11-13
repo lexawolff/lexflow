@@ -62,7 +62,8 @@ export const clientSchema = z.object({
   pis: optionalText,
 
   govLogin: optionalText,
-  govPassword: optionalText,
+  // Senhas são valores exatos: não remover espaços.
+  govPassword: z.string().optional(),
 
   notes: optionalText,
 });

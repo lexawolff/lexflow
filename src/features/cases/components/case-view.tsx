@@ -22,22 +22,86 @@ import {
   CaseTabs,
 } from "./case-tabs";
 
+import {
+  getCurrentWorkspaceAccess,
+  hasPermission,
+} from "@/lib/permissions";
+
 type CaseViewProps = {
   caseData:
     CaseDetails;
 };
 
+const TIME_ZONE =
+  "America/Sao_Paulo";
+
+function getTodayKey() {
+  return new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone:
+        TIME_ZONE,
+
+      year:
+        "numeric",
+
+      month:
+        "2-digit",
+
+      day:
+        "2-digit",
+    },
+  ).format(
+    new Date(),
+  );
+}
+
 export async function CaseView({
   caseData,
 }: CaseViewProps) {
-  const agendaData =
-    await getCaseAgendaData({
-      workspaceId:
-        caseData.workspaceId,
+  const {
+    membership,
+  } =
+    await getCurrentWorkspaceAccess();
 
-      caseId:
-        caseData.id,
-    });
+  const canEditCase =
+    hasPermission(
+      membership.role,
+      "CASE_EDIT",
+    );
+
+  const canCreateWork =
+    hasPermission(
+      membership.role,
+      "WORK_CREATE",
+    );
+
+  const canViewAgenda =
+    hasPermission(
+      membership.role,
+      "AGENDA_VIEW",
+    );
+
+  const canCreateAgenda =
+    hasPermission(
+      membership.role,
+      "AGENDA_CREATE",
+    );
+
+  const agendaData =
+    canViewAgenda
+      ? await getCaseAgendaData({
+          workspaceId:
+            caseData.workspaceId,
+
+          caseId:
+            caseData.id,
+        })
+      : {
+          tasks: [],
+          todayKey:
+            getTodayKey(),
+        };
 
   const caseNumber =
     caseData.number ??
@@ -46,19 +110,17 @@ export async function CaseView({
 
   return (
     <div className="space-y-6">
-      {/* ==========================
-          CABEÇALHO
-      ========================== */}
-
       <CaseHeader
         caseData={
           caseData
         }
+        canEditCase={
+          canEditCase
+        }
+        canCreateWork={
+          canCreateWork
+        }
       />
-
-      {/* ==========================
-          RESUMO
-      ========================== */}
 
       <CaseSummaryCards
         caseData={
@@ -72,37 +134,34 @@ export async function CaseView({
         }
       />
 
-      {/* ==========================
-          AGENDA
-      ========================== */}
-
-      <CaseAgendaSection
-        clientId={
-          caseData.clientId
-        }
-        clientName={
-          caseData.client.name
-        }
-        caseId={
-          caseData.id
-        }
-        caseTitle={
-          caseData.title
-        }
-        caseNumber={
-          caseNumber
-        }
-        todayKey={
-          agendaData.todayKey
-        }
-        tasks={
-          agendaData.tasks
-        }
-      />
-
-      {/* ==========================
-          DADOS / HISTÓRICO
-      ========================== */}
+      {canViewAgenda ? (
+        <CaseAgendaSection
+          clientId={
+            caseData.clientId
+          }
+          clientName={
+            caseData.client.name
+          }
+          caseId={
+            caseData.id
+          }
+          caseTitle={
+            caseData.title
+          }
+          caseNumber={
+            caseNumber
+          }
+          todayKey={
+            agendaData.todayKey
+          }
+          tasks={
+            agendaData.tasks
+          }
+          canCreate={
+            canCreateAgenda
+          }
+        />
+      ) : null}
 
       <CaseTabs
         caseData={

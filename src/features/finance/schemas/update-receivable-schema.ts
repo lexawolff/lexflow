@@ -50,7 +50,7 @@ export const updateReceivableFormSchema =
           !value ||
           z.string().uuid().safeParse(value)
             .success,
-        "Processo inválido.",
+        "Caso inválido.",
       ),
 
     description: z
@@ -117,7 +117,7 @@ export const updateReceivableSchema =
       },
       z
         .string()
-        .uuid("Processo inválido.")
+        .uuid("Caso inválido.")
         .nullable(),
     ),
 

@@ -270,41 +270,41 @@ function getToneStyles(
       };
 
     case "overdue":
-      return {
-        container:
-          "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/15",
+  return {
+    container:
+      "border-rose-200 bg-rose-50/50 dark:border-rose-900 dark:bg-rose-950/15",
 
-        accent:
-          "bg-red-500",
+    accent:
+      "bg-rose-500",
 
-        title:
-          "text-red-800 dark:text-red-300",
+    title:
+      "text-rose-800 dark:text-rose-300",
 
-        value:
-          "text-red-700 dark:text-red-300",
+    value:
+      "text-rose-700 dark:text-rose-300",
 
-        icon:
-          "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300",
-      };
+    icon:
+      "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300",
+  };
 
-    case "received":
-      return {
-        container:
-          "border-teal-200 bg-teal-50/50 dark:border-teal-900 dark:bg-teal-950/15",
+case "received":
+  return {
+    container:
+      "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/15",
 
-        accent:
-          "bg-teal-500",
+    accent:
+      "bg-emerald-500",
 
-        title:
-          "text-teal-800 dark:text-teal-300",
+    title:
+      "text-emerald-800 dark:text-emerald-300",
 
-        value:
-          "text-teal-800 dark:text-teal-200",
+    value:
+      "text-emerald-800 dark:text-emerald-200",
 
-        icon:
-          "bg-teal-100 text-teal-700 dark:bg-teal-900/60 dark:text-teal-300",
-      };
-
+    icon:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300",
+  };
+  
     case "forecast":
       return {
         container:

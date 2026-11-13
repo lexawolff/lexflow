@@ -4,46 +4,24 @@ import {
   google,
 } from "googleapis";
 
-export const GOOGLE_CALENDAR_SCOPES =
-  [
-    "openid",
-    "email",
-    "https://www.googleapis.com/auth/calendar.events",
-  ];
+export const GOOGLE_CALENDAR_SCOPES = [
+  "openid",
+  "email",
+  "https://www.googleapis.com/auth/calendar.events",
+];
 
-function getGoogleClientId(): string {
+function requireGoogleEnv(
+  name:
+    | "GOOGLE_CLIENT_ID"
+    | "GOOGLE_CLIENT_SECRET"
+    | "GOOGLE_REDIRECT_URI",
+): string {
   const value =
-    process.env.GOOGLE_CLIENT_ID;
+    process.env[name];
 
   if (!value) {
     throw new Error(
-      "GOOGLE_CLIENT_ID não configurado.",
-    );
-  }
-
-  return value;
-}
-
-function getGoogleClientSecret(): string {
-  const value =
-    process.env.GOOGLE_CLIENT_SECRET;
-
-  if (!value) {
-    throw new Error(
-      "GOOGLE_CLIENT_SECRET não configurado.",
-    );
-  }
-
-  return value;
-}
-
-function getGoogleRedirectUri(): string {
-  const value =
-    process.env.GOOGLE_REDIRECT_URI;
-
-  if (!value) {
-    throw new Error(
-      "GOOGLE_REDIRECT_URI não configurado.",
+      `Variável de ambiente ${name} não configurada.`,
     );
   }
 
@@ -52,15 +30,21 @@ function getGoogleRedirectUri(): string {
 
 export function createGoogleOAuthClient() {
   return new google.auth.OAuth2(
-    getGoogleClientId(),
-    getGoogleClientSecret(),
-    getGoogleRedirectUri(),
+    requireGoogleEnv(
+      "GOOGLE_CLIENT_ID",
+    ),
+    requireGoogleEnv(
+      "GOOGLE_CLIENT_SECRET",
+    ),
+    requireGoogleEnv(
+      "GOOGLE_REDIRECT_URI",
+    ),
   );
 }
 
 export function createGoogleAuthorizationUrl(
   state: string,
-): string {
+) {
   const oauthClient =
     createGoogleOAuthClient();
 
@@ -69,11 +53,9 @@ export function createGoogleAuthorizationUrl(
       "offline",
 
     /*
-     * Garante nova tela de
-     * consentimento em uma
-     * reconexão e aumenta a
-     * previsibilidade de obter
-     * refresh_token.
+     * Essencial na reconexão:
+     * força nova tela de consentimento
+     * para obter novo refresh_token.
      */
     prompt:
       "consent",

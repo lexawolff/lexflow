@@ -51,7 +51,7 @@ export const caseSchema =
       .trim()
       .min(
         3,
-        "Informe o título da demanda.",
+        "Informe o título do caso.",
       ),
 
     practiceArea:

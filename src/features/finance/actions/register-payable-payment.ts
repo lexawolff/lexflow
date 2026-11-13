@@ -8,18 +8,28 @@ import {
   revalidatePath,
 } from "next/cache";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
 
 import {
   registerPayablePaymentSchema,
 } from "../schemas/payable-actions-schema";
 
 export async function registerPayablePayment(
-  formData: FormData,
+  formData:
+    FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     registerPayablePaymentSchema.safeParse(
@@ -49,7 +59,7 @@ export async function registerPayablePayment(
     throw new Error(
       parsed.error.issues[0]
         ?.message ??
-        "Dados inválidos.",
+      "Dados inválidos.",
     );
   }
 
@@ -68,8 +78,11 @@ export async function registerPayablePayment(
         },
 
         select: {
-          id: true,
-          status: true,
+          id:
+            true,
+
+          status:
+            true,
         },
       },
     );
@@ -119,8 +132,16 @@ export async function registerPayablePayment(
   revalidatePath(
     "/financeiro",
   );
+  revalidatePath(
+    "/financeiro/contas-a-pagar",
+  );
+
+  revalidatePath(
+    "/financeiro/fluxo-de-caixa",
+  );
 
   return {
-    success: true,
+    success:
+      true,
   };
 }

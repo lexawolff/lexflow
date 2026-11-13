@@ -43,7 +43,7 @@ import type {
 
 type Props = {
   data:
-    OfficeFinancialData;
+  OfficeFinancialData;
 };
 
 type MovementKind =
@@ -63,10 +63,10 @@ type CashFlowMovement = {
   id: string;
 
   kind:
-    MovementKind;
+  MovementKind;
 
   state:
-    MovementState;
+  MovementState;
 
   dateKey: string;
 
@@ -77,7 +77,7 @@ type CashFlowMovement = {
   amount: number;
 
   href:
-    string | null;
+  string | null;
 };
 
 type SummaryTone =
@@ -188,7 +188,7 @@ function shiftMonth(
       Date.UTC(
         year,
         month - 1 +
-          amount,
+        amount,
         1,
         12,
       ),
@@ -199,7 +199,7 @@ function shiftMonth(
 
     String(
       date.getUTCMonth() +
-        1,
+      1,
     ).padStart(
       2,
       "0",
@@ -388,7 +388,7 @@ function getMonthlyRealizedSummary({
   monthKey,
 }: {
   data:
-    OfficeFinancialData;
+  OfficeFinancialData;
 
   monthKey: string;
 }): MonthlyRealizedSummary {
@@ -413,7 +413,7 @@ function getMonthlyRealizedSummary({
 
     if (
       receivable.paidAmount >
-        0 &&
+      0 &&
       receivedAt.startsWith(
         monthKey,
       )
@@ -503,7 +503,7 @@ export function OfficeCashFlow({
     useMemo(() => {
       const result:
         MonthlyRealizedSummary[] =
-          [];
+        [];
 
       for (
         let offset = -5;
@@ -535,8 +535,8 @@ export function OfficeCashFlow({
 
   const selectedRealized =
     monthlyHistory[
-      monthlyHistory.length -
-        1
+    monthlyHistory.length -
+    1
     ] ?? {
       monthKey,
       income: 0,
@@ -546,8 +546,8 @@ export function OfficeCashFlow({
 
   const previousRealized =
     monthlyHistory[
-      monthlyHistory.length -
-        2
+    monthlyHistory.length -
+    2
     ] ?? {
       monthKey:
         shiftMonth(
@@ -570,7 +570,7 @@ export function OfficeCashFlow({
     useMemo(() => {
       const result:
         CashFlowMovement[] =
-          [];
+        [];
 
       for (
         const receivable of
@@ -596,7 +596,7 @@ export function OfficeCashFlow({
 
         if (
           receivable.paidAmount >
-            0 &&
+          0 &&
           receivedAt.startsWith(
             monthKey,
           )
@@ -626,14 +626,16 @@ export function OfficeCashFlow({
               receivable.paidAmount,
 
             href:
-              `/clientes/${receivable.clientId}`,
+              receivable.caseId
+                ? `/clientes/${receivable.clientId}/casos/${receivable.caseId}`
+                : `/clientes/${receivable.clientId}`,
           });
         }
 
         const remaining =
           Math.max(
             receivable.totalAmount -
-              receivable.paidAmount,
+            receivable.paidAmount,
             0,
           );
 
@@ -673,7 +675,9 @@ export function OfficeCashFlow({
               remaining,
 
             href:
-              `/clientes/${receivable.clientId}`,
+              receivable.caseId
+                ? `/clientes/${receivable.clientId}/casos/${receivable.caseId}`
+                : `/clientes/${receivable.clientId}`,
           });
         }
       }
@@ -723,7 +727,7 @@ export function OfficeCashFlow({
 
             subtitle:
               payableCategoryLabels[
-                payable.category
+              payable.category
               ],
 
             amount:
@@ -741,7 +745,7 @@ export function OfficeCashFlow({
 
         if (
           status !==
-            "PAGO" &&
+          "PAGO" &&
           dueDate.startsWith(
             monthKey,
           )
@@ -764,7 +768,7 @@ export function OfficeCashFlow({
 
             subtitle:
               payableCategoryLabels[
-                payable.category
+              payable.category
               ],
 
             amount:
@@ -795,7 +799,7 @@ export function OfficeCashFlow({
 
           if (
             first.state ===
-              second.state
+            second.state
           ) {
             return 0;
           }
@@ -836,9 +840,9 @@ export function OfficeCashFlow({
   ) {
     if (
       movement.state ===
-        "REALIZED" &&
+      "REALIZED" &&
       movement.kind ===
-        "INCOME"
+      "INCOME"
     ) {
       realizedIncome +=
         movement.amount;
@@ -846,9 +850,9 @@ export function OfficeCashFlow({
 
     if (
       movement.state ===
-        "REALIZED" &&
+      "REALIZED" &&
       movement.kind ===
-        "EXPENSE"
+      "EXPENSE"
     ) {
       realizedExpense +=
         movement.amount;
@@ -856,9 +860,9 @@ export function OfficeCashFlow({
 
     if (
       movement.state ===
-        "PROJECTED" &&
+      "PROJECTED" &&
       movement.kind ===
-        "INCOME"
+      "INCOME"
     ) {
       projectedIncome +=
         movement.amount;
@@ -866,9 +870,9 @@ export function OfficeCashFlow({
 
     if (
       movement.state ===
-        "PROJECTED" &&
+      "PROJECTED" &&
       movement.kind ===
-        "EXPENSE"
+      "EXPENSE"
     ) {
       projectedExpense +=
         movement.amount;
@@ -924,9 +928,9 @@ export function OfficeCashFlow({
 
     if (
       status ===
-        "PAGO" ||
+      "PAGO" ||
       status ===
-        "CANCELADO"
+      "CANCELADO"
     ) {
       continue;
     }
@@ -939,14 +943,14 @@ export function OfficeCashFlow({
     const remaining =
       Math.max(
         receivable.totalAmount -
-          receivable.paidAmount,
+        receivable.paidAmount,
         0,
       );
 
     if (
       dueDate &&
       dueDate <
-        monthStart &&
+      monthStart &&
       remaining > 0
     ) {
       previousReceivables +=
@@ -969,9 +973,9 @@ export function OfficeCashFlow({
 
     if (
       status ===
-        "PAGO" ||
+      "PAGO" ||
       status ===
-        "CANCELADO"
+      "CANCELADO"
     ) {
       continue;
     }
@@ -984,7 +988,7 @@ export function OfficeCashFlow({
     if (
       dueDate &&
       dueDate <
-        monthStart
+      monthStart
     ) {
       previousPayables +=
         payable.amount;
@@ -1216,7 +1220,7 @@ export function OfficeCashFlow({
           description="Entradas menos saídas efetivamente realizadas"
           icon={
             realizedResult >=
-            0 ? (
+              0 ? (
               <TrendingUp className="size-5" />
             ) : (
               <TrendingDown className="size-5" />
@@ -1224,7 +1228,7 @@ export function OfficeCashFlow({
           }
           tone={
             realizedResult >=
-            0
+              0
               ? "positive"
               : "negative"
           }
@@ -1247,7 +1251,7 @@ export function OfficeCashFlow({
           }
           icon={
             estimatedResult >=
-            0 ? (
+              0 ? (
               <TrendingUp className="size-5" />
             ) : (
               <TrendingDown className="size-5" />
@@ -1255,7 +1259,7 @@ export function OfficeCashFlow({
           }
           tone={
             estimatedResult >=
-            0
+              0
               ? "projection"
               : "negative"
           }
@@ -1428,12 +1432,11 @@ export function OfficeCashFlow({
 
         <div className="border-t p-5">
           <div
-            className={`rounded-xl border p-5 ${
-              estimatedResult >=
-              0
+            className={`rounded-xl border p-5 ${estimatedResult >=
+                0
                 ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20"
-                : "border-red-200 bg-red-50/60 dark:border-red-900 dark:bg-red-950/20"
-            }`}
+                : "border-rose-200 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/20"
+              }`}
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -1451,12 +1454,11 @@ export function OfficeCashFlow({
               </div>
 
               <p
-                className={`shrink-0 text-2xl font-bold ${
-                  estimatedResult >=
-                  0
+                className={`shrink-0 text-2xl font-bold ${estimatedResult >=
+                    0
                     ? "text-emerald-700 dark:text-emerald-300"
-                    : "text-red-700 dark:text-red-300"
-                }`}
+                    : "text-rose-700 dark:text-rose-300"
+                  }`}
               >
                 {formatSignedMoney(
                   estimatedResult,
@@ -1474,7 +1476,7 @@ export function OfficeCashFlow({
       {(previousReceivablesCount >
         0 ||
         previousPayablesCount >
-          0) ? (
+        0) ? (
         <section className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/30 dark:border-amber-900 dark:bg-amber-950/10">
           <div className="flex items-start gap-3 border-b border-amber-200/70 p-5 dark:border-amber-900">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300">
@@ -1616,7 +1618,7 @@ export function OfficeCashFlow({
         </div>
 
         {filteredMovements.length ===
-        0 ? (
+          0 ? (
           <div className="rounded-2xl border border-dashed p-10 text-center">
             <div className="mx-auto flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
               <ArrowRightLeft className="size-5" />
@@ -1671,10 +1673,10 @@ function CashFlowChart({
   selectedMonth,
 }: {
   history:
-    MonthlyRealizedSummary[];
+  MonthlyRealizedSummary[];
 
   selectedMonth:
-    string;
+  string;
 }) {
   const maximumValue =
     Math.max(
@@ -1714,24 +1716,24 @@ function CashFlowChart({
             (month) => {
               const incomeHeight =
                 month.income >
-                0
+                  0
                   ? Math.max(
-                      8,
-                      (month.income /
-                        maximumValue) *
-                        100,
-                    )
+                    8,
+                    (month.income /
+                      maximumValue) *
+                    100,
+                  )
                   : 0;
 
               const expenseHeight =
                 month.expense >
-                0
+                  0
                   ? Math.max(
-                      8,
-                      (month.expense /
-                        maximumValue) *
-                        100,
-                    )
+                    8,
+                    (month.expense /
+                      maximumValue) *
+                    100,
+                  )
                   : 0;
 
               const isSelected =
@@ -1743,11 +1745,10 @@ function CashFlowChart({
                   key={
                     month.monthKey
                   }
-                  className={`rounded-xl p-3 ${
-                    isSelected
+                  className={`rounded-xl p-3 ${isSelected
                       ? "bg-blue-50/60 ring-1 ring-blue-200 dark:bg-blue-950/20 dark:ring-blue-900"
                       : "bg-muted/20"
-                  }`}
+                    }`}
                 >
                   <div className="flex h-44 items-end justify-center gap-2">
                     <div className="flex h-full w-8 items-end">
@@ -1779,11 +1780,10 @@ function CashFlowChart({
 
                   <div className="mt-3 text-center">
                     <p
-                      className={`text-sm font-semibold ${
-                        isSelected
+                      className={`text-sm font-semibold ${isSelected
                           ? "text-blue-700 dark:text-blue-300"
                           : ""
-                      }`}
+                        }`}
                     >
                       {formatShortMonth(
                         month.monthKey,
@@ -1791,15 +1791,14 @@ function CashFlowChart({
                     </p>
 
                     <p
-                      className={`mt-1 text-xs font-semibold ${
-                        month.result >
-                        0
+                      className={`mt-1 text-xs font-semibold ${month.result >
+                          0
                           ? "text-emerald-700 dark:text-emerald-300"
                           : month.result <
-                              0
-                            ? "text-red-700 dark:text-red-300"
+                            0
+                            ? "text-rose-700 dark:text-rose-300"
                             : "text-muted-foreground"
-                      }`}
+                        }`}
                     >
                       {formatSignedMoney(
                         month.result,
@@ -1836,7 +1835,7 @@ function ComparisonCard({
   previous: number;
 
   positiveWhenHigher:
-    boolean;
+  boolean;
 
   signed?: boolean;
 }) {
@@ -1858,13 +1857,13 @@ function ComparisonCard({
 
   const isImprovement =
     direction ===
-    "EQUAL"
+      "EQUAL"
       ? null
       : positiveWhenHigher
         ? direction ===
-          "UP"
+        "UP"
         : direction ===
-          "DOWN";
+        "DOWN";
 
   return (
     <div className="rounded-xl border bg-background p-4">
@@ -1875,11 +1874,11 @@ function ComparisonCard({
       <p className="mt-2 text-lg font-bold">
         {signed
           ? formatSignedMoney(
-              current,
-            )
+            current,
+          )
           : formatMoney(
-              current,
-            )}
+            current,
+          )}
       </p>
 
       <div className="mt-3 flex items-center gap-2">
@@ -1894,50 +1893,48 @@ function ComparisonCard({
 
         <div>
           <p
-            className={`text-xs font-semibold ${
-              isImprovement ===
-              true
+            className={`text-xs font-semibold ${isImprovement ===
+                true
                 ? "text-emerald-700 dark:text-emerald-300"
                 : isImprovement ===
-                    false
-                  ? "text-red-700 dark:text-red-300"
+                  false
+                  ? "text-rose-700 dark:text-rose-300"
                   : "text-muted-foreground"
-            }`}
+              }`}
           >
             {percentage ===
-            null
+              null
               ? difference ===
                 0
                 ? "Sem alteração"
                 : "Sem base comparável"
               : `${Math.abs(
-                  percentage,
-                ).toLocaleString(
-                  "pt-BR",
-                  {
-                    maximumFractionDigits:
-                      1,
-                  },
-                )}% ${
-                  direction ===
-                  "UP"
-                    ? "maior"
-                    : direction ===
-                        "DOWN"
-                      ? "menor"
-                      : "igual"
-                }`}
+                percentage,
+              ).toLocaleString(
+                "pt-BR",
+                {
+                  maximumFractionDigits:
+                    1,
+                },
+              )}% ${direction ===
+                "UP"
+                ? "maior"
+                : direction ===
+                  "DOWN"
+                  ? "menor"
+                  : "igual"
+              }`}
           </p>
 
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             Mês anterior:{" "}
             {signed
               ? formatSignedMoney(
-                  previous,
-                )
+                previous,
+              )
               : formatMoney(
-                  previous,
-                )}
+                previous,
+              )}
           </p>
         </div>
       </div>
@@ -1950,10 +1947,10 @@ function ComparisonIcon({
   isImprovement,
 }: {
   direction:
-    ComparisonDirection;
+  ComparisonDirection;
 
   isImprovement:
-    boolean | null;
+  boolean | null;
 }) {
   if (
     direction ===
@@ -1969,14 +1966,14 @@ function ComparisonIcon({
   const className =
     isImprovement
       ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-      : "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300";
+      : "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300";
 
   return (
     <div
       className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${className}`}
     >
       {direction ===
-      "UP" ? (
+        "UP" ? (
         <ArrowUp className="size-4" />
       ) : (
         <ArrowDown className="size-4" />
@@ -2008,7 +2005,7 @@ function SummaryCard({
   icon: ReactNode;
 
   tone:
-    SummaryTone;
+  SummaryTone;
 
   signed?: boolean;
 }) {
@@ -2044,11 +2041,11 @@ function SummaryCard({
       >
         {signed
           ? formatSignedMoney(
-              value,
-            )
+            value,
+          )
           : formatMoney(
-              value,
-            )}
+            value,
+          )}
       </p>
 
       <p className="mt-1 text-xs text-muted-foreground">
@@ -2076,18 +2073,18 @@ function FlowCompositionCard({
   title: string;
 
   icon:
-    ReactNode;
+  ReactNode;
 
   tone:
-    | "income"
-    | "expense";
+  | "income"
+  | "expense";
 
   realized: number;
 
   projected: number;
 
   projectedLabel:
-    string;
+  string;
 
   total: number;
 }) {
@@ -2097,19 +2094,17 @@ function FlowCompositionCard({
 
   return (
     <div
-      className={`rounded-xl border p-4 ${
-        isIncome
+      className={`rounded-xl border p-4 ${isIncome
           ? "border-emerald-200 bg-emerald-50/40 dark:border-emerald-900 dark:bg-emerald-950/10"
           : "border-rose-200 bg-rose-50/40 dark:border-rose-900 dark:bg-rose-950/10"
-      }`}
+        }`}
     >
       <div className="flex items-center gap-3">
         <div
-          className={`flex size-9 items-center justify-center rounded-lg ${
-            isIncome
+          className={`flex size-9 items-center justify-center rounded-lg ${isIncome
               ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300"
               : "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300"
-          }`}
+            }`}
         >
           {icon}
         </div>
@@ -2152,11 +2147,10 @@ function FlowCompositionCard({
           </span>
 
           <span
-            className={`font-bold ${
-              isIncome
+            className={`font-bold ${isIncome
                 ? "text-emerald-700 dark:text-emerald-300"
                 : "text-rose-700 dark:text-rose-300"
-            }`}
+              }`}
           >
             {formatMoney(
               total,
@@ -2193,8 +2187,8 @@ function PreviousPendingCard({
   plural: string;
 
   kind:
-    | "income"
-    | "expense";
+  | "income"
+  | "expense";
 }) {
   const isIncome =
     kind ===
@@ -2215,11 +2209,10 @@ function PreviousPendingCard({
       </div>
 
       <p
-        className={`mt-3 text-xl font-bold ${
-          isIncome
+        className={`mt-3 text-xl font-bold ${isIncome
             ? "text-emerald-700 dark:text-emerald-300"
             : "text-rose-700 dark:text-rose-300"
-        }`}
+          }`}
       >
         {formatMoney(
           value,
@@ -2250,10 +2243,10 @@ function MovementFilterButton({
   active: boolean;
 
   onClick:
-    () => void;
+  () => void;
 
   children:
-    ReactNode;
+  ReactNode;
 }) {
   return (
     <button
@@ -2261,11 +2254,10 @@ function MovementFilterButton({
       onClick={
         onClick
       }
-      className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-        active
+      className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${active
           ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
           : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-      }`}
+        }`}
     >
       {children}
     </button>
@@ -2279,7 +2271,7 @@ function MovementDay({
   dateKey: string;
 
   movements:
-    CashFlowMovement[];
+  CashFlowMovement[];
 }) {
   let income = 0;
   let expense = 0;
@@ -2337,11 +2329,10 @@ function MovementDay({
           ) : null}
 
           <span
-            className={`font-semibold ${
-              result >= 0
+            className={`font-semibold ${result >= 0
                 ? "text-emerald-700 dark:text-emerald-300"
-                : "text-red-700 dark:text-red-300"
-            }`}
+                : "text-rose-700 dark:text-rose-300"
+              }`}
           >
             Resultado:{" "}
             {formatSignedMoney(
@@ -2373,7 +2364,7 @@ function MovementRow({
   movement,
 }: {
   movement:
-    CashFlowMovement;
+  CashFlowMovement;
 }) {
   const isIncome =
     movement.kind ===
@@ -2387,11 +2378,10 @@ function MovementRow({
     <div className="flex items-start justify-between gap-4 p-4 transition hover:bg-muted/20">
       <div className="flex min-w-0 gap-3">
         <div
-          className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${
-            isIncome
+          className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${isIncome
               ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
               : "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
-          }`}
+            }`}
         >
           {isIncome ? (
             <ArrowDownToLine className="size-4" />
@@ -2409,11 +2399,10 @@ function MovementRow({
             </p>
 
             <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                isRealized
+              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${isRealized
                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
                   : "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
-              }`}
+                }`}
             >
               {isRealized
                 ? "Realizado"
@@ -2460,11 +2449,10 @@ function MovementRow({
 
       <div className="shrink-0 text-right">
         <p
-          className={`font-bold ${
-            isIncome
+          className={`font-bold ${isIncome
               ? "text-emerald-700 dark:text-emerald-300"
               : "text-rose-700 dark:text-rose-300"
-          }`}
+            }`}
         >
           {isIncome
             ? "+"
@@ -2552,19 +2540,19 @@ function getSummaryStyles(
     case "negative":
       return {
         container:
-          "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/15",
+          "border-rose-200 bg-rose-50/50 dark:border-rose-900 dark:bg-rose-950/15",
 
         accent:
-          "bg-red-500",
+          "bg-rose-500",
 
         title:
-          "text-red-800 dark:text-red-300",
+          "text-rose-800 dark:text-rose-300",
 
         value:
-          "text-red-700 dark:text-red-300",
+          "text-rose-700 dark:text-rose-300",
 
         icon:
-          "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300",
+          "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300",
       };
 
     case "projection":

@@ -1,61 +1,81 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import {
+  revalidatePath,
+} from "next/cache";
 
-import type { ActionResult } from "@/lib/actions/action-result";
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import type {
+  ActionResult,
+} from "@/lib/actions/action-result";
 
-import { createCaseEvent } from "@/features/cases/services/create-case-event";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
-import { deleteFile } from "../services/delete-file";
+import {
+  prisma,
+} from "@/lib/prisma";
+
+import {
+  deleteFile,
+} from "../services/delete-file";
 
 export async function deleteDocument(
-  documentId: string
+  documentId:
+    string,
 ): Promise<ActionResult> {
-  const workspace = await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "DOCUMENT_DELETE",
+    );
 
-  const document = await prisma.document.findFirst({
-    where: {
-      id: documentId,
-      workspaceId: workspace.id,
-    },
-  });
+  const document =
+    await prisma.document.findFirst({
+      where: {
+        id:
+          documentId,
+
+        workspaceId:
+          workspace.id,
+      },
+    });
 
   if (!document) {
     return {
-      success: false,
-      message: "Documento não encontrado.",
+      success:
+        false,
+
+      message:
+        "Documento não encontrado.",
     };
   }
 
   await deleteFile({
-    storagePath: document.storagePath,
+    storagePath:
+      document.storagePath,
   });
 
   await prisma.document.delete({
     where: {
-      id: document.id,
+      id:
+        document.id,
     },
   });
 
-  if (document.caseId) {
-    await createCaseEvent({
-      caseId: document.caseId,
-      title: "Documento removido",
-      content: document.originalName,
-    });
-
-    revalidatePath(`/cases/${document.caseId}`);
-  }
-
-  if (document.clientId) {
-    revalidatePath(`/clients/${document.clientId}`);
-  }
+  revalidatePath(
+    `/clientes/${document.clientId}`,
+  );
 
   return {
-    success: true,
-    data: undefined,
-    message: "Documento removido com sucesso.",
+    success:
+      true,
+
+    data:
+      undefined,
+
+    message:
+      "Documento removido com sucesso.",
   };
 }

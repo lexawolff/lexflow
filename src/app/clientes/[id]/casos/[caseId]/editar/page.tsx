@@ -2,6 +2,10 @@ import Link from "next/link";
 
 import {
   ArrowLeft,
+  BriefcaseBusiness,
+  CheckCircle2,
+  FileText,
+  UserRound,
 } from "lucide-react";
 
 import {
@@ -13,8 +17,8 @@ import {
 } from "@/components/app-shell/app-shell";
 
 import {
-  CaseForm,
-} from "@/features/cases/components/case-form";
+  CaseEditForm,
+} from "@/features/cases/components/case-edit-form";
 
 import {
   caseDetailsInclude,
@@ -25,32 +29,39 @@ import {
 } from "@/lib/prisma";
 
 import {
-  getDefaultWorkspace,
-} from "@/lib/workspace";
+  requireWorkspacePagePermission,
+} from "@/lib/permissions";
 
 type PageProps = {
-  params: Promise<{
-    id:
-      string;
+  params:
+    Promise<{
+      id:
+        string;
 
-    caseId:
-      string;
-  }>;
+      caseId:
+        string;
+    }>;
 };
 
 export default async function EditCasePage({
   params,
 }: PageProps) {
   const {
-    id: clientId,
+    id:
+      clientId,
+
     caseId,
   } =
     await params;
 
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePagePermission(
+      "CASE_EDIT",
+    );
 
-  const demand =
+  const caseData =
     await prisma.case.findFirst({
       where: {
         id:
@@ -65,16 +76,27 @@ export default async function EditCasePage({
       ...caseDetailsInclude,
     });
 
-  if (!demand) {
+  if (!caseData) {
     notFound();
   }
 
   const casePath =
     `/clientes/${clientId}/casos/${caseId}`;
 
+  const mainReference =
+    caseData.number
+      ? `Processo ${caseData.number}`
+      : caseData.administrativeNumber
+        ? `NB ${caseData.administrativeNumber}`
+        : null;
+
   return (
     <AppShell>
-      <div className="space-y-6">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        {/* ==========================
+            VOLTAR
+        ========================== */}
+
         <Link
           href={
             casePath
@@ -83,99 +105,152 @@ export default async function EditCasePage({
         >
           <ArrowLeft className="size-4" />
 
-          Voltar para o processo
+          Voltar para o caso
         </Link>
 
-        <div>
-          <h1 className="text-3xl font-bold">
-            Editar processo
-          </h1>
+        {/* ==========================
+            CABEÇALHO
+        ========================== */}
 
-          <p className="mt-1 text-muted-foreground">
-            {demand.title}
-            {" • "}
-            {
-              demand.client.name
-            }
-          </p>
-        </div>
+        <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <div className="flex flex-col gap-5 px-5 py-5 sm:px-6 sm:py-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-start gap-4">
+              <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <BriefcaseBusiness className="size-7" />
+              </div>
 
-        <div className="rounded-2xl border bg-card p-5 sm:p-6">
-          <CaseForm
-            clientId={
-              clientId
-            }
-            case={{
-              id:
-                demand.id,
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                  Editar caso
+                </p>
 
-              title:
-                demand.title,
+                <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+                  {
+                    caseData.title
+                  }
+                </h1>
 
-              practiceArea:
-                demand.practiceArea,
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                  <Link
+                    href={`/clientes/${clientId}`}
+                    className="inline-flex items-center gap-1.5 font-medium text-foreground transition hover:text-primary"
+                  >
+                    <UserRound className="size-3.5" />
 
-              subject:
-                demand.subject,
+                    {
+                      caseData.client.name
+                    }
+                  </Link>
 
-              benefitType:
-                demand.benefitType,
+                  {mainReference ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <FileText className="size-3.5" />
 
-              origin:
-                demand.origin,
+                      {
+                        mainReference
+                      }
+                    </span>
+                  ) : (
+                    <span>
+                      Sem número informado
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
 
-              administrativeStatus:
-                demand.administrativeStatus,
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border bg-muted/30 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              <CheckCircle2 className="size-3.5 text-emerald-600" />
 
-              number:
-                demand.number,
+              Caso cadastrado
+            </div>
+          </div>
 
-              administrativeNumber:
-                demand.administrativeNumber,
+          <div className="border-t bg-muted/20 px-5 py-3 sm:px-6">
+            <p className="text-sm text-muted-foreground">
+              Atualize somente as informações necessárias. Prazos e compromissos permanecem na Agenda.
+            </p>
+          </div>
+        </section>
 
-              administrativeProcess:
-                demand.administrativeProcess,
+        {/* ==========================
+            FORMULÁRIO
+        ========================== */}
 
-              court:
-                demand.court,
+        <CaseEditForm
+          clientId={
+            clientId
+          }
+          case={{
+            id:
+              caseData.id,
 
-              courtUnit:
-                demand.courtUnit,
+            title:
+              caseData.title,
 
-              judge:
-                demand.judge,
+            practiceArea:
+              caseData.practiceArea,
 
-              city:
-                demand.city,
+            subject:
+              caseData.subject,
 
-              state:
-                demand.state,
+            benefitType:
+              caseData.benefitType,
 
-              opposingParty:
-                demand.opposingParty,
+            origin:
+              caseData.origin,
 
-              claimValue:
-                demand.claimValue !==
-                null
-                  ? Number(
-                      demand.claimValue,
-                    )
-                  : null,
+            administrativeStatus:
+              caseData.administrativeStatus,
 
-              status:
-                demand.status,
+            number:
+              caseData.number,
 
-              administrativeRequestDate:
-                demand.administrativeRequestDate,
+            administrativeNumber:
+              caseData.administrativeNumber,
 
-              distributionDate:
-                demand.distributionDate,
+            administrativeProcess:
+              caseData.administrativeProcess,
 
-              notes:
-                demand.notes,
-            }}
-          />
-        </div>
+            court:
+              caseData.court,
+
+            courtUnit:
+              caseData.courtUnit,
+
+            judge:
+              caseData.judge,
+
+            city:
+              caseData.city,
+
+            state:
+              caseData.state,
+
+            opposingParty:
+              caseData.opposingParty,
+
+            claimValue:
+              caseData.claimValue !==
+              null
+                ? Number(
+                    caseData.claimValue,
+                  )
+                : null,
+
+            status:
+              caseData.status,
+
+            administrativeRequestDate:
+              caseData.administrativeRequestDate,
+
+            distributionDate:
+              caseData.distributionDate,
+
+            notes:
+              caseData.notes,
+          }}
+        />
       </div>
     </AppShell>
   );

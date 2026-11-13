@@ -5,12 +5,12 @@ import {
 } from "next/cache";
 
 import {
-  prisma,
-} from "@/lib/prisma";
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
 import {
-  getDefaultWorkspace,
-} from "@/lib/workspace";
+  prisma,
+} from "@/lib/prisma";
 
 import {
   deleteAgendaTaskSchema,
@@ -23,8 +23,12 @@ import {
 export async function deleteAgendaTask(
   formData: FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "AGENDA_DELETE",
+    );
 
   const parsed =
     deleteAgendaTaskSchema.safeParse({
@@ -54,9 +58,7 @@ export async function deleteAgendaTask(
 
       select: {
         id: true,
-
         clientId: true,
-
         caseId: true,
 
         googleEventId:
@@ -73,18 +75,6 @@ export async function deleteAgendaTask(
     );
   }
 
-  /*
-   * Se existir evento vinculado ao
-   * Google, removemos primeiro.
-   *
-   * Neste caso específico NÃO
-   * apagamos a Task se o Google
-   * responder com erro.
-   *
-   * Isso evita deixar um evento
-   * órfão no Google que poderia
-   * voltar a ser importado depois.
-   */
   if (
     task.googleEventId &&
     task.googleConnectionId
@@ -110,11 +100,6 @@ export async function deleteAgendaTask(
     }
   }
 
-  /*
-   * Depois que o evento Google
-   * estiver resolvido, apagamos
-   * definitivamente a Task.
-   */
   await prisma.task.delete({
     where: {
       id:
@@ -136,12 +121,9 @@ export async function deleteAgendaTask(
     );
   }
 
-  if (
-    task.clientId &&
-    task.caseId
-  ) {
+  if (task.caseId) {
     revalidatePath(
-      `/clientes/${task.clientId}/casos/${task.caseId}`,
+      `/casos/${task.caseId}`,
     );
   }
 

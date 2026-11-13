@@ -33,23 +33,42 @@ export function CaseTabs({
   return (
     <Tabs
       defaultValue="overview"
-      className="space-y-4"
+      className="space-y-5"
     >
-      <TabsList>
-        <TabsTrigger value="overview">
-          <FileText className="size-4" />
+      {/* ==========================
+          NAVEGAÇÃO DAS ABAS
+      ========================== */}
 
-          Visão geral
-        </TabsTrigger>
+      <div className="overflow-x-auto">
+        <TabsList className="h-auto min-w-max justify-start gap-1 rounded-2xl border bg-card p-1.5 shadow-sm">
+          <TabsTrigger
+            value="overview"
+            className="gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+          >
+            <FileText className="size-4" />
 
-        <TabsTrigger value="timeline">
-          <History className="size-4" />
+            Visão geral
+          </TabsTrigger>
 
-          Histórico
-        </TabsTrigger>
-      </TabsList>
+          <TabsTrigger
+            value="timeline"
+            className="gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+          >
+            <History className="size-4" />
 
-      <TabsContent value="overview">
+            Histórico
+          </TabsTrigger>
+        </TabsList>
+      </div>
+
+      {/* ==========================
+          CONTEÚDO
+      ========================== */}
+
+      <TabsContent
+        value="overview"
+        className="mt-0"
+      >
         <OverviewTab
           caseData={
             caseData
@@ -57,7 +76,10 @@ export function CaseTabs({
         />
       </TabsContent>
 
-      <TabsContent value="timeline">
+      <TabsContent
+        value="timeline"
+        className="mt-0"
+      >
         <TimelineTab
           caseData={
             caseData

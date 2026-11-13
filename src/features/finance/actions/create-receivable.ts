@@ -1,26 +1,49 @@
 "use server";
 
-import { randomUUID } from "crypto";
+import {
+  randomUUID,
+} from "crypto";
 
-import { revalidatePath } from "next/cache";
+import {
+  revalidatePath,
+} from "next/cache";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
-import { splitAmount } from "../lib/split-amount";
-import { createReceivableSchema } from "../schemas/create-receivable-schema";
+import {
+  prisma,
+} from "@/lib/prisma";
+
+import {
+  splitAmount,
+} from "../lib/split-amount";
+
+import {
+  createReceivableSchema,
+} from "../schemas/create-receivable-schema";
 
 export async function createReceivable(
-  clientId: string,
-  formData: FormData,
+  clientId:
+    string,
+
+  formData:
+    FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     createReceivableSchema.safeParse({
       caseId:
-        formData.get("caseId"),
+        formData.get(
+          "caseId",
+        ),
 
       description:
         formData.get(
@@ -28,7 +51,9 @@ export async function createReceivable(
         ),
 
       type:
-        formData.get("type"),
+        formData.get(
+          "type",
+        ),
 
       totalAmount:
         formData.get(
@@ -36,7 +61,9 @@ export async function createReceivable(
         ),
 
       dueDate:
-        formData.get("dueDate"),
+        formData.get(
+          "dueDate",
+        ),
 
       installmentDueDates:
         formData.get(
@@ -54,7 +81,9 @@ export async function createReceivable(
         ),
 
       notes:
-        formData.get("notes"),
+        formData.get(
+          "notes",
+        ),
     });
 
   if (!parsed.success) {
@@ -69,19 +98,22 @@ export async function createReceivable(
     );
   }
 
-  const data = parsed.data;
+  const data =
+    parsed.data;
 
   const client =
     await prisma.client.findFirst({
       where: {
-        id: clientId,
+        id:
+          clientId,
 
         workspaceId:
           workspace.id,
       },
 
       select: {
-        id: true,
+        id:
+          true,
       },
     });
 
@@ -91,11 +123,14 @@ export async function createReceivable(
     );
   }
 
-  if (data.caseId) {
+  if (
+    data.caseId
+  ) {
     const relatedCase =
       await prisma.case.findFirst({
         where: {
-          id: data.caseId,
+          id:
+            data.caseId,
 
           clientId,
 
@@ -104,13 +139,14 @@ export async function createReceivable(
         },
 
         select: {
-          id: true,
+          id:
+            true,
         },
       });
 
     if (!relatedCase) {
       throw new Error(
-        "O processo selecionado não pertence a este cliente.",
+        "O caso selecionado não pertence a este cliente.",
       );
     }
   }
@@ -121,8 +157,8 @@ export async function createReceivable(
       : 1;
 
   if (
-    data.installmentDueDates
-      .length !== installments
+    data.installmentDueDates.length !==
+    installments
   ) {
     throw new Error(
       "A quantidade de vencimentos não corresponde à quantidade de parcelas.",
@@ -141,10 +177,13 @@ export async function createReceivable(
     );
 
   await prisma.$transaction(
-    async (transaction) => {
+    async (
+      transaction,
+    ) => {
       for (
         let index = 0;
-        index < installments;
+        index <
+        installments;
         index++
       ) {
         const installmentDueDate =
@@ -184,7 +223,8 @@ export async function createReceivable(
                   index
                 ],
 
-              paidAmount: 0,
+              paidAmount:
+                0,
 
               dueDate:
                 installmentDueDate,
@@ -195,12 +235,14 @@ export async function createReceivable(
               installmentGroupId,
 
               installmentNumber:
-                installments > 1
+                installments >
+                1
                   ? index + 1
                   : null,
 
               totalInstallments:
-                installments > 1
+                installments >
+                1
                   ? installments
                   : null,
 
@@ -221,7 +263,16 @@ export async function createReceivable(
     "/financeiro",
   );
 
+  revalidatePath(
+  "/financeiro/recebimentos",
+);
+
+revalidatePath(
+  "/financeiro/fluxo-de-caixa",
+);
+
   return {
-    success: true,
+    success:
+      true,
   };
 }

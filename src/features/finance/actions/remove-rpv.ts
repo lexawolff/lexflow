@@ -8,8 +8,13 @@ import {
   revalidatePath,
 } from "next/cache";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
 
 import {
   syncRpvReceivables,
@@ -24,39 +29,26 @@ function revalidateFinance({
   caseId,
 }: {
   clientId: string;
-
   caseId: string;
 }) {
-  revalidatePath(
-    "/financeiro",
-  );
-
-  revalidatePath(
-    "/financeiro/recebimentos",
-  );
-
-  revalidatePath(
-    "/financeiro/fluxo-de-caixa",
-  );
-
-  revalidatePath(
-    "/financeiro/rpvs-e-precatorios",
-  );
-
-  revalidatePath(
-    `/clientes/${clientId}`,
-  );
-
-  revalidatePath(
-    `/casos/${caseId}`,
-  );
+  revalidatePath("/dashboard");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/recebimentos");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/financeiro/rpvs-e-precatorios");
+  revalidatePath(`/clientes/${clientId}`);
+  revalidatePath(`/clientes/${clientId}/casos/${caseId}`);
 }
 
 export async function removeRpv(
   formData: FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     removeRpvSchema.safeParse({
@@ -97,11 +89,8 @@ export async function removeRpv(
 
             select: {
               id: true,
-
               status: true,
-
               paidAt: true,
-
               caseId: true,
 
               case: {
@@ -167,10 +156,8 @@ export async function removeRpv(
 
           await syncRpvReceivables({
             tx,
-
             workspaceId:
               workspace.id,
-
             rpvId:
               rpv.id,
           });
@@ -199,9 +186,7 @@ export async function removeRpv(
       },
     );
 
-  revalidateFinance(
-    result,
-  );
+  revalidateFinance(result);
 
   return {
     success: true,

@@ -8,8 +8,13 @@ import {
   revalidatePath,
 } from "next/cache";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
 
 import {
   syncRpvReceivables,
@@ -24,39 +29,26 @@ function revalidateFinance({
   caseId,
 }: {
   clientId: string;
-
   caseId: string;
 }) {
-  revalidatePath(
-    "/financeiro",
-  );
-
-  revalidatePath(
-    "/financeiro/recebimentos",
-  );
-
-  revalidatePath(
-    "/financeiro/fluxo-de-caixa",
-  );
-
-  revalidatePath(
-    "/financeiro/rpvs-e-precatorios",
-  );
-
-  revalidatePath(
-    `/clientes/${clientId}`,
-  );
-
-  revalidatePath(
-    `/casos/${caseId}`,
-  );
+  revalidatePath("/dashboard");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/recebimentos");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/financeiro/rpvs-e-precatorios");
+  revalidatePath(`/clientes/${clientId}`);
+  revalidatePath(`/clientes/${clientId}/casos/${caseId}`);
 }
 
 export async function updateRpvStatus(
   formData: FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     updateRpvStatusSchema.safeParse({
@@ -135,19 +127,15 @@ export async function updateRpvStatus(
 
         return syncRpvReceivables({
           tx,
-
           workspaceId:
             workspace.id,
-
           rpvId:
             existing.id,
         });
       },
     );
 
-  revalidateFinance(
-    result,
-  );
+  revalidateFinance(result);
 
   return {
     success: true,

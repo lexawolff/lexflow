@@ -1,39 +1,79 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import {
+  redirect,
+} from "next/navigation";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
-export async function deleteClient(clientId: string) {
-  const workspace = await getDefaultWorkspace();
+import {
+  prisma,
+} from "@/lib/prisma";
 
-  const client = await prisma.client.findFirst({
-    where: {
-      id: clientId,
-      workspaceId: workspace.id,
-    },
-    include: {
-      cases: {
-        select: { id: true },
+export async function deleteClient(
+  clientId: string,
+) {
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "CLIENT_DELETE",
+    );
+
+  const client =
+    await prisma.client.findFirst({
+      where: {
+        id:
+          clientId,
+
+        workspaceId:
+          workspace.id,
       },
-      documents: {
-        select: { id: true },
+
+      include: {
+        cases: {
+          select: {
+            id:
+              true,
+          },
+        },
+
+        documents: {
+          select: {
+            id:
+              true,
+          },
+        },
+
+        tasks: {
+          select: {
+            id:
+              true,
+          },
+        },
+
+        receivables: {
+          select: {
+            id:
+              true,
+          },
+        },
+
+        events: {
+          select: {
+            id:
+              true,
+          },
+        },
       },
-      tasks: {
-        select: { id: true },
-      },
-      receivables: {
-        select: { id: true },
-      },
-      events: {
-        select: { id: true },
-      },
-    },
-  });
+    });
 
   if (!client) {
-    throw new Error("Cliente não encontrado.");
+    throw new Error(
+      "Cliente não encontrado.",
+    );
   }
 
   const hasDependencies =
@@ -45,15 +85,18 @@ export async function deleteClient(clientId: string) {
 
   if (hasDependencies) {
     throw new Error(
-      "Não é possível excluir este cliente porque existem registros vinculados a ele."
+      "Não é possível excluir este cliente porque existem registros vinculados a ele.",
     );
   }
 
   await prisma.client.delete({
     where: {
-      id: client.id,
+      id:
+        client.id,
     },
   });
 
-  redirect("/clientes");
+  redirect(
+    "/clientes",
+  );
 }

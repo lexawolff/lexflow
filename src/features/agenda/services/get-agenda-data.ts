@@ -356,11 +356,6 @@ export async function getAgendaData(
           workspaceId:
             workspace.id,
 
-          status: {
-            not:
-              TaskStatus.CANCELADA,
-          },
-
           OR: [
             {
               startsAt: {

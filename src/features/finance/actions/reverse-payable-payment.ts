@@ -8,8 +8,13 @@ import {
   revalidatePath,
 } from "next/cache";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
 
 import {
   getOpenPayableStatus,
@@ -20,10 +25,15 @@ import {
 } from "../schemas/payable-actions-schema";
 
 export async function reversePayablePayment(
-  formData: FormData,
+  formData:
+    FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     reversePayablePaymentSchema.safeParse(
@@ -39,7 +49,7 @@ export async function reversePayablePayment(
     throw new Error(
       parsed.error.issues[0]
         ?.message ??
-        "Dados inválidos.",
+      "Dados inválidos.",
     );
   }
 
@@ -55,9 +65,14 @@ export async function reversePayablePayment(
         },
 
         select: {
-          id: true,
-          status: true,
-          dueDate: true,
+          id:
+            true,
+
+          status:
+            true,
+
+          dueDate:
+            true,
         },
       },
     );
@@ -89,9 +104,11 @@ export async function reversePayablePayment(
     },
 
     data: {
-      paidAt: null,
+      paidAt:
+        null,
 
-      paymentMethod: null,
+      paymentMethod:
+        null,
 
       status,
     },
@@ -100,8 +117,15 @@ export async function reversePayablePayment(
   revalidatePath(
     "/financeiro",
   );
+  revalidatePath(
+    "/financeiro/contas-a-pagar",
+  );
 
+  revalidatePath(
+    "/financeiro/fluxo-de-caixa",
+  );
   return {
-    success: true,
+    success:
+      true,
   };
 }

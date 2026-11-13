@@ -328,7 +328,7 @@ export function CreateReceivableForm({
           control={control}
           name="description"
           label="Descrição"
-          placeholder="Ex.: Honorários do processo"
+          placeholder="Ex.: Honorários contratuais"
         />
 
         <SelectField
@@ -342,8 +342,8 @@ export function CreateReceivableForm({
           <SelectField
             control={control}
             name="caseId"
-            label="Processo relacionado"
-            placeholder="Nenhum processo"
+            label="Caso relacionado"
+            placeholder="Nenhum caso"
             options={caseOptions.map(
               (item) => ({
                 label: item.label,

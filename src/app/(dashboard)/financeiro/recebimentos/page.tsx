@@ -1,11 +1,38 @@
-import { AppShell } from "@/components/app-shell/app-shell";
+import {
+  AppShell,
+} from "@/components/app-shell/app-shell";
 
-import { FinanceNavigation } from "@/features/finance/components/finance-navigation";
-import { OfficeReceivablesSection } from "@/features/finance/components/office-receivables-section";
+import {
+  FinanceNavigation,
+} from "@/features/finance/components/finance-navigation";
 
-import { getOfficeFinancialData } from "@/features/finance/services/get-office-financial-data";
+import {
+  OfficeReceivablesSection,
+} from "@/features/finance/components/office-receivables-section";
+
+import {
+  getOfficeFinancialData,
+} from "@/features/finance/services/get-office-financial-data";
+
+import {
+  hasPermission,
+  requireWorkspacePagePermission,
+} from "@/lib/permissions";
 
 export default async function RecebimentosPage() {
+  const {
+    membership,
+  } =
+    await requireWorkspacePagePermission(
+      "FINANCE_VIEW",
+    );
+
+  const canWriteFinance =
+    hasPermission(
+      membership.role,
+      "FINANCE_WRITE",
+    );
+
   const data =
     await getOfficeFinancialData();
 
@@ -27,7 +54,12 @@ export default async function RecebimentosPage() {
         <FinanceNavigation />
 
         <OfficeReceivablesSection
-          data={data}
+          data={
+            data
+          }
+          canWriteFinance={
+            canWriteFinance
+          }
         />
       </div>
     </AppShell>

@@ -1,6 +1,15 @@
 import type {
+  ElementType,
   ReactNode,
 } from "react";
+
+import {
+  Building2,
+  CalendarDays,
+  FileText,
+  Gavel,
+  Scale,
+} from "lucide-react";
 
 import {
   formatDate,
@@ -22,6 +31,29 @@ type Props = {
     CaseDetails;
 };
 
+type SectionTone =
+  | "default"
+  | "blue"
+  | "violet"
+  | "amber";
+
+type SectionProps = {
+  title:
+    string;
+
+  description:
+    string;
+
+  icon:
+    ElementType;
+
+  children:
+    ReactNode;
+
+  tone?:
+    SectionTone;
+};
+
 function Item({
   label,
   value,
@@ -33,14 +65,14 @@ function Item({
     ReactNode;
 }) {
   return (
-    <div className="space-y-1">
+    <div className="min-w-0">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
 
-      <div className="font-medium break-words">
+      <div className="mt-1.5 break-words text-sm font-medium leading-6">
         {value ??
-          "-"}
+        "-"}
       </div>
     </div>
   );
@@ -48,21 +80,89 @@ function Item({
 
 function Section({
   title,
+  description,
+  icon: Icon,
   children,
-}: {
-  title:
-    string;
+  tone =
+    "default",
+}: SectionProps) {
+  const styles = {
+    default: {
+      border:
+        "border-border",
 
-  children:
-    ReactNode;
-}) {
+      header:
+        "border-border bg-muted/20",
+
+      icon:
+        "bg-muted text-muted-foreground",
+    },
+
+    blue: {
+      border:
+        "border-blue-200 dark:border-blue-900",
+
+      header:
+        "border-blue-100 bg-blue-50/30 dark:border-blue-900 dark:bg-blue-950/10",
+
+      icon:
+        "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+    },
+
+    violet: {
+      border:
+        "border-violet-200 dark:border-violet-900",
+
+      header:
+        "border-violet-100 bg-violet-50/30 dark:border-violet-900 dark:bg-violet-950/10",
+
+      icon:
+        "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
+    },
+
+    amber: {
+      border:
+        "border-amber-200 dark:border-amber-900",
+
+      header:
+        "border-amber-100 bg-amber-50/30 dark:border-amber-900 dark:bg-amber-950/10",
+
+      icon:
+        "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+    },
+  }[
+    tone
+  ];
+
   return (
-    <section className="rounded-2xl border bg-card p-5 sm:p-6">
-      <h2 className="mb-5 text-lg font-semibold">
-        {title}
-      </h2>
+    <section
+      className={`overflow-hidden rounded-2xl border bg-card shadow-sm ${styles.border}`}
+    >
+      <div
+        className={`border-b px-5 py-4 sm:px-6 ${styles.header}`}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${styles.icon}`}
+          >
+            <Icon className="size-5" />
+          </div>
 
-      {children}
+          <div>
+            <h2 className="font-semibold">
+              {title}
+            </h2>
+
+            <p className="mt-0.5 text-sm leading-5 text-muted-foreground">
+              {description}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-5 sm:p-6">
+        {children}
+      </div>
     </section>
   );
 }
@@ -94,18 +194,28 @@ export function OverviewTab({
       caseData.city,
       caseData.state,
     ]
-      .filter(Boolean)
-      .join(" - ") ||
+      .filter(
+        Boolean,
+      )
+      .join(
+        " - ",
+      ) ||
     "-";
 
   return (
     <div className="space-y-4">
       {/* ==========================
-          IDENTIFICAÇÃO
+          CLASSIFICAÇÃO
       ========================== */}
 
-      <Section title="Identificação da demanda">
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <Section
+        title="Dados do caso"
+        description="Classificação e informações gerais utilizadas para identificar o atendimento."
+        icon={
+          FileText
+        }
+      >
+        <div className="grid gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
           <Item
             label="Título"
             value={
@@ -123,7 +233,7 @@ export function OverviewTab({
           />
 
           <Item
-            label="Tipo da demanda"
+            label="Tipo do caso"
             value={
               caseData.benefitType ||
               "-"
@@ -131,10 +241,11 @@ export function OverviewTab({
           />
 
           <Item
-            label="Objeto"
+            label="Origem"
             value={
-              caseData.subject ||
-              "-"
+              CASE_ORIGIN_LABELS[
+                caseData.origin
+              ]
             }
           />
 
@@ -148,11 +259,10 @@ export function OverviewTab({
           />
 
           <Item
-            label="Origem"
+            label="Objeto"
             value={
-              CASE_ORIGIN_LABELS[
-                caseData.origin
-              ]
+              caseData.subject ||
+              "-"
             }
           />
         </div>
@@ -162,8 +272,15 @@ export function OverviewTab({
           ADMINISTRATIVO
       ========================== */}
 
-      <Section title="Dados administrativos">
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <Section
+        title="Dados administrativos"
+        description="Informações relacionadas ao requerimento ou procedimento administrativo."
+        icon={
+          Building2
+        }
+        tone="violet"
+      >
+        <div className="grid gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-4">
           <Item
             label="Número do benefício (NB)"
             value={
@@ -206,8 +323,15 @@ export function OverviewTab({
           JUDICIAL
       ========================== */}
 
-      <Section title="Dados judiciais">
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <Section
+        title="Dados judiciais"
+        description="Informações de distribuição, tramitação e identificação do processo judicial."
+        icon={
+          Gavel
+        }
+        tone="blue"
+      >
+        <div className="grid gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
           <Item
             label="Número do processo"
             value={
@@ -276,11 +400,22 @@ export function OverviewTab({
       </Section>
 
       {/* ==========================
-          SISTEMA
+          CADASTRO E OBSERVAÇÕES
       ========================== */}
 
-      <Section title="Informações do cadastro">
-        <div className="grid gap-6 md:grid-cols-2">
+      <Section
+        title="Informações internas"
+        description="Dados de controle do LexFlow e observações registradas para acompanhamento."
+        icon={
+          CalendarDays
+        }
+        tone={
+          caseData.notes
+            ? "amber"
+            : "default"
+        }
+      >
+        <div className="grid gap-x-8 gap-y-6 md:grid-cols-2">
           <Item
             label="Cadastrado em"
             value={
@@ -302,17 +437,31 @@ export function OverviewTab({
 
         {caseData.notes ? (
           <div className="mt-6 border-t pt-6">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Observações
-            </p>
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                <Scale className="size-4" />
+              </div>
 
-            <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-              {
-                caseData.notes
-              }
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Observações
+                </p>
+
+                <p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-foreground/80">
+                  {
+                    caseData.notes
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6 border-t pt-5">
+            <p className="text-sm text-muted-foreground">
+              Nenhuma observação interna registrada neste caso.
             </p>
           </div>
-        ) : null}
+        )}
       </Section>
     </div>
   );

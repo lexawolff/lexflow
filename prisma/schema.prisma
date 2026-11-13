@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -10,6 +11,18 @@ datasource db {
 //
 // ENUMS
 //
+
+enum WorkItemStatus {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+}
+
+enum WorkPlanningPeriod {
+  ESTA_SEMANA
+  ESTE_MES
+  DEPOIS
+}
 
 enum CaseOrigin {
   ADMINISTRATIVO
@@ -187,6 +200,19 @@ enum TimelineEventType {
   SYSTEM
 }
 
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
 //
 // USER
 //
@@ -212,29 +238,74 @@ model User {
 model Workspace {
   id String @id @default(uuid())
 
-  name String
-  slug String @unique
+  //
+  // IDENTIFICAÇÃO
+  //
+
+  name      String
+  slug      String  @unique
+  legalName String?
+
+  //
+  // DADOS PROFISSIONAIS
+  //
+
+  cnpj            String?
+  oabRegistration String?
+  oabState        String?
+
+  //
+  // CONTATO
+  //
+
+  email    String?
+  phone    String?
+  whatsapp String?
+  website  String?
+
+  //
+  // ENDEREÇO
+  //
+
+  cep           String?
+  address       String?
+  addressNumber String?
+  complement    String?
+  neighborhood  String?
+  city          String?
+  state         String?
+
+  //
+  // CONTROLE
+  //
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  //
+  // RELAÇÕES
+  //
 
   members Membership[]
 
   clients Client[]
   cases   Case[]
 
+  subscription   Subscription?
+  billingProfile BillingProfile?
+
   payables    Payable[]
   receivables Receivable[]
   rpvs        Rpv[]
   tasks       Task[]
+  workItems   WorkItem[]
 
   extraServices ExtraService[]
 
   documents Document[]
 
-  clientEvents ClientEvent[]
-  caseEvents   CaseEvent[]
-
+  clientEvents              ClientEvent[]
+  caseEvents                CaseEvent[]
   googleCalendarConnections GoogleCalendarConnection[]
 }
 
@@ -250,20 +321,30 @@ model Membership {
 
   role UserRole @default(OWNER)
 
+  // ==========================
+  // PREFERÊNCIAS DO USUÁRIO NO ESCRITÓRIO
+  // ==========================
+
+  agendaShowCompleted Boolean @default(true)
+  agendaDefaultStatus String  @default("TODOS")
+  agendaItemsPerDay   Int     @default(4)
+  agendaShowAttention Boolean @default(true)
+
   createdAt DateTime @default(now())
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  workItems WorkItem[]
+
   @@unique([userId, workspaceId])
   @@index([userId])
-  @@index([workspaceId])
 }
 
 //
 
 model TimelineEvent {
-  id          String            @id @default(cuid())
+  id          String @id @default(cuid())
   workspaceId String
   clientId    String
 
@@ -271,23 +352,21 @@ model TimelineEvent {
   title       String
   description String?
 
-  entityType  TimelineEntityType?
-  entityId    String?
+  entityType TimelineEntityType?
+  entityId   String?
 
-  metadata    Json?
+  metadata Json?
 
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  client      Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([clientId])
   @@index([clientId, createdAt])
   @@index([entityType, entityId])
 }
-
-
 
 //
 
@@ -362,11 +441,12 @@ model Client {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  cases       Case[]
-  documents   Document[]
-  receivables Receivable[]
-  events      ClientEvent[]
-  tasks       Task[]
+  cases          Case[]
+  documents      Document[]
+  receivables    Receivable[]
+  events         ClientEvent[]
+  tasks          Task[]
+  workItems      WorkItem[]
   timelineEvents TimelineEvent[]
 
   @@index([workspaceId])
@@ -442,6 +522,7 @@ model Case {
   rpvs        Rpv[]
   events      CaseEvent[]
   tasks       Task[]
+  workItems   WorkItem[]
 
   @@index([workspaceId])
   @@index([clientId])
@@ -496,29 +577,29 @@ model Receivable {
   id String @id @default(uuid())
 
   workspaceId String
-  clientId String
-  caseId String?
-  rpvId String?
+  clientId    String
+  caseId      String?
+  rpvId       String?
 
   description String
-  type ReceivableType @default(HONORARIO_CONTRATUAL)
+  type        ReceivableType @default(HONORARIO_CONTRATUAL)
 
   totalAmount Decimal
-  paidAmount Decimal @default(0)
+  paidAmount  Decimal @default(0)
 
-  dueDate DateTime?
+  dueDate    DateTime?
   receivedAt DateTime?
 
   status FinancialStatus @default(PENDENTE)
 
   paymentMethod String?
-  notes String?
+  notes         String?
 
   originalDueDate DateTime?
 
   installmentGroupId String?
-  installmentNumber Int?
-  totalInstallments Int?
+  installmentNumber  Int?
+  totalInstallments  Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -531,6 +612,7 @@ model Receivable {
 
   rpv Rpv? @relation(fields: [rpvId], references: [id], onDelete: Cascade)
 
+  @@unique([rpvId, type])
   @@index([workspaceId])
   @@index([clientId])
   @@index([caseId])
@@ -539,8 +621,6 @@ model Receivable {
   @@index([type])
   @@index([dueDate])
   @@index([installmentGroupId])
-
-  @@unique([rpvId, type])
 }
 
 //
@@ -651,24 +731,72 @@ model Task {
 
   case Case? @relation(fields: [caseId], references: [id], onDelete: SetNull)
 
-  googleConnection GoogleCalendarConnection? @relation(fields: [googleConnectionId],references: [id], onDelete: SetNull)
+  googleConnection GoogleCalendarConnection? @relation(fields: [googleConnectionId], references: [id], onDelete: SetNull)
+
+  @@unique([googleConnectionId, googleEventId])
+  @@index([workspaceId])
+  @@index([clientId])
+  @@index([caseId])
+  @@index([dueDate])
+  @@index([startsAt])
+  @@index([endsAt])
+  @@index([status])
+  @@index([type])
+  @@index([source])
+  @@index([googleConnectionId])
+  @@index([googleEventId])
+}
+
+model WorkItem {
+  id                     String  @id @default(uuid())
+  workspaceId            String
+  clientId               String?
+  caseId                 String?
+  assignedToMembershipId String
+
+  // ==========================
+  // Trabalho
+  // ==========================
+
+  title       String
+  description String?
+
+  status WorkItemStatus     @default(PENDENTE)
+  period WorkPlanningPeriod @default(ESTA_SEMANA)
+
+  // Quanto menor, mais acima aparece na fila
+  position Int @default(0)
+
+  // Prazo real, quando existir
+  dueDate DateTime?
+
+  completedAt DateTime?
+
+  // ==========================
+  // Controle
+  // ==========================
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ==========================
+  // Relações
+  // ==========================
+
+  workspace  Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client     Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  case       Case?      @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  assignedTo Membership @relation(fields: [assignedToMembershipId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([clientId])
   @@index([caseId])
-
-  @@index([dueDate])
-  @@index([startsAt])
-  @@index([endsAt])
-
   @@index([status])
-  @@index([type])
-  @@index([source])
-
-  @@index([googleConnectionId])
-  @@index([googleEventId])
-
-  @@unique([googleConnectionId, googleEventId])
+  @@index([period])
+  @@index([position])
+  @@index([dueDate])
+  @@index([workspaceId, period, status, position])
+  @@index([assignedToMembershipId])
 }
 
 //
@@ -728,7 +856,6 @@ model GoogleCalendarConnection {
   tasks Task[]
 
   @@unique([workspaceId, userId])
-
   @@index([workspaceId])
   @@index([userId])
 }
@@ -848,4 +975,97 @@ model CaseEvent {
 
   @@index([workspaceId])
   @@index([caseId])
+}
+
+//
+// SUBSCRIPTION
+//
+
+model Subscription {
+  id String @id @default(uuid())
+
+  workspaceId String @unique
+
+  //
+  // PLANO
+  //
+
+  planCode String?
+  planName String?
+
+  status SubscriptionStatus @default(TRIALING)
+
+  billingInterval BillingInterval?
+
+  amountCents Int?
+  currency    String @default("BRL")
+
+  //
+  // PERÍODO
+  //
+
+  trialEndsAt DateTime?
+
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+
+  cancelAtPeriodEnd Boolean   @default(false)
+  canceledAt        DateTime?
+
+  //
+  // PROVEDOR DE PAGAMENTO
+  //
+
+  provider               String?
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  providerPriceId        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+//
+// BILLING PROFILE
+//
+
+model BillingProfile {
+  id String @id @default(uuid())
+
+  workspaceId String @unique
+
+  //
+  // IDENTIFICAÇÃO
+  //
+
+  name  String?
+  taxId String?
+
+  //
+  // CONTATO
+  //
+
+  email String?
+  phone String?
+
+  //
+  // ENDEREÇO DE COBRANÇA
+  //
+
+  cep           String?
+  address       String?
+  addressNumber String?
+  complement    String?
+  neighborhood  String?
+  city          String?
+  state         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }

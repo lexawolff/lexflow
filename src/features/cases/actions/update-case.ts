@@ -13,8 +13,8 @@ import {
 } from "@/lib/prisma";
 
 import {
-  getDefaultWorkspace,
-} from "@/lib/workspace";
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
 import {
   CASE_STATUS_LABELS,
@@ -82,8 +82,12 @@ export async function updateCase(
   formData:
     FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+ const {
+  workspace,
+} =
+  await requireWorkspacePermission(
+    "CASE_EDIT",
+  );
 
   const existing =
     await prisma.case.findFirst({
@@ -109,7 +113,7 @@ export async function updateCase(
 
   if (!existing) {
     throw new Error(
-      "Demanda não encontrada.",
+      "Caso não encontrado.",
     );
   }
 
@@ -345,7 +349,7 @@ export async function updateCase(
         existing.id,
 
       title:
-        "Status da demanda alterado",
+        "Status do caso alterado",
 
       content:
         `Status alterado de "${CASE_STATUS_LABELS[existing.status]}" para "${CASE_STATUS_LABELS[data.status]}".`,

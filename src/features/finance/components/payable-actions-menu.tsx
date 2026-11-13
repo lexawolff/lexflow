@@ -1,18 +1,28 @@
 "use client";
 
+import type {
+  ElementType,
+  ReactNode,
+} from "react";
+
 import {
   useState,
   useTransition,
 } from "react";
 
 import {
+  AlertTriangle,
+  Ban,
+  CalendarDays,
+  CheckCircle2,
+  CircleDollarSign,
+  FileText,
   MoreHorizontal,
   Pencil,
+  ReceiptText,
   RotateCcw,
   Trash2,
   Wallet,
-  Ban,
-  AlertTriangle,
 } from "lucide-react";
 
 import {
@@ -28,7 +38,9 @@ import {
   useForm,
 } from "react-hook-form";
 
-import { Button } from "@/components/ui/button";
+import {
+  Button,
+} from "@/components/ui/button";
 
 import {
   Dialog,
@@ -45,18 +57,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { CurrencyField } from "@/components/forms/currency-field";
-import { SelectField } from "@/components/forms/select-field";
-import { TextareaField } from "@/components/forms/textarea-field";
-import { TextField } from "@/components/forms/text-field";
+import {
+  CurrencyField,
+} from "@/components/forms/currency-field";
 
-import { updatePayable } from "../actions/update-payable";
+import {
+  SelectField,
+} from "@/components/forms/select-field";
 
-import { registerPayablePayment } from "../actions/register-payable-payment";
+import {
+  TextareaField,
+} from "@/components/forms/textarea-field";
 
-import { reversePayablePayment } from "../actions/reverse-payable-payment";
+import {
+  TextField,
+} from "@/components/forms/text-field";
 
-import { removePayable } from "../actions/remove-payable";
+import {
+  updatePayable,
+} from "../actions/update-payable";
+
+import {
+  registerPayablePayment,
+} from "../actions/register-payable-payment";
+
+import {
+  reversePayablePayment,
+} from "../actions/reverse-payable-payment";
+
+import {
+  removePayable,
+} from "../actions/remove-payable";
 
 import {
   registerPayablePaymentFormSchema,
@@ -100,37 +131,44 @@ const categoryOptions = [
     value:
       PayableCategory.ALUGUEL,
   },
+
   {
     label: "Salário",
     value:
       PayableCategory.SALARIO,
   },
+
   {
     label: "Imposto",
     value:
       PayableCategory.IMPOSTO,
   },
+
   {
     label: "Software",
     value:
       PayableCategory.SOFTWARE,
   },
+
   {
     label: "Marketing",
     value:
       PayableCategory.MARKETING,
   },
+
   {
     label:
       "Material de escritório",
     value:
       PayableCategory.MATERIAL_ESCRITORIO,
   },
+
   {
     label: "Custas",
     value:
       PayableCategory.CUSTAS,
   },
+
   {
     label: "Outro",
     value:
@@ -143,30 +181,38 @@ const paymentMethodOptions = [
     label: "PIX",
     value: "PIX",
   },
+
   {
     label: "Dinheiro",
     value: "DINHEIRO",
   },
+
   {
     label: "Cartão",
     value: "CARTAO",
   },
+
   {
     label: "Transferência",
     value: "TRANSFERENCIA",
   },
+
   {
     label: "Depósito",
     value: "DEPOSITO",
   },
+
   {
     label: "Boleto",
     value: "BOLETO",
   },
+
   {
     label: "Débito automático",
-    value: "DEBITO_AUTOMATICO",
+    value:
+      "DEBITO_AUTOMATICO",
   },
+
   {
     label: "Outro",
     value: "OUTRO",
@@ -192,8 +238,11 @@ function getTodayInputValue(): string {
       {
         timeZone:
           "America/Sao_Paulo",
+
         year: "numeric",
+
         month: "2-digit",
+
         day: "2-digit",
       },
     );
@@ -205,20 +254,29 @@ function getTodayInputValue(): string {
 
   const year =
     parts.find(
-      (part) =>
-        part.type === "year",
+      (
+        part,
+      ) =>
+        part.type ===
+        "year",
     )?.value;
 
   const month =
     parts.find(
-      (part) =>
-        part.type === "month",
+      (
+        part,
+      ) =>
+        part.type ===
+        "month",
     )?.value;
 
   const day =
     parts.find(
-      (part) =>
-        part.type === "day",
+      (
+        part,
+      ) =>
+        part.type ===
+        "day",
     )?.value;
 
   if (
@@ -319,8 +377,10 @@ export function PayableActionsMenu({
                 true,
               )
             }
+            className="text-emerald-700 focus:text-emerald-700 dark:text-emerald-300 dark:focus:text-emerald-300"
           >
             <Wallet className="mr-2 size-4" />
+
             Registrar pagamento
           </DropdownMenuItem>
 
@@ -333,85 +393,123 @@ export function PayableActionsMenu({
                 true,
               )
             }
+            className="text-amber-700 focus:text-amber-700 dark:text-amber-300 dark:focus:text-amber-300"
           >
             <RotateCcw className="mr-2 size-4" />
+
             Estornar pagamento
           </DropdownMenuItem>
 
           <DropdownMenuItem
-            disabled={!canEdit}
+            disabled={
+              !canEdit
+            }
             onClick={() =>
-              setEditOpen(true)
+              setEditOpen(
+                true,
+              )
             }
           >
             <Pencil className="mr-2 size-4" />
+
             Editar
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
           <DropdownMenuItem
-            disabled={!canCancel}
-            onClick={() =>
-              setCancelOpen(true)
+            disabled={
+              !canCancel
             }
+            onClick={() =>
+              setCancelOpen(
+                true,
+              )
+            }
+            className="text-amber-700 focus:text-amber-700 dark:text-amber-300 dark:focus:text-amber-300"
           >
             <Ban className="mr-2 size-4" />
+
             Cancelar conta
           </DropdownMenuItem>
 
           <DropdownMenuItem
-            disabled={!canDelete}
-            onClick={() =>
-              setDeleteOpen(true)
+            disabled={
+              !canDelete
             }
-            className="text-destructive"
+            onClick={() =>
+              setDeleteOpen(
+                true,
+              )
+            }
+            className="text-destructive focus:text-destructive"
           >
             <Trash2 className="mr-2 size-4" />
+
             Excluir
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <EditPayableDialog
-        open={editOpen}
+        open={
+          editOpen
+        }
         onOpenChange={
           setEditOpen
         }
-        payable={payable}
+        payable={
+          payable
+        }
       />
 
       <RegisterPayablePaymentDialog
-        open={paymentOpen}
+        open={
+          paymentOpen
+        }
         onOpenChange={
           setPaymentOpen
         }
-        payable={payable}
+        payable={
+          payable
+        }
       />
 
       <ReversePayablePaymentDialog
-        open={reverseOpen}
+        open={
+          reverseOpen
+        }
         onOpenChange={
           setReverseOpen
         }
-        payable={payable}
+        payable={
+          payable
+        }
       />
 
       <RemovePayableDialog
-        open={cancelOpen}
+        open={
+          cancelOpen
+        }
         onOpenChange={
           setCancelOpen
         }
-        payable={payable}
+        payable={
+          payable
+        }
         mode="CANCEL"
       />
 
       <RemovePayableDialog
-        open={deleteOpen}
+        open={
+          deleteOpen
+        }
         onOpenChange={
           setDeleteOpen
         }
-        payable={payable}
+        payable={
+          payable
+        }
         mode="DELETE"
       />
     </>
@@ -426,7 +524,9 @@ function EditPayableDialog({
   open: boolean;
 
   onOpenChange:
-    (open: boolean) => void;
+    (
+      open: boolean,
+    ) => void;
 
   payable:
     EditablePayable;
@@ -482,15 +582,27 @@ function EditPayableDialog({
   } = form;
 
   function close() {
-    reset(defaultValues);
-    setErrorMessage(null);
-    onOpenChange(false);
+    reset(
+      defaultValues,
+    );
+
+    setErrorMessage(
+      null,
+    );
+
+    onOpenChange(
+      false,
+    );
   }
 
   const submit =
     handleSubmit(
-      (values) => {
-        setErrorMessage(null);
+      (
+        values,
+      ) => {
+        setErrorMessage(
+          null,
+        );
 
         startTransition(
           async () => {
@@ -537,7 +649,9 @@ function EditPayableDialog({
               onOpenChange(
                 false,
               );
-            } catch (error) {
+            } catch (
+              error
+            ) {
               console.error(
                 error,
               );
@@ -556,82 +670,112 @@ function EditPayableDialog({
 
   return (
     <Dialog
-      open={open}
+      open={
+        open
+      }
       onOpenChange={
         isPending
           ? undefined
           : onOpenChange
       }
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            Editar conta
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-2xl">
+        <DialogHero
+          icon={
+            Pencil
+          }
+          eyebrow="Despesas do escritório"
+          title="Editar conta"
+          description="Atualize as informações do lançamento financeiro."
+          tone="rose"
+        />
 
         <form
-          onSubmit={submit}
-          className="space-y-6"
+          onSubmit={
+            submit
+          }
+          className="space-y-5 px-6 pt-5"
         >
-          <div className="grid gap-4 md:grid-cols-2">
-            <TextField
+          <FormSection
+            icon={
+              ReceiptText
+            }
+            title="Dados da conta"
+            description="Descrição, categoria, valor e vencimento."
+            tone="rose"
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <TextField
+                control={
+                  control
+                }
+                name="description"
+                label="Descrição"
+              />
+
+              <SelectField
+                control={
+                  control
+                }
+                name="category"
+                label="Categoria"
+                options={
+                  categoryOptions
+                }
+              />
+
+              <CurrencyField
+                control={
+                  control
+                }
+                name="amount"
+                label="Valor"
+              />
+
+              <TextField
+                control={
+                  control
+                }
+                name="dueDate"
+                label="Vencimento"
+                type="date"
+              />
+            </div>
+          </FormSection>
+
+          <FormSection
+            icon={
+              FileText
+            }
+            title="Observações"
+            description="Informações internas relacionadas a esta despesa."
+            tone="neutral"
+          >
+            <TextareaField
               control={
                 control
               }
-              name="description"
-              label="Descrição"
+              name="notes"
+              label="Observações"
             />
+          </FormSection>
 
-            <SelectField
-              control={
-                control
-              }
-              name="category"
-              label="Categoria"
-              options={
-                categoryOptions
-              }
-            />
-
-            <CurrencyField
-              control={
-                control
-              }
-              name="amount"
-              label="Valor"
-            />
-
-            <TextField
-              control={
-                control
-              }
-              name="dueDate"
-              label="Vencimento"
-              type="date"
-            />
-          </div>
-
-          <TextareaField
-            control={control}
-            name="notes"
-            label="Observações"
+          <ErrorBanner
+            message={
+              errorMessage
+            }
           />
 
-          {errorMessage ? (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {errorMessage}
-            </div>
-          ) : null}
-
-          <div className="flex justify-end gap-3">
+          <DialogActions>
             <button
               type="button"
               disabled={
                 isPending
               }
-              onClick={close}
-              className="rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium"
+              onClick={
+                close
+              }
+              className={secondaryButtonClass}
             >
               Cancelar
             </button>
@@ -641,13 +785,13 @@ function EditPayableDialog({
               disabled={
                 isPending
               }
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              className={roseButtonClass}
             >
               {isPending
                 ? "Salvando..."
                 : "Salvar alterações"}
             </button>
-          </div>
+          </DialogActions>
         </form>
       </DialogContent>
     </Dialog>
@@ -662,7 +806,9 @@ function RegisterPayablePaymentDialog({
   open: boolean;
 
   onOpenChange:
-    (open: boolean) => void;
+    (
+      open: boolean,
+    ) => void;
 
   payable:
     EditablePayable;
@@ -706,8 +852,12 @@ function RegisterPayablePaymentDialog({
 
   const submit =
     handleSubmit(
-      (values) => {
-        setErrorMessage(null);
+      (
+        values,
+      ) => {
+        setErrorMessage(
+          null,
+        );
 
         startTransition(
           async () => {
@@ -737,7 +887,9 @@ function RegisterPayablePaymentDialog({
               onOpenChange(
                 false,
               );
-            } catch (error) {
+            } catch (
+              error
+            ) {
               console.error(
                 error,
               );
@@ -756,67 +908,77 @@ function RegisterPayablePaymentDialog({
 
   return (
     <Dialog
-      open={open}
+      open={
+        open
+      }
       onOpenChange={
         isPending
           ? undefined
           : onOpenChange
       }
     >
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            Registrar pagamento
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="p-0 sm:max-w-lg">
+        <DialogHero
+          icon={
+            CheckCircle2
+          }
+          eyebrow="Baixa financeira"
+          title="Registrar pagamento"
+          description="Confirme quando e como esta despesa foi paga."
+          tone="emerald"
+        />
 
         <form
-          onSubmit={submit}
-          className="space-y-6"
+          onSubmit={
+            submit
+          }
+          className="space-y-5 px-6 pt-5"
         >
-          <div className="rounded-lg border bg-muted/40 p-4">
-            <p className="font-medium">
-              {
-                payable.description
-              }
-            </p>
+          <PayableSummaryCard
+            payable={
+              payable
+            }
+            tone="emerald"
+          />
 
-            <p className="mt-2 text-2xl font-bold">
-              {formatMoney(
-                payable.amount,
-              )}
-            </p>
-          </div>
+          <FormSection
+            icon={
+              CalendarDays
+            }
+            title="Dados do pagamento"
+            description="Informe a data e a forma utilizada no pagamento."
+            tone="emerald"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                control={
+                  control
+                }
+                name="paidAt"
+                label="Data do pagamento"
+                type="date"
+              />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              control={
-                control
-              }
-              name="paidAt"
-              label="Data do pagamento"
-              type="date"
-            />
-
-            <SelectField
-              control={
-                control
-              }
-              name="paymentMethod"
-              label="Forma de pagamento"
-              options={
-                paymentMethodOptions
-              }
-            />
-          </div>
-
-          {errorMessage ? (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {errorMessage}
+              <SelectField
+                control={
+                  control
+                }
+                name="paymentMethod"
+                label="Forma de pagamento"
+                options={
+                  paymentMethodOptions
+                }
+              />
             </div>
-          ) : null}
+          </FormSection>
 
-          <div className="flex justify-end gap-3">
+          <ErrorBanner
+            message={
+              errorMessage
+            }
+          />
+
+          <DialogActions>
             <button
               type="button"
               disabled={
@@ -827,7 +989,7 @@ function RegisterPayablePaymentDialog({
                   false,
                 )
               }
-              className="rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium"
+              className={secondaryButtonClass}
             >
               Cancelar
             </button>
@@ -837,13 +999,15 @@ function RegisterPayablePaymentDialog({
               disabled={
                 isPending
               }
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              className={emeraldButtonClass}
             >
+              <CheckCircle2 className="size-4" />
+
               {isPending
                 ? "Registrando..."
                 : "Confirmar pagamento"}
             </button>
-          </div>
+          </DialogActions>
         </form>
       </DialogContent>
     </Dialog>
@@ -858,7 +1022,9 @@ function ReversePayablePaymentDialog({
   open: boolean;
 
   onOpenChange:
-    (open: boolean) => void;
+    (
+      open: boolean,
+    ) => void;
 
   payable:
     EditablePayable;
@@ -878,7 +1044,9 @@ function ReversePayablePaymentDialog({
     useTransition();
 
   function confirm() {
-    setErrorMessage(null);
+    setErrorMessage(
+      null,
+    );
 
     startTransition(
       async () => {
@@ -898,7 +1066,9 @@ function ReversePayablePaymentDialog({
           onOpenChange(
             false,
           );
-        } catch (error) {
+        } catch (
+          error
+        ) {
           console.error(
             error,
           );
@@ -916,57 +1086,63 @@ function ReversePayablePaymentDialog({
 
   return (
     <Dialog
-      open={open}
+      open={
+        open
+      }
       onOpenChange={
         isPending
           ? undefined
           : onOpenChange
       }
     >
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            Estornar pagamento
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="p-0 sm:max-w-lg">
+        <DialogHero
+          icon={
+            RotateCcw
+          }
+          eyebrow="Reversão financeira"
+          title="Estornar pagamento"
+          description="O registro de pagamento será removido desta conta."
+          tone="amber"
+        />
 
-        <div className="space-y-5">
-          <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4">
-            <div className="flex gap-3">
-              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-yellow-700" />
+        <div className="space-y-5 px-6 pt-5">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300">
+                <AlertTriangle className="size-4" />
+              </div>
 
-              <p className="text-sm text-yellow-900">
-                A conta voltará para
-                Pendente ou Atrasada,
-                conforme o vencimento.
-                A data e a forma de
-                pagamento serão
-                removidas.
-              </p>
+              <div>
+                <p className="font-semibold text-amber-900 dark:text-amber-200">
+                  O que acontecerá?
+                </p>
+
+                <p className="mt-1 text-sm leading-6 text-amber-900/80 dark:text-amber-200/80">
+                  A conta voltará para
+                  Pendente ou Atrasada,
+                  conforme o vencimento.
+                  A data e a forma de
+                  pagamento serão removidas.
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-lg border p-4">
-            <p className="font-medium">
-              {
-                payable.description
-              }
-            </p>
+          <PayableSummaryCard
+            payable={
+              payable
+            }
+            tone="amber"
+          />
 
-            <p className="mt-2 text-xl font-bold">
-              {formatMoney(
-                payable.amount,
-              )}
-            </p>
-          </div>
+          <ErrorBanner
+            message={
+              errorMessage
+            }
+          />
 
-          {errorMessage ? (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {errorMessage}
-            </div>
-          ) : null}
-
-          <div className="flex justify-end gap-3">
+          <DialogActions>
             <button
               type="button"
               disabled={
@@ -977,7 +1153,7 @@ function ReversePayablePaymentDialog({
                   false,
                 )
               }
-              className="rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium"
+              className={secondaryButtonClass}
             >
               Voltar
             </button>
@@ -987,16 +1163,18 @@ function ReversePayablePaymentDialog({
               disabled={
                 isPending
               }
-              onClick={confirm}
-              className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              onClick={
+                confirm
+              }
+              className={amberButtonClass}
             >
-              <RotateCcw className="mr-2 size-4" />
+              <RotateCcw className="size-4" />
 
               {isPending
                 ? "Estornando..."
                 : "Confirmar estorno"}
             </button>
-          </div>
+          </DialogActions>
         </div>
       </DialogContent>
     </Dialog>
@@ -1012,7 +1190,9 @@ function RemovePayableDialog({
   open: boolean;
 
   onOpenChange:
-    (open: boolean) => void;
+    (
+      open: boolean,
+    ) => void;
 
   payable:
     EditablePayable;
@@ -1035,10 +1215,13 @@ function RemovePayableDialog({
     useTransition();
 
   const isDelete =
-    mode === "DELETE";
+    mode ===
+    "DELETE";
 
   function confirm() {
-    setErrorMessage(null);
+    setErrorMessage(
+      null,
+    );
 
     startTransition(
       async () => {
@@ -1063,7 +1246,9 @@ function RemovePayableDialog({
           onOpenChange(
             false,
           );
-        } catch (error) {
+        } catch (
+          error
+        ) {
           console.error(
             error,
           );
@@ -1081,56 +1266,75 @@ function RemovePayableDialog({
 
   return (
     <Dialog
-      open={open}
+      open={
+        open
+      }
       onOpenChange={
         isPending
           ? undefined
           : onOpenChange
       }
     >
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {isDelete
+      <DialogContent className="p-0 sm:max-w-lg">
+        <DialogHero
+          icon={
+            isDelete
+              ? Trash2
+              : Ban
+          }
+          eyebrow={
+            isDelete
+              ? "Remoção definitiva"
+              : "Histórico financeiro"
+          }
+          title={
+            isDelete
               ? "Excluir conta"
-              : "Cancelar conta"}
-          </DialogTitle>
-        </DialogHeader>
+              : "Cancelar conta"
+          }
+          description={
+            isDelete
+              ? "Remova definitivamente um lançamento cadastrado por engano."
+              : "Mantenha o lançamento no histórico, mas retire-o das obrigações ativas."
+          }
+          tone={
+            isDelete
+              ? "rose"
+              : "amber"
+          }
+        />
 
-        <div className="space-y-5">
-          <div
-            className={`rounded-lg border p-4 ${
+        <div className="space-y-5 px-6 pt-5">
+          <PayableSummaryCard
+            payable={
+              payable
+            }
+            tone={
               isDelete
-                ? "border-destructive/30 bg-destructive/5"
-                : "bg-muted/40"
+                ? "rose"
+                : "amber"
+            }
+          />
+
+          <div
+            className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${
+              isDelete
+                ? "border-rose-200 bg-rose-50/60 text-rose-900 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-200"
+                : "border-amber-200 bg-amber-50/60 text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200"
             }`}
           >
-            <p className="font-medium">
-              {
-                payable.description
-              }
-            </p>
-
-            <p className="mt-2 text-xl font-bold">
-              {formatMoney(
-                payable.amount,
-              )}
-            </p>
-
-            <p className="mt-3 text-sm text-muted-foreground">
-              {isDelete
-                ? "A conta será removida definitivamente. Use esta opção apenas para lançamentos cadastrados por engano."
-                : "A conta continuará no histórico financeiro, mas ficará marcada como cancelada."}
-            </p>
+            {isDelete
+              ? "A conta será removida definitivamente. Use esta opção apenas para lançamentos cadastrados por engano."
+              : "A conta continuará no histórico financeiro, mas ficará marcada como cancelada."}
           </div>
 
-          {errorMessage ? (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {errorMessage}
-            </div>
-          ) : null}
+          <ErrorBanner
+            message={
+              errorMessage
+            }
+          />
 
-          <div className="flex justify-end gap-3">
+          <DialogActions>
             <button
               type="button"
               disabled={
@@ -1141,7 +1345,7 @@ function RemovePayableDialog({
                   false,
                 )
               }
-              className="rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium"
+              className={secondaryButtonClass}
             >
               Voltar
             </button>
@@ -1151,17 +1355,19 @@ function RemovePayableDialog({
               disabled={
                 isPending
               }
-              onClick={confirm}
+              onClick={
+                confirm
+              }
               className={
                 isDelete
-                  ? "inline-flex items-center rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground"
-                  : "inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                  ? destructiveButtonClass
+                  : amberButtonClass
               }
             >
               {isDelete ? (
-                <Trash2 className="mr-2 size-4" />
+                <Trash2 className="size-4" />
               ) : (
-                <Ban className="mr-2 size-4" />
+                <Ban className="size-4" />
               )}
 
               {isPending
@@ -1170,9 +1376,347 @@ function RemovePayableDialog({
                   ? "Excluir definitivamente"
                   : "Confirmar cancelamento"}
             </button>
-          </div>
+          </DialogActions>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+function DialogHero({
+  icon: Icon,
+  eyebrow,
+  title,
+  description,
+  tone,
+}: {
+  icon:
+    ElementType;
+
+  eyebrow:
+    string;
+
+  title:
+    string;
+
+  description:
+    string;
+
+  tone:
+    | "rose"
+    | "emerald"
+    | "amber";
+}) {
+  const styles = {
+    rose: {
+      container:
+        "bg-rose-50/50 dark:bg-rose-950/15",
+
+      icon:
+        "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300",
+
+      eyebrow:
+        "text-rose-700 dark:text-rose-300",
+    },
+
+    emerald: {
+      container:
+        "bg-emerald-50/50 dark:bg-emerald-950/15",
+
+      icon:
+        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300",
+
+      eyebrow:
+        "text-emerald-700 dark:text-emerald-300",
+    },
+
+    amber: {
+      container:
+        "bg-amber-50/50 dark:bg-amber-950/15",
+
+      icon:
+        "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300",
+
+      eyebrow:
+        "text-amber-700 dark:text-amber-300",
+    },
+  }[
+    tone
+  ];
+
+  return (
+    <div
+      className={`border-b px-6 py-5 ${styles.container}`}
+    >
+      <DialogHeader>
+        <div className="flex items-start gap-3">
+          <div
+            className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${styles.icon}`}
+          >
+            <Icon className="size-5" />
+          </div>
+
+          <div>
+            <p
+              className={`text-xs font-medium uppercase tracking-wider ${styles.eyebrow}`}
+            >
+              {
+                eyebrow
+              }
+            </p>
+
+            <DialogTitle>
+              {
+                title
+              }
+            </DialogTitle>
+
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              {
+                description
+              }
+            </p>
+          </div>
+        </div>
+      </DialogHeader>
+    </div>
+  );
+}
+
+function FormSection({
+  icon: Icon,
+  title,
+  description,
+  tone,
+  children,
+}: {
+  icon:
+    ElementType;
+
+  title:
+    string;
+
+  description:
+    string;
+
+  tone:
+    | "rose"
+    | "emerald"
+    | "neutral";
+
+  children:
+    ReactNode;
+}) {
+  const styles = {
+    rose: {
+      border:
+        "border-rose-200/80 dark:border-rose-900",
+
+      header:
+        "bg-rose-50/40 dark:bg-rose-950/10",
+
+      icon:
+        "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300",
+    },
+
+    emerald: {
+      border:
+        "border-emerald-200/80 dark:border-emerald-900",
+
+      header:
+        "bg-emerald-50/40 dark:bg-emerald-950/10",
+
+      icon:
+        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300",
+    },
+
+    neutral: {
+      border:
+        "border-border",
+
+      header:
+        "bg-muted/20",
+
+      icon:
+        "bg-muted text-muted-foreground",
+    },
+  }[
+    tone
+  ];
+
+  return (
+    <section
+      className={`overflow-hidden rounded-2xl border bg-card ${styles.border}`}
+    >
+      <div
+        className={`border-b px-4 py-3.5 ${styles.header}`}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${styles.icon}`}
+          >
+            <Icon className="size-4" />
+          </div>
+
+          <div>
+            <h3 className="font-semibold">
+              {
+                title
+              }
+            </h3>
+
+            <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+              {
+                description
+              }
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4">
+        {
+          children
+        }
+      </div>
+    </section>
+  );
+}
+
+function PayableSummaryCard({
+  payable,
+  tone,
+}: {
+  payable:
+    EditablePayable;
+
+  tone:
+    | "rose"
+    | "emerald"
+    | "amber";
+}) {
+  const styles = {
+    rose:
+      "border-rose-200 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/20",
+
+    emerald:
+      "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20",
+
+    amber:
+      "border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20",
+  }[
+    tone
+  ];
+
+  const valueStyles = {
+    rose:
+      "text-rose-700 dark:text-rose-300",
+
+    emerald:
+      "text-emerald-700 dark:text-emerald-300",
+
+    amber:
+      "text-amber-700 dark:text-amber-300",
+  }[
+    tone
+  ];
+
+  return (
+    <div
+      className={`rounded-2xl border p-4 ${styles}`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <ReceiptText className="size-4 shrink-0 text-muted-foreground" />
+
+            <p className="truncate font-semibold">
+              {
+                payable.description
+              }
+            </p>
+          </div>
+
+          {payable.dueDate ? (
+            <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarDays className="size-3.5" />
+
+              Vencimento:{" "}
+              {
+                payable.dueDate
+              }
+            </p>
+          ) : null}
+        </div>
+
+        <div className="shrink-0 text-right">
+          <CircleDollarSign
+            className={`ml-auto size-4 ${valueStyles}`}
+          />
+
+          <p
+            className={`mt-1 text-xl font-bold tracking-tight ${valueStyles}`}
+          >
+            {formatMoney(
+              payable.amount,
+            )}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorBanner({
+  message,
+}: {
+  message:
+    string | null;
+}) {
+  if (
+    !message
+  ) {
+    return null;
+  }
+
+  return (
+    <div
+      role="alert"
+      className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+    >
+      {
+        message
+      }
+    </div>
+  );
+}
+
+function DialogActions({
+  children,
+}: {
+  children:
+    ReactNode;
+}) {
+  return (
+    <div className="sticky bottom-0 -mx-6 mt-6 flex flex-col-reverse gap-3 border-t bg-background/95 px-6 py-4 backdrop-blur sm:flex-row sm:justify-end">
+      {
+        children
+      }
+    </div>
+  );
+}
+
+const secondaryButtonClass =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-input bg-background px-4 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50";
+
+const roseButtonClass =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-rose-500";
+
+const emeraldButtonClass =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-emerald-500";
+
+const amberButtonClass =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-amber-950";
+
+const destructiveButtonClass =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-destructive px-5 text-sm font-semibold text-destructive-foreground transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50";

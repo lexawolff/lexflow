@@ -1,6 +1,6 @@
 import {
   randomBytes,
-} from "crypto";
+} from "node:crypto";
 
 import {
   NextResponse,
@@ -14,11 +14,18 @@ import {
   createGoogleAuthorizationUrl,
 } from "@/lib/google-calendar";
 
-export const runtime =
-  "nodejs";
+import {
+  getCurrentWorkspaceAccess,
+} from "@/lib/permissions";
 
-const STATE_COOKIE =
+const OAUTH_STATE_COOKIE =
   "lexflow_google_calendar_oauth_state";
+
+const OAUTH_WORKSPACE_COOKIE =
+  "lexflow_google_calendar_oauth_workspace";
+
+const TEN_MINUTES =
+  10 * 60;
 
 export async function GET(
   request: Request,
@@ -27,21 +34,22 @@ export async function GET(
     await getCurrentUser();
 
   if (!user) {
-    const loginUrl =
+    return NextResponse.redirect(
       new URL(
         "/login",
         request.url,
-      );
-
-    return NextResponse.redirect(
-      loginUrl,
+      ),
     );
   }
 
+  const {
+    workspace,
+  } =
+    await getCurrentWorkspaceAccess();
+
   const state =
-    randomBytes(32).toString(
-      "hex",
-    );
+    randomBytes(32)
+      .toString("hex");
 
   const authorizationUrl =
     createGoogleAuthorizationUrl(
@@ -53,29 +61,49 @@ export async function GET(
       authorizationUrl,
     );
 
-  response.cookies.set({
-    name:
-      STATE_COOKIE,
+  response.cookies.set(
+    OAUTH_STATE_COOKIE,
+    state,
+    {
+      httpOnly:
+        true,
 
-    value:
-      state,
+      sameSite:
+        "lax",
 
-    httpOnly:
-      true,
+      secure:
+        process.env.NODE_ENV ===
+        "production",
 
-    sameSite:
-      "lax",
+      maxAge:
+        TEN_MINUTES,
 
-    secure:
-      process.env.NODE_ENV ===
-      "production",
+      path:
+        "/",
+    },
+  );
 
-    path:
-      "/",
+  response.cookies.set(
+    OAUTH_WORKSPACE_COOKIE,
+    workspace.id,
+    {
+      httpOnly:
+        true,
 
-    maxAge:
-      10 * 60,
-  });
+      sameSite:
+        "lax",
+
+      secure:
+        process.env.NODE_ENV ===
+        "production",
+
+      maxAge:
+        TEN_MINUTES,
+
+      path:
+        "/",
+    },
+  );
 
   return response;
 }

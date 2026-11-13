@@ -1,30 +1,48 @@
-import { ClientDetails } from "@/features/clients/types";
+import type {
+  ClientDetails,
+} from "@/features/clients/types";
 
-import { CreateReceivableDialog } from "@/features/finance/components/create-receivable-dialog";
+import {
+  CreateReceivableDialog,
+} from "@/features/finance/components/create-receivable-dialog";
 
-import { FinancialSummary } from "./financial-summary";
-import { ReceivablesList } from "./receivables-list";
+import {
+  FinancialSummary,
+} from "./financial-summary";
+
+import {
+  ReceivablesList,
+} from "./receivables-list";
 
 type Props = {
-  client: ClientDetails;
+  client:
+    ClientDetails;
+
+  canWriteFinance:
+    boolean;
 };
 
 export function ClientFinancialTab({
   client,
+  canWriteFinance,
 }: Props) {
   const caseOptions =
     client.cases.map(
-      (process) => {
+      (
+        process,
+      ) => {
         const processNumber =
           process.number ??
           process.administrativeNumber;
 
         return {
-          id: process.id,
+          id:
+            process.id,
 
-          label: processNumber
-            ? `${process.title} • ${processNumber}`
-            : process.title,
+          label:
+            processNumber
+              ? `${process.title} • ${processNumber}`
+              : process.title,
         };
       },
     );
@@ -44,22 +62,33 @@ export function ClientFinancialTab({
           </p>
         </div>
 
-        <div className="shrink-0">
-          <CreateReceivableDialog
-            clientId={client.id}
-            caseOptions={
-              caseOptions
-            }
-          />
-        </div>
+        {canWriteFinance ? (
+          <div className="shrink-0">
+            <CreateReceivableDialog
+              clientId={
+                client.id
+              }
+              caseOptions={
+                caseOptions
+              }
+            />
+          </div>
+        ) : null}
       </div>
 
       <FinancialSummary
-        client={client}
+        client={
+          client
+        }
       />
 
       <ReceivablesList
-        client={client}
+        client={
+          client
+        }
+        canWriteFinance={
+          canWriteFinance
+        }
       />
     </div>
   );

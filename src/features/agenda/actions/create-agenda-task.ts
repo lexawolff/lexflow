@@ -9,16 +9,12 @@ import {
 } from "next/cache";
 
 import {
-  requireCurrentUser,
-} from "@/lib/auth";
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
 import {
   prisma,
 } from "@/lib/prisma";
-
-import {
-  getDefaultWorkspace,
-} from "@/lib/workspace";
 
 import {
   createAgendaTaskSchema,
@@ -40,11 +36,6 @@ function buildDateOnly(
       .split("-")
       .map(Number);
 
-  /*
-   * Meio-dia UTC evita que
-   * a data "ande" ao ser
-   * exibida no Brasil.
-   */
   return new Date(
     Date.UTC(
       year,
@@ -71,11 +62,13 @@ function buildStartsAt(
 export async function createAgendaTask(
   formData: FormData,
 ) {
-  const user =
-    await requireCurrentUser();
-
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    user,
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "AGENDA_CREATE",
+    );
 
   const parsed =
     createAgendaTaskSchema.safeParse({
@@ -138,14 +131,6 @@ export async function createAgendaTask(
   let clientId =
     data.clientId;
 
-  /*
-   * Se houver processo,
-   * o cliente verdadeiro
-   * vem do próprio processo.
-   *
-   * Assim evitamos:
-   * cliente A + processo B.
-   */
   if (data.caseId) {
     const clientCase =
       await prisma.case.findFirst({
@@ -165,7 +150,7 @@ export async function createAgendaTask(
 
     if (!clientCase) {
       throw new Error(
-        "Processo não encontrado.",
+        "Caso não encontrado.",
       );
     }
 
@@ -196,13 +181,6 @@ export async function createAgendaTask(
     }
   }
 
-  /*
-   * Primeiro salvamos no LexFlow.
-   *
-   * A Task é nossa fonte de verdade.
-   * O Google nunca deve impedir o
-   * cadastro do compromisso.
-   */
   const task =
     await prisma.task.create({
       data: {
@@ -242,13 +220,6 @@ export async function createAgendaTask(
       },
     });
 
-  /*
-   * Depois tentamos enviar
-   * imediatamente ao Google.
-   *
-   * Se o Google falhar, a Task
-   * permanece salva normalmente.
-   */
   const googleSync =
     await syncTaskToGoogleCalendar({
       taskId:
@@ -282,16 +253,9 @@ export async function createAgendaTask(
     );
   }
 
-  /*
-   * A ficha individual do processo
-   * fica dentro da rota do cliente.
-   */
-  if (
-    clientId &&
-    data.caseId
-  ) {
+  if (data.caseId) {
     revalidatePath(
-      `/clientes/${clientId}/casos/${data.caseId}`,
+      `/casos/${data.caseId}`,
     );
   }
 

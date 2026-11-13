@@ -4,28 +4,45 @@ import {
   FinancialStatus,
 } from "@prisma/client";
 
-import { revalidatePath } from "next/cache";
+import {
+  revalidatePath,
+} from "next/cache";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
-import { createPayableSchema } from "../schemas/create-payable-schema";
+import {
+  prisma,
+} from "@/lib/prisma";
+
+import {
+  createPayableSchema,
+} from "../schemas/create-payable-schema";
 
 function getDateKey(
-  date: Date,
+  date:
+    Date,
 ): string {
   const year =
     date.getUTCFullYear();
 
   const month =
     String(
-      date.getUTCMonth() + 1,
-    ).padStart(2, "0");
+      date.getUTCMonth() +
+      1,
+    ).padStart(
+      2,
+      "0",
+    );
 
   const day =
     String(
       date.getUTCDate(),
-    ).padStart(2, "0");
+    ).padStart(
+      2,
+      "0",
+    );
 
   return `${year}-${month}-${day}`;
 }
@@ -38,9 +55,14 @@ function getTodayDateKey(): string {
         timeZone:
           "America/Sao_Paulo",
 
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
+        year:
+          "numeric",
+
+        month:
+          "2-digit",
+
+        day:
+          "2-digit",
       },
     );
 
@@ -52,19 +74,22 @@ function getTodayDateKey(): string {
   const year =
     parts.find(
       (part) =>
-        part.type === "year",
+        part.type ===
+        "year",
     )?.value;
 
   const month =
     parts.find(
       (part) =>
-        part.type === "month",
+        part.type ===
+        "month",
     )?.value;
 
   const day =
     parts.find(
       (part) =>
-        part.type === "day",
+        part.type ===
+        "day",
     )?.value;
 
   if (
@@ -81,10 +106,13 @@ function getTodayDateKey(): string {
 }
 
 function getInitialStatus(
-  dueDate: Date,
+  dueDate:
+    Date,
 ): FinancialStatus {
   if (
-    getDateKey(dueDate) <
+    getDateKey(
+      dueDate,
+    ) <
     getTodayDateKey()
   ) {
     return FinancialStatus.ATRASADO;
@@ -94,10 +122,15 @@ function getInitialStatus(
 }
 
 export async function createPayable(
-  formData: FormData,
+  formData:
+    FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     createPayableSchema.safeParse({
@@ -135,7 +168,7 @@ export async function createPayable(
     throw new Error(
       parsed.error.issues[0]
         ?.message ??
-        "Dados inválidos.",
+      "Dados inválidos.",
     );
   }
 
@@ -174,8 +207,16 @@ export async function createPayable(
   revalidatePath(
     "/financeiro",
   );
+  revalidatePath(
+    "/financeiro/contas-a-pagar",
+  );
+
+  revalidatePath(
+    "/financeiro/fluxo-de-caixa",
+  );
 
   return {
-    success: true,
+    success:
+      true,
   };
 }

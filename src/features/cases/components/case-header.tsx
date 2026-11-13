@@ -6,35 +6,48 @@ import {
   UserRound,
 } from "lucide-react";
 
+import {
+  AddToWorkQueue,
+} from "@/features/work/components/add-to-work-queue";
+
 import type {
   CaseDetails,
 } from "../types";
 
 import {
-  PracticeAreaBadge,
-} from "./practice-area-badge";
-
-import {
   CaseStatusBadge,
 } from "./case-status-badge";
+
+import {
+  PracticeAreaBadge,
+} from "./practice-area-badge";
 
 type Props = {
   caseData:
     CaseDetails;
+
+  canEditCase:
+    boolean;
+
+  canCreateWork:
+    boolean;
 };
 
 export function CaseHeader({
   caseData,
+  canEditCase,
+  canCreateWork,
 }: Props) {
   const casePath =
     `/clientes/${caseData.clientId}/casos/${caseData.id}`;
 
+  const caseNumber =
+    caseData.number ??
+    caseData.administrativeNumber ??
+    null;
+
   return (
     <header className="space-y-5">
-      {/* ==========================
-          NAVEGAÇÃO
-      ========================== */}
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/casos"
@@ -45,19 +58,40 @@ export function CaseHeader({
           Voltar para casos
         </Link>
 
-        <Link
-          href={`${casePath}/editar`}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border bg-background px-4 text-sm font-medium transition hover:bg-muted"
-        >
-          <Pencil className="size-4" />
+        <div className="flex flex-wrap items-center gap-2">
+          {canCreateWork ? (
+            <AddToWorkQueue
+              clientId={
+                caseData.clientId
+              }
+              clientName={
+                caseData.client.name
+              }
+              fixedCase={{
+                id:
+                  caseData.id,
 
-          Editar processo
-        </Link>
+                title:
+                  caseData.title,
+
+                number:
+                  caseNumber,
+              }}
+            />
+          ) : null}
+
+          {canEditCase ? (
+            <Link
+              href={`${casePath}/editar`}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border bg-background px-4 text-sm font-medium transition hover:bg-muted"
+            >
+              <Pencil className="size-4" />
+
+              Editar caso
+            </Link>
+          ) : null}
+        </div>
       </div>
-
-      {/* ==========================
-          IDENTIFICAÇÃO
-      ========================== */}
 
       <div className="flex flex-col gap-4 rounded-2xl border bg-card p-5 sm:p-6">
         <div>

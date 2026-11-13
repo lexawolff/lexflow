@@ -62,7 +62,7 @@ export default async function LoginPage() {
           </p>
 
           <p className="mt-5 max-w-lg text-lg leading-relaxed text-slate-400">
-            Clientes, processos,
+            Clientes, casos,
             agenda e financeiro
             integrados à sua rotina.
           </p>

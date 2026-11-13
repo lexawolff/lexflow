@@ -1,12 +1,24 @@
 "use server";
 
-import { FinancialStatus } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import {
+  FinancialStatus,
+} from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  revalidatePath,
+} from "next/cache";
 
-import { reverseReceivablePaymentSchema } from "../schemas/reverse-receivable-payment-schema";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
+
+import {
+  reverseReceivablePaymentSchema,
+} from "../schemas/reverse-receivable-payment-schema";
 
 function getDateKey(
   date: Date,
@@ -14,13 +26,21 @@ function getDateKey(
   const year =
     date.getUTCFullYear();
 
-  const month = String(
-    date.getUTCMonth() + 1,
-  ).padStart(2, "0");
+  const month =
+    String(
+      date.getUTCMonth() + 1,
+    ).padStart(
+      2,
+      "0",
+    );
 
-  const day = String(
-    date.getUTCDate(),
-  ).padStart(2, "0");
+  const day =
+    String(
+      date.getUTCDate(),
+    ).padStart(
+      2,
+      "0",
+    );
 
   return `${year}-${month}-${day}`;
 }
@@ -33,9 +53,14 @@ function getTodayDateKey(): string {
         timeZone:
           "America/Sao_Paulo",
 
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
+        year:
+          "numeric",
+
+        month:
+          "2-digit",
+
+        day:
+          "2-digit",
       },
     );
 
@@ -47,19 +72,22 @@ function getTodayDateKey(): string {
   const year =
     parts.find(
       (part) =>
-        part.type === "year",
+        part.type ===
+        "year",
     )?.value;
 
   const month =
     parts.find(
       (part) =>
-        part.type === "month",
+        part.type ===
+        "month",
     )?.value;
 
   const day =
     parts.find(
       (part) =>
-        part.type === "day",
+        part.type ===
+        "day",
     )?.value;
 
   if (
@@ -76,14 +104,17 @@ function getTodayDateKey(): string {
 }
 
 function getStatusAfterReversal(
-  dueDate: Date | null,
+  dueDate:
+    Date | null,
 ): FinancialStatus {
   if (!dueDate) {
     return FinancialStatus.PENDENTE;
   }
 
   if (
-    getDateKey(dueDate) <
+    getDateKey(
+      dueDate,
+    ) <
     getTodayDateKey()
   ) {
     return FinancialStatus.ATRASADO;
@@ -93,10 +124,15 @@ function getStatusAfterReversal(
 }
 
 export async function reverseReceivablePayment(
-  formData: FormData,
+  formData:
+    FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     reverseReceivablePaymentSchema.safeParse(
@@ -122,30 +158,38 @@ export async function reverseReceivablePayment(
 
   const {
     receivableId,
-  } = parsed.data;
+  } =
+    parsed.data;
 
   const receivable =
     await prisma.receivable.findFirst(
       {
         where: {
-          id: receivableId,
+          id:
+            receivableId,
 
           workspaceId:
             workspace.id,
         },
 
         select: {
-          id: true,
+          id:
+            true,
 
-          clientId: true,
+          clientId:
+            true,
 
-          status: true,
+          status:
+            true,
 
-          paidAmount: true,
+          paidAmount:
+            true,
 
-          dueDate: true,
+          dueDate:
+            true,
 
-          receivedAt: true,
+          receivedAt:
+            true,
         },
       },
     );
@@ -182,15 +226,19 @@ export async function reverseReceivablePayment(
 
   await prisma.receivable.update({
     where: {
-      id: receivable.id,
+      id:
+        receivable.id,
     },
 
     data: {
-      paidAmount: 0,
+      paidAmount:
+        0,
 
-      receivedAt: null,
+      receivedAt:
+        null,
 
-      paymentMethod: null,
+      paymentMethod:
+        null,
 
       status,
     },
@@ -204,7 +252,16 @@ export async function reverseReceivablePayment(
     "/financeiro",
   );
 
+  revalidatePath(
+  "/financeiro/recebimentos",
+);
+
+revalidatePath(
+  "/financeiro/fluxo-de-caixa",
+);
+
   return {
-    success: true,
+    success:
+      true,
   };
 }

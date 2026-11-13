@@ -76,13 +76,15 @@ export function FinanceNavigation() {
     usePathname();
 
   return (
-    <div className="overflow-x-auto border-b">
+    <div className="overflow-x-auto">
       <nav
-        className="flex min-w-max gap-1"
+        className="flex min-w-max gap-1.5"
         aria-label="Navegação financeira"
       >
         {items.map(
-          (item) => {
+          (
+            item,
+          ) => {
             const Icon =
               item.icon;
 
@@ -110,21 +112,25 @@ export function FinanceNavigation() {
                     ? "page"
                     : undefined
                 }
-                className={`relative inline-flex h-11 items-center gap-2 px-4 text-sm font-medium transition ${
+                className={`inline-flex h-9 items-center gap-2 rounded-xl px-3.5 text-sm font-medium transition ${
                   isActive
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                    : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
                 }`}
               >
-                <Icon className="size-4" />
+                <Icon
+                  className={`size-4 ${
+                    isActive
+                      ? getActiveIconClass(
+                          item.href,
+                        )
+                      : ""
+                  }`}
+                />
 
                 {
                   item.title
                 }
-
-                {isActive ? (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-primary" />
-                ) : null}
               </Link>
             );
           },
@@ -132,4 +138,28 @@ export function FinanceNavigation() {
       </nav>
     </div>
   );
+}
+
+function getActiveIconClass(
+  href:
+    string,
+): string {
+  switch (
+    href
+  ) {
+    case "/financeiro/recebimentos":
+      return "text-emerald-600 dark:text-emerald-400";
+
+    case "/financeiro/contas-a-pagar":
+      return "text-rose-600 dark:text-rose-400";
+
+    case "/financeiro/fluxo-de-caixa":
+      return "text-blue-600 dark:text-blue-400";
+
+    case "/financeiro/rpvs-e-precatorios":
+      return "text-violet-600 dark:text-violet-400";
+
+    default:
+      return "text-primary";
+  }
 }

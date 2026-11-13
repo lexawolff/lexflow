@@ -5,26 +5,45 @@ import {
   Prisma,
 } from "@prisma/client";
 
-import { revalidatePath } from "next/cache";
+import {
+  revalidatePath,
+} from "next/cache";
 
-import { prisma } from "@/lib/prisma";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
-import { updateReceivableSchema } from "../schemas/update-receivable-schema";
+import {
+  prisma,
+} from "@/lib/prisma";
+
+import {
+  updateReceivableSchema,
+} from "../schemas/update-receivable-schema";
 
 function getDateKey(
-  date: Date,
+  date:
+    Date,
 ): string {
   const year =
     date.getUTCFullYear();
 
-  const month = String(
-    date.getUTCMonth() + 1,
-  ).padStart(2, "0");
+  const month =
+    String(
+      date.getUTCMonth() +
+        1,
+    ).padStart(
+      2,
+      "0",
+    );
 
-  const day = String(
-    date.getUTCDate(),
-  ).padStart(2, "0");
+  const day =
+    String(
+      date.getUTCDate(),
+    ).padStart(
+      2,
+      "0",
+    );
 
   return `${year}-${month}-${day}`;
 }
@@ -37,9 +56,14 @@ function getTodayDateKey(): string {
         timeZone:
           "America/Sao_Paulo",
 
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
+        year:
+          "numeric",
+
+        month:
+          "2-digit",
+
+        day:
+          "2-digit",
       },
     );
 
@@ -50,20 +74,29 @@ function getTodayDateKey(): string {
 
   const year =
     parts.find(
-      (part) =>
-        part.type === "year",
+      (
+        part,
+      ) =>
+        part.type ===
+        "year",
     )?.value;
 
   const month =
     parts.find(
-      (part) =>
-        part.type === "month",
+      (
+        part,
+      ) =>
+        part.type ===
+        "month",
     )?.value;
 
   const day =
     parts.find(
-      (part) =>
-        part.type === "day",
+      (
+        part,
+      ) =>
+        part.type ===
+        "day",
     )?.value;
 
   if (
@@ -80,14 +113,17 @@ function getTodayDateKey(): string {
 }
 
 function isOverdue(
-  dueDate: Date | null,
+  dueDate:
+    Date | null,
 ): boolean {
   if (!dueDate) {
     return false;
   }
 
   return (
-    getDateKey(dueDate) <
+    getDateKey(
+      dueDate,
+    ) <
     getTodayDateKey()
   );
 }
@@ -125,12 +161,18 @@ function calculateStatus({
     return FinancialStatus.PAGO;
   }
 
-  if (isOverdue(dueDate)) {
+  if (
+    isOverdue(
+      dueDate,
+    )
+  ) {
     return FinancialStatus.ATRASADO;
   }
 
   if (
-    paidAmount.greaterThan(0)
+    paidAmount.greaterThan(
+      0,
+    )
   ) {
     return FinancialStatus.PARCIAL;
   }
@@ -139,10 +181,15 @@ function calculateStatus({
 }
 
 export async function updateReceivable(
-  formData: FormData,
+  formData:
+    FormData,
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "FINANCE_WRITE",
+    );
 
   const parsed =
     updateReceivableSchema.safeParse({
@@ -152,7 +199,9 @@ export async function updateReceivable(
         ),
 
       caseId:
-        formData.get("caseId"),
+        formData.get(
+          "caseId",
+        ),
 
       description:
         formData.get(
@@ -160,7 +209,9 @@ export async function updateReceivable(
         ),
 
       type:
-        formData.get("type"),
+        formData.get(
+          "type",
+        ),
 
       totalAmount:
         formData.get(
@@ -168,10 +219,14 @@ export async function updateReceivable(
         ),
 
       dueDate:
-        formData.get("dueDate"),
+        formData.get(
+          "dueDate",
+        ),
 
       notes:
-        formData.get("notes"),
+        formData.get(
+          "notes",
+        ),
     });
 
   if (!parsed.success) {
@@ -201,15 +256,20 @@ export async function updateReceivable(
         },
 
         select: {
-          id: true,
+          id:
+            true,
 
-          clientId: true,
+          clientId:
+            true,
 
-          paidAmount: true,
+          paidAmount:
+            true,
 
-          status: true,
+          status:
+            true,
 
-          dueDate: true,
+          dueDate:
+            true,
 
           originalDueDate:
             true,
@@ -223,11 +283,14 @@ export async function updateReceivable(
     );
   }
 
-  if (data.caseId) {
+  if (
+    data.caseId
+  ) {
     const relatedCase =
       await prisma.case.findFirst({
         where: {
-          id: data.caseId,
+          id:
+            data.caseId,
 
           clientId:
             receivable.clientId,
@@ -237,13 +300,14 @@ export async function updateReceivable(
         },
 
         select: {
-          id: true,
+          id:
+            true,
         },
       });
 
     if (!relatedCase) {
       throw new Error(
-        "O processo selecionado não pertence a este cliente.",
+        "O caso selecionado não pertence a este cliente.",
       );
     }
   }
@@ -285,7 +349,8 @@ export async function updateReceivable(
 
   await prisma.receivable.update({
     where: {
-      id: receivable.id,
+      id:
+        receivable.id,
     },
 
     data: {
@@ -321,7 +386,16 @@ export async function updateReceivable(
     "/financeiro",
   );
 
+  revalidatePath(
+  "/financeiro/recebimentos",
+);
+
+revalidatePath(
+  "/financeiro/fluxo-de-caixa",
+);
+
   return {
-    success: true,
+    success:
+      true,
   };
 }

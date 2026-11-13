@@ -1,11 +1,38 @@
-import { AppShell } from "@/components/app-shell/app-shell";
+import {
+  AppShell,
+} from "@/components/app-shell/app-shell";
 
-import { FinanceNavigation } from "@/features/finance/components/finance-navigation";
-import { OfficePayablesSection } from "@/features/finance/components/office-payables-section";
+import {
+  FinanceNavigation,
+} from "@/features/finance/components/finance-navigation";
 
-import { getOfficeFinancialData } from "@/features/finance/services/get-office-financial-data";
+import {
+  OfficePayablesSection,
+} from "@/features/finance/components/office-payables-section";
+
+import {
+  getOfficeFinancialData,
+} from "@/features/finance/services/get-office-financial-data";
+
+import {
+  hasPermission,
+  requireWorkspacePagePermission,
+} from "@/lib/permissions";
 
 export default async function ContasAPagarPage() {
+  const {
+    membership,
+  } =
+    await requireWorkspacePagePermission(
+      "FINANCE_VIEW",
+    );
+
+  const canWriteFinance =
+    hasPermission(
+      membership.role,
+      "FINANCE_WRITE",
+    );
+
   const data =
     await getOfficeFinancialData();
 
@@ -32,6 +59,9 @@ export default async function ContasAPagarPage() {
           }
           todayKey={
             data.todayKey
+          }
+          canWriteFinance={
+            canWriteFinance
           }
         />
       </div>

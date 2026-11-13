@@ -14,7 +14,25 @@ import {
   getOfficeRpvData,
 } from "@/features/finance/services/get-office-rpv-data";
 
+import {
+  hasPermission,
+  requireWorkspacePagePermission,
+} from "@/lib/permissions";
+
 export default async function RpvsEPrecatoriosPage() {
+  const {
+    membership,
+  } =
+    await requireWorkspacePagePermission(
+      "FINANCE_VIEW",
+    );
+
+  const canWriteFinance =
+    hasPermission(
+      membership.role,
+      "FINANCE_WRITE",
+    );
+
   const data =
     await getOfficeRpvData();
 
@@ -38,6 +56,9 @@ export default async function RpvsEPrecatoriosPage() {
         <OfficeRpvDashboard
           data={
             data
+          }
+          canWriteFinance={
+            canWriteFinance
           }
         />
       </div>

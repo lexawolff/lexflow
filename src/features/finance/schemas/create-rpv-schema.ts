@@ -125,7 +125,7 @@ export const createRpvFormSchema =
         .string()
         .min(
           1,
-          "Selecione o processo.",
+          "Selecione o caso.",
         ),
 
     type:
@@ -202,7 +202,7 @@ export const createRpvSchema =
     .object({
       caseId:
         z.string().uuid(
-          "Processo inválido.",
+          "Caso inválido.",
         ),
 
       type:

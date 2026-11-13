@@ -1,25 +1,57 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { Vault } from "@/lib/security/vault";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
-export async function revealGovPassword(clientId: string) {
-  const workspace = await getDefaultWorkspace();
+import {
+  prisma,
+} from "@/lib/prisma";
 
-  const client = await prisma.client.findFirst({
-    where: {
-      id: clientId,
-      workspaceId: workspace.id,
-    },
-    select: {
-      govPasswordEncrypted: true,
-    },
-  });
+import {
+  Vault,
+} from "@/lib/security/vault";
 
-  if (!client?.govPasswordEncrypted) {
+export async function revealGovPassword(
+  clientId:
+    string,
+) {
+  const {
+    workspace,
+  } =
+    await requireWorkspacePermission(
+      "GOV_VIEW",
+    );
+
+  const client =
+    await prisma.client.findFirst({
+      where: {
+        id:
+          clientId,
+
+        workspaceId:
+          workspace.id,
+      },
+
+      select: {
+        govPasswordEncrypted:
+          true,
+      },
+    });
+
+  if (!client) {
+    throw new Error(
+      "Cliente não encontrado neste escritório.",
+    );
+  }
+
+  if (
+    !client.govPasswordEncrypted
+  ) {
     return null;
   }
 
-  return Vault.decrypt(client.govPasswordEncrypted);
+  return Vault.decrypt(
+    client.govPasswordEncrypted,
+  );
 }

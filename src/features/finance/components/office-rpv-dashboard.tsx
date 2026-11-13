@@ -51,6 +51,9 @@ import {
 type Props = {
   data:
     OfficeRpvData;
+
+  canWriteFinance:
+    boolean;
 };
 
 type StatusFilter =
@@ -204,6 +207,7 @@ function toEditableRpv(
 
 export function OfficeRpvDashboard({
   data,
+  canWriteFinance,
 }: Props) {
   const [
     search,
@@ -287,9 +291,9 @@ export function OfficeRpvDashboard({
 
     if (
       rpv.status ===
-        "EXPEDIDA" ||
+      "EXPEDIDA" ||
       rpv.status ===
-        "AUTUADA"
+      "AUTUADA"
     ) {
       processingAmount +=
         rpv.grossAmount;
@@ -311,7 +315,7 @@ export function OfficeRpvDashboard({
 
     if (
       rpv.status ===
-        "PAGA" &&
+      "PAGA" &&
       rpv.paidAt?.startsWith(
         currentYear,
       )
@@ -347,18 +351,18 @@ export function OfficeRpvDashboard({
             (rpv) => {
               if (
                 statusFilter !==
-                  "TODOS" &&
+                "TODOS" &&
                 rpv.status !==
-                  statusFilter
+                statusFilter
               ) {
                 return false;
               }
 
               if (
                 typeFilter !==
-                  "TODOS" &&
+                "TODOS" &&
                 rpv.type !==
-                  typeFilter
+                typeFilter
               ) {
                 return false;
               }
@@ -375,19 +379,19 @@ export function OfficeRpvDashboard({
                 rpv.caseTitle,
 
                 rpv.caseNumber ??
-                  "",
+                "",
 
                 rpv.requisitionNumber ??
-                  "",
+                "",
 
                 rpv.court ??
-                  "",
+                "",
 
                 rpv.bank ??
-                  "",
+                "",
 
                 rpv.notes ??
-                  "",
+                "",
               ]
                 .join(" ")
                 .toLocaleLowerCase(
@@ -422,9 +426,9 @@ export function OfficeRpvDashboard({
   const hasFilters =
     Boolean(search) ||
     statusFilter !==
-      "TODOS" ||
+    "TODOS" ||
     typeFilter !==
-      "TODOS";
+    "TODOS";
 
   return (
     <div className="space-y-8">
@@ -449,11 +453,13 @@ export function OfficeRpvDashboard({
             </div>
           </div>
 
-          <CreateRpvDialog
-            cases={
-              data.cases
-            }
-          />
+          {canWriteFinance ? (
+  <CreateRpvDialog
+    cases={
+      data.cases
+    }
+  />
+) : null}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -464,7 +470,7 @@ export function OfficeRpvDashboard({
             }
             description={
               waitingIssueCount ===
-              1
+                1
                 ? "1 requisição aguardando expedição"
                 : `${waitingIssueCount} requisições aguardando expedição`
             }
@@ -481,7 +487,7 @@ export function OfficeRpvDashboard({
             }
             description={
               processingCount ===
-              1
+                1
                 ? "1 requisição em tramitação"
                 : `${processingCount} requisições em tramitação`
             }
@@ -498,7 +504,7 @@ export function OfficeRpvDashboard({
             }
             description={
               releasedCount ===
-              1
+                1
                 ? "1 valor disponível"
                 : `${releasedCount} valores disponíveis`
             }
@@ -515,7 +521,7 @@ export function OfficeRpvDashboard({
             }
             description={
               paidThisYearCount ===
-              1
+                1
                 ? "1 requisição paga no ano"
                 : `${paidThisYearCount} requisições pagas no ano`
             }
@@ -551,7 +557,7 @@ export function OfficeRpvDashboard({
                     event.target.value,
                   )
                 }
-                placeholder="Buscar cliente, processo, requisição, tribunal..."
+                placeholder="Buscar cliente, caso, requisição, tribunal..."
                 className="h-10 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none transition focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20"
               />
             </div>
@@ -643,7 +649,7 @@ export function OfficeRpvDashboard({
         </div>
 
         {data.rpvs.length ===
-        0 ? (
+          0 ? (
           <EmptyState />
         ) : filtered.length ===
           0 ? (
@@ -663,9 +669,16 @@ export function OfficeRpvDashboard({
             {filtered.map(
               (rpv) => (
                 <RpvCard
-                  key={rpv.id}
-                  rpv={rpv}
-                />
+  key={
+    rpv.id
+  }
+  rpv={
+    rpv
+  }
+  canWriteFinance={
+    canWriteFinance
+  }
+/>
               ),
             )}
           </div>
@@ -677,9 +690,13 @@ export function OfficeRpvDashboard({
 
 function RpvCard({
   rpv,
+  canWriteFinance,
 }: {
   rpv:
     OfficeRpvRecord;
+
+  canWriteFinance:
+    boolean;
 }) {
   const statusStyle =
     getStatusStyle(
@@ -703,7 +720,7 @@ function RpvCard({
     rpv.clientNetAmount ??
     Math.max(
       rpv.grossAmount -
-        contractualFee,
+      contractualFee,
       0,
     );
 
@@ -718,11 +735,10 @@ function RpvCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border bg-card p-5 transition hover:shadow-sm ${statusStyle.border} ${
-        isCanceled
-          ? "opacity-70"
-          : ""
-      }`}
+      className={`relative overflow-hidden rounded-2xl border bg-card p-5 transition hover:shadow-sm ${statusStyle.border} ${isCanceled
+        ? "opacity-70"
+        : ""
+        }`}
     >
       <div
         className={`absolute inset-y-0 left-0 w-1 ${statusStyle.accent}`}
@@ -733,16 +749,15 @@ function RpvCard({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
-                  rpv.type ===
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold ${rpv.type ===
                   "PRECATORIO"
-                    ? "bg-violet-100 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300"
-                    : "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300"
-                }`}
+                  ? "bg-violet-100 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300"
+                  : "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300"
+                  }`}
               >
                 {
                   typeLabels[
-                    rpv.type
+                  rpv.type
                   ]
                 }
               </span>
@@ -752,7 +767,7 @@ function RpvCard({
               >
                 {
                   statusLabels[
-                    rpv.status
+                  rpv.status
                   ]
                 }
               </span>
@@ -762,7 +777,7 @@ function RpvCard({
               <UserRound className="size-4 text-muted-foreground" />
 
               <Link
-                href={`/clientes/${rpv.clientId}`}
+                href={`/clientes/${rpv.clientId}/casos/${rpv.caseId}`}
                 className="font-semibold hover:underline"
               >
                 {
@@ -772,7 +787,7 @@ function RpvCard({
             </div>
 
             <Link
-              href={`/casos/${rpv.caseId}`}
+              href={`/clientes/${rpv.clientId}/casos/${rpv.caseId}`}
               className="mt-1 block text-sm text-muted-foreground hover:text-foreground hover:underline"
             >
               {
@@ -819,11 +834,10 @@ function RpvCard({
               </p>
 
               <p
-                className={`mt-1 text-2xl font-bold ${
-                  isCanceled
-                    ? "line-through"
-                    : ""
-                }`}
+                className={`mt-1 text-2xl font-bold ${isCanceled
+                  ? "line-through"
+                  : ""
+                  }`}
               >
                 {formatMoney(
                   rpv.grossAmount,
@@ -831,11 +845,13 @@ function RpvCard({
               </p>
             </div>
 
-            <RpvActionsMenu
-              rpv={
-                editableRpv
-              }
-            />
+            {canWriteFinance ? (
+  <RpvActionsMenu
+    rpv={
+      editableRpv
+    }
+  />
+) : null}
           </div>
         </div>
 
@@ -847,14 +863,14 @@ function RpvCard({
             }
             description={
               rpv.contractualFeeRate !==
-              null
+                null
                 ? `${rpv.contractualFeeRate.toLocaleString(
-                    "pt-BR",
-                    {
-                      maximumFractionDigits:
-                        2,
-                    },
-                  )}% do crédito`
+                  "pt-BR",
+                  {
+                    maximumFractionDigits:
+                      2,
+                  },
+                )}% do crédito`
                 : null
             }
             tone="violet"
@@ -938,13 +954,13 @@ function FinancialMetric({
   value: number;
 
   description?:
-    string | null;
+  string | null;
 
   tone:
-    | "violet"
-    | "blue"
-    | "emerald"
-    | "neutral";
+  | "violet"
+  | "blue"
+  | "emerald"
+  | "neutral";
 }) {
   const styles = {
     violet:
@@ -997,10 +1013,10 @@ function SummaryCard({
   icon: ReactNode;
 
   tone:
-    | "amber"
-    | "blue"
-    | "emerald"
-    | "violet";
+  | "amber"
+  | "blue"
+  | "emerald"
+  | "violet";
 }) {
   const styles = {
     amber: {
@@ -1106,10 +1122,10 @@ function FilterSelect({
   value: string;
 
   onChange:
-    (value: string) => void;
+  (value: string) => void;
 
   children:
-    ReactNode;
+  ReactNode;
 }) {
   return (
     <label className="space-y-1.5">
@@ -1235,13 +1251,13 @@ function getStatusStyle(
     case "PAGA":
       return {
         border:
-          "border-teal-200 dark:border-teal-900",
+          "border-emerald-200 dark:border-emerald-900",
 
         accent:
-          "bg-teal-500",
+          "bg-emerald-500",
 
         badge:
-          "bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300",
+          "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300",
       };
 
     case "CANCELADA":

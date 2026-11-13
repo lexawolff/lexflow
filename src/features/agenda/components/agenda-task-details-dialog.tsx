@@ -85,6 +85,12 @@ type Props = {
 
   onOpenChange:
     (open: boolean) => void;
+
+  canEditAgenda:
+    boolean;
+
+  canDeleteAgenda:
+    boolean;
 };
 
 type Mode =
@@ -366,6 +372,8 @@ export function AgendaTaskDetailsDialog({
   clients,
   open,
   onOpenChange,
+  canEditAgenda,
+  canDeleteAgenda,
 }: Props) {
   const router =
     useRouter();
@@ -431,6 +439,10 @@ export function AgendaTaskDetailsDialog({
     action:
       AgendaTaskStatusAction,
   ) {
+    if (!canEditAgenda) {
+      return;
+    }
+
     setErrorMessage(
       null,
     );
@@ -477,6 +489,10 @@ export function AgendaTaskDetailsDialog({
   }
 
   function handleDelete() {
+    if (!canDeleteAgenda) {
+      return;
+    }
+
     setErrorMessage(
       null,
     );
@@ -611,11 +627,12 @@ export function AgendaTaskDetailsDialog({
                     icon={
                       <FileText className="size-4" />
                     }
-                    label="Processo"
+                    label="Caso"
                   >
-                    {currentTask.caseId ? (
+                    {currentTask.caseId &&
+                    currentTask.clientId ? (
                       <Link
-                        href={`/casos/${currentTask.caseId}`}
+                        href={`/clientes/${currentTask.clientId}/casos/${currentTask.caseId}`}
                         className="inline-flex items-center gap-1 font-medium hover:underline"
                       >
                         <span>
@@ -678,149 +695,161 @@ export function AgendaTaskDetailsDialog({
                 </ErrorMessage>
               ) : null}
 
-              <div className="flex flex-col gap-3 border-t pt-5">
-                <div className="flex flex-wrap gap-2">
-                  {currentTask.status ===
-                    TaskStatus.CONCLUIDA ? (
-                    <ActionButton
-                      onClick={() =>
-                        runStatusAction(
-                          "REOPEN",
-                        )
-                      }
-                      disabled={
-                        isPending
-                      }
-                      icon={
-                        <RotateCcw className="size-4" />
-                      }
-                    >
-                      Reabrir
-                    </ActionButton>
-                  ) : currentTask.status ===
-                    TaskStatus.CANCELADA ? (
-                    <ActionButton
-                      onClick={() =>
-                        runStatusAction(
-                          "REOPEN",
-                        )
-                      }
-                      disabled={
-                        isPending
-                      }
-                      icon={
-                        <RotateCcw className="size-4" />
-                      }
-                    >
-                      Reabrir
-                    </ActionButton>
-                  ) : (
+              {canEditAgenda ||
+              canDeleteAgenda ? (
+                <div className="flex flex-col gap-3 border-t pt-5">
+                  {canEditAgenda ? (
                     <>
-                      {currentTask.status !==
-                      TaskStatus.EM_ANDAMENTO ? (
-                        <ActionButton
-                          onClick={() =>
-                            runStatusAction(
-                              "START",
-                            )
-                          }
-                          disabled={
-                            isPending
-                          }
-                          icon={
-                            <Play className="size-4" />
-                          }
-                        >
-                          Em andamento
-                        </ActionButton>
-                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        {currentTask.status ===
+                          TaskStatus.CONCLUIDA ? (
+                          <ActionButton
+                            onClick={() =>
+                              runStatusAction(
+                                "REOPEN",
+                              )
+                            }
+                            disabled={
+                              isPending
+                            }
+                            icon={
+                              <RotateCcw className="size-4" />
+                            }
+                          >
+                            Reabrir
+                          </ActionButton>
+                        ) : currentTask.status ===
+                          TaskStatus.CANCELADA ? (
+                          <ActionButton
+                            onClick={() =>
+                              runStatusAction(
+                                "REOPEN",
+                              )
+                            }
+                            disabled={
+                              isPending
+                            }
+                            icon={
+                              <RotateCcw className="size-4" />
+                            }
+                          >
+                            Reabrir
+                          </ActionButton>
+                        ) : (
+                          <>
+                            {currentTask.status !==
+                            TaskStatus.EM_ANDAMENTO ? (
+                              <ActionButton
+                                onClick={() =>
+                                  runStatusAction(
+                                    "START",
+                                  )
+                                }
+                                disabled={
+                                  isPending
+                                }
+                                icon={
+                                  <Play className="size-4" />
+                                }
+                              >
+                                Em andamento
+                              </ActionButton>
+                            ) : null}
 
+                            <ActionButton
+                              onClick={() =>
+                                runStatusAction(
+                                  "COMPLETE",
+                                )
+                              }
+                              disabled={
+                                isPending
+                              }
+                              icon={
+                                <CheckCircle2 className="size-4" />
+                              }
+                              tone="success"
+                            >
+                              Concluir
+                            </ActionButton>
+                          </>
+                        )}
+
+                        {currentTask.status !==
+                        TaskStatus.CANCELADA ? (
+                          <ActionButton
+                            onClick={() =>
+                              setMode(
+                                "EDIT",
+                              )
+                            }
+                            disabled={
+                              isPending
+                            }
+                            icon={
+                              <Pencil className="size-4" />
+                            }
+                          >
+                            Editar
+                          </ActionButton>
+                        ) : null}
+                      </div>
+
+                      {currentTask.status !==
+                        TaskStatus.CONCLUIDA &&
+                      currentTask.status !==
+                        TaskStatus.CANCELADA ? (
+                        <div className="flex flex-wrap gap-2">
+                          <ActionButton
+                            onClick={() =>
+                              setMode(
+                                "CANCEL",
+                              )
+                            }
+                            disabled={
+                              isPending
+                            }
+                            icon={
+                              <Ban className="size-4" />
+                            }
+                            tone="warning"
+                          >
+                            Cancelar
+                          </ActionButton>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+
+                  {canDeleteAgenda ? (
+                    <div className="flex flex-wrap gap-2">
                       <ActionButton
                         onClick={() =>
-                          runStatusAction(
-                            "COMPLETE",
+                          setMode(
+                            "DELETE",
                           )
                         }
                         disabled={
                           isPending
                         }
                         icon={
-                          <CheckCircle2 className="size-4" />
+                          <Trash2 className="size-4" />
                         }
-                        tone="success"
+                        tone="danger"
                       >
-                        Concluir
+                        Excluir
                       </ActionButton>
-                    </>
-                  )}
-
-                  {currentTask.status !==
-                  TaskStatus.CANCELADA ? (
-                    <ActionButton
-                      onClick={() =>
-                        setMode(
-                          "EDIT",
-                        )
-                      }
-                      disabled={
-                        isPending
-                      }
-                      icon={
-                        <Pencil className="size-4" />
-                      }
-                    >
-                      Editar
-                    </ActionButton>
+                    </div>
                   ) : null}
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {currentTask.status !==
-                    TaskStatus.CONCLUIDA &&
-                  currentTask.status !==
-                    TaskStatus.CANCELADA ? (
-                    <ActionButton
-                      onClick={() =>
-                        setMode(
-                          "CANCEL",
-                        )
-                      }
-                      disabled={
-                        isPending
-                      }
-                      icon={
-                        <Ban className="size-4" />
-                      }
-                      tone="warning"
-                    >
-                      Cancelar
-                    </ActionButton>
-                  ) : null}
-
-                  <ActionButton
-                    onClick={() =>
-                      setMode(
-                        "DELETE",
-                      )
-                    }
-                    disabled={
-                      isPending
-                    }
-                    icon={
-                      <Trash2 className="size-4" />
-                    }
-                    tone="danger"
-                  >
-                    Excluir
-                  </ActionButton>
-                </div>
-              </div>
+              ) : null}
             </div>
           </>
         ) : null}
 
         {mode ===
-        "EDIT" ? (
+          "EDIT" &&
+        canEditAgenda ? (
           <EditTaskContent
             task={
               currentTask
@@ -844,7 +873,8 @@ export function AgendaTaskDetailsDialog({
         ) : null}
 
         {mode ===
-        "CANCEL" ? (
+          "CANCEL" &&
+        canEditAgenda ? (
           <ConfirmationContent
             title="Cancelar compromisso"
             description="O compromisso será mantido no banco de dados, mas deixará de aparecer na agenda ativa."
@@ -873,7 +903,8 @@ export function AgendaTaskDetailsDialog({
         ) : null}
 
         {mode ===
-        "DELETE" ? (
+          "DELETE" &&
+        canDeleteAgenda ? (
           <ConfirmationContent
             title="Excluir compromisso"
             description="O compromisso será apagado definitivamente. Use esta opção apenas quando o registro tiver sido criado por engano."
@@ -1237,7 +1268,7 @@ function EditTaskContent({
 
           <div className="sm:col-span-2">
             <FieldGroup
-              label="Processo"
+              label="Caso"
               error={
                 errors.caseId
                   ?.message
@@ -1252,7 +1283,7 @@ function EditTaskContent({
                 }
               >
                 <option value="">
-                  Sem processo vinculado
+                  Sem caso vinculado
                 </option>
 
                 {visibleCases.map(

@@ -1,11 +1,35 @@
-import { notFound } from "next/navigation";
+import {
+  notFound,
+} from "next/navigation";
 
-import { AppShell } from "@/components/app-shell/app-shell";
-import { getClientDashboard } from "@/features/clients/services/get-client-dashboard";
-import { ClientHeader } from "@/features/clients/components/client-header";
-import { ClientStats } from "@/features/clients/components/client-stats";
-import { ClientTabs } from "@/features/clients/components/client-tabs";
-import { UpcomingClientEvents } from "@/features/clients/components/upcoming-client-events";
+import {
+  AppShell,
+} from "@/components/app-shell/app-shell";
+
+import {
+  ClientHeader,
+} from "@/features/clients/components/client-header";
+
+import {
+  ClientStats,
+} from "@/features/clients/components/client-stats";
+
+import {
+  ClientTabs,
+} from "@/features/clients/components/client-tabs";
+
+import {
+  UpcomingClientEvents,
+} from "@/features/clients/components/upcoming-client-events";
+
+import {
+  getClientDashboard,
+} from "@/features/clients/services/get-client-dashboard";
+
+import {
+  hasPermission,
+  requireWorkspacePagePermission,
+} from "@/lib/permissions";
 
 type PageProps = {
   params: Promise<{
@@ -13,10 +37,103 @@ type PageProps = {
   }>;
 };
 
-export default async function ClientePage({ params }: PageProps) {
-  const { id } = await params;
+export default async function ClientePage({
+  params,
+}: PageProps) {
+  const {
+    membership,
+  } =
+    await requireWorkspacePagePermission(
+      "CLIENT_VIEW",
+    );
 
-  const client = await getClientDashboard(id);
+  const canCreateCase =
+    hasPermission(
+      membership.role,
+      "CASE_CREATE",
+    );
+
+  const canCreateWork =
+    hasPermission(
+      membership.role,
+      "WORK_CREATE",
+    );
+
+  const canEditClient =
+    hasPermission(
+      membership.role,
+      "CLIENT_EDIT",
+    );
+
+  const canDeleteClient =
+    hasPermission(
+      membership.role,
+      "CLIENT_DELETE",
+    );
+
+  const canViewAgenda =
+    hasPermission(
+      membership.role,
+      "AGENDA_VIEW",
+    );
+
+  const canCreateAgenda =
+    hasPermission(
+      membership.role,
+      "AGENDA_CREATE",
+    );
+
+  const canViewDocuments =
+    hasPermission(
+      membership.role,
+      "DOCUMENT_VIEW",
+    );
+
+  const canCreateDocuments =
+    hasPermission(
+      membership.role,
+      "DOCUMENT_CREATE",
+    );
+
+  const canDeleteDocuments =
+    hasPermission(
+      membership.role,
+      "DOCUMENT_DELETE",
+    );
+
+  const canViewFinance =
+    hasPermission(
+      membership.role,
+      "FINANCE_VIEW",
+    );
+
+  const canWriteFinance =
+    hasPermission(
+      membership.role,
+      "FINANCE_WRITE",
+    );
+
+  const canViewGov =
+    hasPermission(
+      membership.role,
+      "GOV_VIEW",
+    );
+
+  const {
+    id,
+  } =
+    await params;
+
+  const client =
+    await getClientDashboard(
+      id,
+      {
+        canViewAgenda,
+        canViewDocuments,
+        canViewFinance,
+        canViewGov,
+      },
+    );
 
   if (!client) {
     notFound();
@@ -25,14 +142,88 @@ export default async function ClientePage({ params }: PageProps) {
   return (
     <AppShell>
       <div className="space-y-6">
-        <ClientHeader client={client} />
+        <ClientHeader
+          client={
+            client
+          }
+          canCreateCase={
+            canCreateCase
+          }
+          canCreateWork={
+            canCreateWork
+          }
+          canEditClient={
+            canEditClient
+          }
+          canDeleteClient={
+            canDeleteClient
+          }
+        />
 
-        <ClientStats client={client} />
+        <ClientStats
+          client={
+            client
+          }
+          canViewAgenda={
+            canViewAgenda
+          }
+          canViewDocuments={
+            canViewDocuments
+          }
+          canViewFinance={
+            canViewFinance
+          }
+        />
 
-        <UpcomingClientEvents tasks={client.tasks} />
+        {canViewAgenda ? (
+          <UpcomingClientEvents
+            clientId={
+              client.id
+            }
+            clientName={
+              client.name
+            }
+            cases={
+              client.cases
+            }
+            tasks={
+              client.tasks
+            }
+          />
+        ) : null}
 
-        <ClientTabs client={client} />
-
+        <ClientTabs
+          client={
+            client
+          }
+          canCreateCase={
+            canCreateCase
+          }
+          canViewDocuments={
+            canViewDocuments
+          }
+          canCreateDocuments={
+            canCreateDocuments
+          }
+          canDeleteDocuments={
+            canDeleteDocuments
+          }
+          canViewFinance={
+            canViewFinance
+          }
+          canWriteFinance={
+            canWriteFinance
+          }
+          canViewGov={
+            canViewGov
+          }
+          canCreateAgenda={
+            canCreateAgenda
+          }
+          canEditClient={
+            canEditClient
+          }
+        />
       </div>
     </AppShell>
   );

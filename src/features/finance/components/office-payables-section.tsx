@@ -48,9 +48,12 @@ import {
 
 type Props = {
   payables:
-    OfficePayable[];
+  OfficePayable[];
 
   todayKey: string;
+
+  canWriteFinance:
+  boolean;
 };
 
 type StatusFilter =
@@ -259,16 +262,16 @@ function matchesPeriod(
   const thirtyDays =
     todayTimestamp +
     30 *
-      24 *
-      60 *
-      60 *
-      1000;
+    24 *
+    60 *
+    60 *
+    1000;
 
   return (
     dueTimestamp >=
-      todayTimestamp &&
+    todayTimestamp &&
     dueTimestamp <=
-      thirtyDays
+    thirtyDays
   );
 }
 
@@ -295,6 +298,7 @@ function getStatusPriority(
 export function OfficePayablesSection({
   payables,
   todayKey,
+  canWriteFinance,
 }: Props) {
   const [
     search,
@@ -441,10 +445,10 @@ export function OfficePayablesSection({
   const nextSevenDays =
     todayTimestamp +
     7 *
-      24 *
-      60 *
-      60 *
-      1000;
+    24 *
+    60 *
+    60 *
+    1000;
 
   const overduePayables =
     payables
@@ -482,9 +486,9 @@ export function OfficePayablesSection({
 
           if (
             status ===
-              "PAGO" ||
+            "PAGO" ||
             status ===
-              "CANCELADO"
+            "CANCELADO"
           ) {
             return false;
           }
@@ -503,9 +507,9 @@ export function OfficePayablesSection({
 
           return (
             dueTimestamp >=
-              todayTimestamp &&
+            todayTimestamp &&
             dueTimestamp <=
-              nextSevenDays
+            nextSevenDays
           );
         },
       )
@@ -563,9 +567,9 @@ export function OfficePayablesSection({
 
               if (
                 categoryFilter !==
-                  "TODAS" &&
+                "TODAS" &&
                 payable.category !==
-                  categoryFilter
+                categoryFilter
               ) {
                 return false;
               }
@@ -577,11 +581,11 @@ export function OfficePayablesSection({
                   payable.description,
 
                   categoryLabels[
-                    payable.category
+                  payable.category
                   ],
 
                   payable.notes ??
-                    "",
+                  "",
                 ]
                   .join(" ")
                   .toLocaleLowerCase(
@@ -634,9 +638,9 @@ export function OfficePayablesSection({
 
               if (
                 firstStatus ===
-                  "PAGO" &&
+                "PAGO" &&
                 secondStatus ===
-                  "PAGO"
+                "PAGO"
               ) {
                 return (
                   (getDateTimestamp(
@@ -671,11 +675,11 @@ export function OfficePayablesSection({
   const hasFilters =
     Boolean(search) ||
     statusFilter !==
-      "TODOS" ||
+    "TODOS" ||
     periodFilter !==
-      "TODOS" ||
+    "TODOS" ||
     categoryFilter !==
-      "TODAS";
+    "TODAS";
 
   return (
     <div className="space-y-8">
@@ -704,7 +708,9 @@ export function OfficePayablesSection({
             </div>
           </div>
 
-          <CreatePayableDialog />
+          {canWriteFinance ? (
+            <CreatePayableDialog />
+          ) : null}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -731,7 +737,7 @@ export function OfficePayablesSection({
             }
             description={
               overdueCount ===
-              1
+                1
                 ? "1 conta vencida"
                 : `${overdueCount} contas vencidas`
             }
@@ -748,7 +754,7 @@ export function OfficePayablesSection({
             }
             description={
               paidThisMonthCount ===
-              1
+                1
                 ? "1 pagamento realizado"
                 : `${paidThisMonthCount} pagamentos realizados`
             }
@@ -765,7 +771,7 @@ export function OfficePayablesSection({
             }
             description={
               expectedThisMonthCount ===
-              1
+                1
                 ? "1 conta prevista"
                 : `${expectedThisMonthCount} contas previstas`
             }
@@ -784,7 +790,7 @@ export function OfficePayablesSection({
       {(overduePayables.length >
         0 ||
         upcomingPayables.length >
-          0) ? (
+        0) ? (
         <section className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold">
@@ -1037,6 +1043,9 @@ export function OfficePayablesSection({
                   payable={
                     payable
                   }
+                  canWriteFinance={
+                    canWriteFinance
+                  }
                 />
               ),
             )}
@@ -1133,49 +1142,45 @@ function AttentionCard({
   icon: ReactNode;
 
   payables:
-    OfficePayable[];
+  OfficePayable[];
 
   emptyMessage: string;
 
   tone:
-    AttentionTone;
+  AttentionTone;
 }) {
   const isDanger =
     tone === "danger";
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border bg-card ${
-        isDanger
-          ? "border-red-200 dark:border-red-900"
-          : "border-blue-200 dark:border-blue-900"
-      }`}
+      className={`overflow-hidden rounded-2xl border bg-card ${isDanger
+        ? "border-rose-200 dark:border-rose-900"
+        : "border-blue-200 dark:border-blue-900"
+        }`}
     >
       <div
-        className={`border-b p-4 ${
-          isDanger
-            ? "bg-red-50/50 dark:bg-red-950/15"
-            : "bg-blue-50/50 dark:bg-blue-950/15"
-        }`}
+        className={`border-b p-4 ${isDanger
+          ? "bg-rose-50/50 dark:bg-rose-950/15"
+          : "bg-blue-50/50 dark:bg-blue-950/15"
+          }`}
       >
         <div className="flex items-center gap-3">
           <div
-            className={`flex size-10 items-center justify-center rounded-xl ${
-              isDanger
-                ? "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300"
-                : "bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300"
-            }`}
+            className={`flex size-10 items-center justify-center rounded-xl ${isDanger
+              ? "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300"
+              : "bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300"
+              }`}
           >
             {icon}
           </div>
 
           <div>
             <h3
-              className={`font-semibold ${
-                isDanger
-                  ? "text-red-900 dark:text-red-200"
-                  : "text-blue-900 dark:text-blue-200"
-              }`}
+              className={`font-semibold ${isDanger
+                ? "text-rose-900 dark:text-rose-200"
+                : "text-blue-900 dark:text-blue-200"
+                }`}
             >
               {title}
             </h3>
@@ -1188,7 +1193,7 @@ function AttentionCard({
       </div>
 
       {payables.length ===
-      0 ? (
+        0 ? (
         <div className="p-5 text-sm text-muted-foreground">
           {emptyMessage}
         </div>
@@ -1212,17 +1217,16 @@ function AttentionCard({
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {
                       categoryLabels[
-                        payable.category
+                      payable.category
                       ]
                     }
                   </p>
 
                   <p
-                    className={`mt-1 text-xs ${
-                      isDanger
-                        ? "font-medium text-red-700 dark:text-red-300"
-                        : "text-blue-700 dark:text-blue-300"
-                    }`}
+                    className={`mt-1 text-xs ${isDanger
+                      ? "font-medium text-rose-700 dark:text-rose-300"
+                      : "text-blue-700 dark:text-blue-300"
+                      }`}
                   >
                     {formatReceivableDate(
                       payable.dueDate,
@@ -1231,11 +1235,10 @@ function AttentionCard({
                 </div>
 
                 <p
-                  className={`shrink-0 font-bold ${
-                    isDanger
-                      ? "text-red-700 dark:text-red-300"
-                      : "text-blue-700 dark:text-blue-300"
-                  }`}
+                  className={`shrink-0 font-bold ${isDanger
+                    ? "text-rose-700 dark:text-rose-300"
+                    : "text-blue-700 dark:text-blue-300"
+                    }`}
                 >
                   {formatMoney(
                     payable.amount,
@@ -1267,12 +1270,12 @@ function FilterSelect({
   value: string;
 
   onChange:
-    (
-      value: string,
-    ) => void;
+  (
+    value: string,
+  ) => void;
 
   children:
-    ReactNode;
+  ReactNode;
 }) {
   return (
     <label className="space-y-1.5">
@@ -1305,9 +1308,13 @@ function FilterSelect({
 
 function PayableCard({
   payable,
+  canWriteFinance,
 }: {
   payable:
-    OfficePayable;
+  OfficePayable;
+
+  canWriteFinance:
+  boolean;
 }) {
   const effectiveStatus =
     getEffectiveFinancialStatus(
@@ -1325,58 +1332,56 @@ function PayableCard({
     "CANCELADO";
 
   const editablePayable: EditablePayable =
-    {
-      id:
-        payable.id,
+  {
+    id:
+      payable.id,
 
-      description:
-        payable.description,
+    description:
+      payable.description,
 
-      category:
-        payable.category,
+    category:
+      payable.category,
 
-      amount:
-        payable.amount,
+    amount:
+      payable.amount,
 
-      dueDate:
-        toDateInputValue(
-          payable.dueDate,
-        ),
+    dueDate:
+      toDateInputValue(
+        payable.dueDate,
+      ),
 
-      paidAt:
-        toDateInputValue(
-          payable.paidAt,
-        ),
+    paidAt:
+      toDateInputValue(
+        payable.paidAt,
+      ),
 
-      status:
-        effectiveStatus,
+    status:
+      effectiveStatus,
 
-      paymentMethod:
-        payable.paymentMethod,
+    paymentMethod:
+      payable.paymentMethod,
 
-      notes:
-        payable.notes ??
-        "",
-    };
+    notes:
+      payable.notes ??
+      "",
+  };
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border bg-card p-4 transition hover:shadow-sm ${
-        effectiveStatus ===
+      className={`relative overflow-hidden rounded-2xl border bg-card p-4 transition hover:shadow-sm ${effectiveStatus ===
         "ATRASADO"
-          ? "border-red-200 bg-red-50/20 dark:border-red-900 dark:bg-red-950/10"
+        ? "border-rose-200 bg-rose-50/20 dark:border-rose-900 dark:bg-rose-950/10"
+        : effectiveStatus ===
+          "PAGO"
+          ? "border-emerald-200/70 dark:border-emerald-900"
           : effectiveStatus ===
-              "PAGO"
-            ? "border-emerald-200/70 dark:border-emerald-900"
-            : effectiveStatus ===
-                "PARCIAL"
-              ? "border-blue-200 dark:border-blue-900"
-              : "border-border"
-      } ${
-        isCanceled
+            "PARCIAL"
+            ? "border-blue-200 dark:border-blue-900"
+            : "border-border"
+        } ${isCanceled
           ? "opacity-70"
           : ""
-      }`}
+        }`}
     >
       <div
         className={`absolute inset-y-0 left-0 w-1 ${statusConfig.accent}`}
@@ -1387,11 +1392,10 @@ function PayableCard({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3
-                className={`font-semibold ${
-                  isCanceled
-                    ? "line-through"
-                    : ""
-                }`}
+                className={`font-semibold ${isCanceled
+                  ? "line-through"
+                  : ""
+                  }`}
               >
                 {
                   payable.description
@@ -1401,7 +1405,7 @@ function PayableCard({
               <span className="rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
                 {
                   categoryLabels[
-                    payable.category
+                  payable.category
                   ]
                 }
               </span>
@@ -1419,19 +1423,17 @@ function PayableCard({
           <div className="flex shrink-0 items-start gap-3">
             <div className="text-right">
               <p
-                className={`text-lg font-bold ${
-                  effectiveStatus ===
+                className={`text-lg font-bold ${effectiveStatus ===
                   "ATRASADO"
-                    ? "text-red-700 dark:text-red-300"
-                    : effectiveStatus ===
-                        "PAGO"
-                      ? "text-emerald-700 dark:text-emerald-300"
-                      : "text-rose-700 dark:text-rose-300"
-                } ${
-                  isCanceled
+                  ? "text-rose-700 dark:text-rose-300"
+                  : effectiveStatus ===
+                    "PAGO"
+                    ? "text-emerald-700 dark:text-emerald-300"
+                    : "text-rose-700 dark:text-rose-300"
+                  } ${isCanceled
                     ? "line-through"
                     : ""
-                }`}
+                  }`}
               >
                 {formatMoney(
                   payable.amount,
@@ -1451,22 +1453,23 @@ function PayableCard({
               }
             </span>
 
-            <PayableActionsMenu
-              payable={
-                editablePayable
-              }
-            />
+            {canWriteFinance ? (
+              <PayableActionsMenu
+                payable={
+                  editablePayable
+                }
+              />
+            ) : null}
           </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t pt-3 text-xs text-muted-foreground">
           <span
-            className={`inline-flex items-center gap-1.5 ${
-              effectiveStatus ===
+            className={`inline-flex items-center gap-1.5 ${effectiveStatus ===
               "ATRASADO"
-                ? "font-medium text-red-700 dark:text-red-300"
-                : ""
-            }`}
+              ? "font-medium text-rose-700 dark:text-rose-300"
+              : ""
+              }`}
           >
             <CalendarDays className="size-3.5" />
 
@@ -1491,7 +1494,7 @@ function PayableCard({
             <span>
               {
                 paymentMethodLabels[
-                  payable.paymentMethod
+                payable.paymentMethod
                 ] ??
                 payable.paymentMethod
               }
@@ -1572,19 +1575,19 @@ function getSummaryStyles(
     case "overdue":
       return {
         container:
-          "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/15",
+          "border-rose-200 bg-rose-50/50 dark:border-rose-900 dark:bg-rose-950/15",
 
         accent:
-          "bg-red-500",
+          "bg-rose-500",
 
         title:
-          "text-red-800 dark:text-red-300",
+          "text-rose-800 dark:text-rose-300",
 
         value:
-          "text-red-700 dark:text-red-300",
+          "text-rose-700 dark:text-rose-300",
 
         icon:
-          "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300",
+          "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300",
       };
 
     case "paid":
@@ -1654,10 +1657,10 @@ function getStatusConfig(
           "Atrasado",
 
         className:
-          "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300",
+          "bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300",
 
         accent:
-          "bg-red-500",
+          "bg-rose-500",
       };
 
     case "PARCIAL":

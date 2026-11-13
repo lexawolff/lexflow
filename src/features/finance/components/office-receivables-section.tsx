@@ -25,6 +25,9 @@ import { OfficeReceivablesList } from "./office-receivables-list";
 
 type Props = {
   data: OfficeFinancialData;
+
+  canWriteFinance:
+  boolean;
 };
 
 type AttentionTone =
@@ -60,10 +63,10 @@ function getFutureTimestamp(
       todayKey,
     ) +
     days *
-      24 *
-      60 *
-      60 *
-      1000
+    24 *
+    60 *
+    60 *
+    1000
   );
 }
 
@@ -81,6 +84,7 @@ function formatMoney(
 
 export function OfficeReceivablesSection({
   data,
+  canWriteFinance,
 }: Props) {
   const overdue =
     data.receivables
@@ -95,13 +99,13 @@ export function OfficeReceivablesSection({
           const remaining =
             Math.max(
               receivable.totalAmount -
-                receivable.paidAmount,
+              receivable.paidAmount,
               0,
             );
 
           return (
             status ===
-              "ATRASADO" &&
+            "ATRASADO" &&
             remaining > 0
           );
         },
@@ -161,9 +165,9 @@ export function OfficeReceivablesSection({
 
           return (
             dueTimestamp >=
-              todayTimestamp &&
+            todayTimestamp &&
             dueTimestamp <=
-              nextSevenDays
+            nextSevenDays
           );
         },
       )
@@ -267,6 +271,9 @@ export function OfficeReceivablesSection({
         todayKey={
           data.todayKey
         }
+        canWriteFinance={
+          canWriteFinance
+        }
       />
     </div>
   );
@@ -290,7 +297,7 @@ function AttentionCard({
   icon: ReactNode;
 
   receivables:
-    AttentionReceivable[];
+  AttentionReceivable[];
 
   emptyMessage: string;
 
@@ -301,37 +308,33 @@ function AttentionCard({
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border bg-card ${
-        isDanger
-          ? "border-red-200 dark:border-red-900"
+      className={`overflow-hidden rounded-2xl border bg-card ${isDanger
+          ? "border-rose-200 dark:border-rose-900"
           : "border-blue-200 dark:border-blue-900"
-      }`}
+        }`}
     >
       <div
-        className={`border-b p-4 ${
-          isDanger
-            ? "bg-red-50/50 dark:bg-red-950/15"
+        className={`border-b p-4 ${isDanger
+            ? "bg-rose-50/50 dark:bg-rose-950/15"
             : "bg-blue-50/50 dark:bg-blue-950/15"
-        }`}
+          }`}
       >
         <div className="flex items-center gap-3">
           <div
-            className={`flex size-10 items-center justify-center rounded-xl ${
-              isDanger
-                ? "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300"
+            className={`flex size-10 items-center justify-center rounded-xl ${isDanger
+                ? "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300"
                 : "bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300"
-            }`}
+              }`}
           >
             {icon}
           </div>
 
           <div>
             <h3
-              className={`font-semibold ${
-                isDanger
-                  ? "text-red-900 dark:text-red-200"
+              className={`font-semibold ${isDanger
+                  ? "text-rose-900 dark:text-rose-200"
                   : "text-blue-900 dark:text-blue-200"
-              }`}
+                }`}
             >
               {title}
             </h3>
@@ -344,7 +347,7 @@ function AttentionCard({
       </div>
 
       {receivables.length ===
-      0 ? (
+        0 ? (
         <div className="p-5 text-sm text-muted-foreground">
           {emptyMessage}
         </div>
@@ -355,7 +358,7 @@ function AttentionCard({
               const remaining =
                 Math.max(
                   receivable.totalAmount -
-                    receivable.paidAmount,
+                  receivable.paidAmount,
                   0,
                 );
 
@@ -383,11 +386,10 @@ function AttentionCard({
                     </p>
 
                     <p
-                      className={`mt-1 text-xs ${
-                        isDanger
-                          ? "font-medium text-red-700 dark:text-red-300"
+                      className={`mt-1 text-xs ${isDanger
+                          ? "font-medium text-rose-700 dark:text-rose-300"
                           : "text-blue-700 dark:text-blue-300"
-                      }`}
+                        }`}
                     >
                       {formatReceivableDate(
                         receivable.dueDate,
@@ -396,11 +398,10 @@ function AttentionCard({
                   </div>
 
                   <p
-                    className={`shrink-0 font-bold ${
-                      isDanger
-                        ? "text-red-700 dark:text-red-300"
+                    className={`shrink-0 font-bold ${isDanger
+                        ? "text-rose-700 dark:text-rose-300"
                         : "text-blue-700 dark:text-blue-300"
-                    }`}
+                      }`}
                   >
                     {formatMoney(
                       remaining,

@@ -325,6 +325,41 @@ function getTaskDatesFromGoogleEvent(
 }
 
 /* =========================================
+   IDENTIFICAR EVENTO DO LEXFLOW
+========================================= */
+
+function getLexFlowEventTag(
+  event:
+    calendar_v3.Schema$Event,
+) {
+  const privateProperties =
+    event
+      .extendedProperties
+      ?.private;
+
+  const taskId =
+    privateProperties
+      ?.lexflowTaskId ??
+    null;
+
+  const workspaceId =
+    privateProperties
+      ?.lexflowWorkspaceId ??
+    null;
+
+  return {
+    taskId,
+    workspaceId,
+
+    isTagged:
+      Boolean(
+        taskId ||
+          workspaceId,
+      ),
+  };
+}
+
+/* =========================================
    LOCALIZAR TASK DO EVENTO GOOGLE
 ========================================= */
 
@@ -339,18 +374,10 @@ async function findTaskForGoogleEvent(
     return null;
   }
 
-  const privateProperties =
-    event
-      .extendedProperties
-      ?.private;
-
-  const taggedWorkspaceId =
-    privateProperties
-      ?.lexflowWorkspaceId;
-
-  const taggedTaskId =
-    privateProperties
-      ?.lexflowTaskId;
+  const tag =
+    getLexFlowEventTag(
+      event,
+    );
 
   /*
    * Se o evento tiver sido criado
@@ -358,15 +385,15 @@ async function findTaskForGoogleEvent(
    * localizar diretamente a Task.
    */
   if (
-    taggedTaskId &&
-    taggedWorkspaceId ===
+    tag.taskId &&
+    tag.workspaceId ===
       connection.workspaceId
   ) {
     const taggedTask =
       await prisma.task.findFirst({
         where: {
           id:
-            taggedTaskId,
+            tag.taskId,
 
           workspaceId:
             connection.workspaceId,
@@ -428,11 +455,75 @@ async function applyGoogleEvent(
     };
   }
 
+  const tag =
+    getLexFlowEventTag(
+      event,
+    );
+
+  /*
+   * Um evento marcado como pertencente
+   * a outro workspace LexFlow nunca deve
+   * ser importado para este workspace.
+   */
+  if (
+    tag.isTagged &&
+    tag.workspaceId &&
+    tag.workspaceId !==
+      connection.workspaceId
+  ) {
+    return {
+      imported: 0,
+      updated: 0,
+      cancelled: 0,
+      skippedRecurring: 0,
+    };
+  }
+
   const existingTask =
     await findTaskForGoogleEvent(
       connection,
       event,
     );
+
+  /*
+   * Se o evento foi criado pelo próprio
+   * LexFlow, mas a Task correspondente
+   * já não existe, não o transformamos
+   * em uma nova Task importada.
+   *
+   * Isso evita a reimportação de eventos
+   * órfãos deixados por versões antigas.
+   */
+  if (
+    tag.isTagged &&
+    !existingTask
+  ) {
+    return {
+      imported: 0,
+      updated: 0,
+      cancelled: 0,
+      skippedRecurring: 0,
+    };
+  }
+
+  /*
+   * Uma conexão Google não pode assumir
+   * uma Task que já está vinculada a
+   * outra conexão do mesmo workspace.
+   */
+  if (
+    existingTask
+      ?.googleConnectionId &&
+    existingTask.googleConnectionId !==
+      connection.id
+  ) {
+    return {
+      imported: 0,
+      updated: 0,
+      cancelled: 0,
+      skippedRecurring: 0,
+    };
+  }
 
   /* ==========================
      EVENTO EXCLUÍDO NO GOOGLE
@@ -514,9 +605,12 @@ async function applyGoogleEvent(
    * em uma única Task incorreta.
    */
   if (
-    event.recurrence &&
-    event.recurrence.length >
-      0
+    event.recurringEventId ||
+    (
+      event.recurrence &&
+      event.recurrence.length >
+        0
+    )
   ) {
     return {
       imported: 0,
@@ -684,15 +778,15 @@ async function applyGoogleEvent(
    BUSCAR ALTERAÇÕES DO GOOGLE
 ========================================= */
 
-function isSyncTokenExpired(
+function getGoogleStatus(
   error: unknown,
-): boolean {
+): number | null {
   if (
     typeof error !==
       "object" ||
     error === null
   ) {
-    return false;
+    return null;
   }
 
   const candidate =
@@ -706,9 +800,34 @@ function isSyncTokenExpired(
     };
 
   return (
-    candidate.code === 410 ||
+    candidate.code ??
     candidate.response
-      ?.status === 410
+      ?.status ??
+    null
+  );
+}
+
+function isMissingGoogleEvent(
+  error: unknown,
+): boolean {
+  const status =
+    getGoogleStatus(
+      error,
+    );
+
+  return (
+    status === 404 ||
+    status === 410
+  );
+}
+
+function isSyncTokenExpired(
+  error: unknown,
+): boolean {
+  return (
+    getGoogleStatus(
+      error,
+    ) === 410
   );
 }
 
@@ -948,6 +1067,33 @@ async function getLexFlowTasksForGoogle(
   } =
     getImportWindow();
 
+   /*
+   * Enquanto Task não possui um campo
+   * explícito de proprietário/usuário,
+   * uma Task sem googleConnectionId é
+   * ambígua em workspaces com mais de
+   * um membro.
+   *
+   * Só podemos assumir uma Task sem
+   * vínculo quando existe exatamente
+   * um membro no workspace.
+   *
+   * Em workspaces com equipe, cada
+   * sincronização só pode manipular
+   * Tasks já vinculadas à própria
+   * conexão Google.
+   */
+  const memberCount =
+    await prisma.membership.count({
+      where: {
+        workspaceId:
+          connection.workspaceId,
+      },
+    });
+
+  const canClaimUnlinkedTasks =
+    memberCount === 1;
+
   return prisma.task.findMany({
     where: {
       workspaceId:
@@ -956,18 +1102,63 @@ async function getLexFlowTasksForGoogle(
       source:
         TaskSource.LEXFLOW,
 
-      status: {
-        not:
-          TaskStatus.CANCELADA,
-      },
+      OR: [
+        /*
+         * Tasks ativas dentro da janela
+         * normal de sincronização.
+         */
+        {
+          status: {
+            not:
+              TaskStatus.CANCELADA,
+          },
 
-      dueDate: {
-        gte:
-          from,
+          dueDate: {
+            gte:
+              from,
 
-        lte:
-          until,
-      },
+            lte:
+              until,
+          },
+
+          OR: [
+            {
+              googleConnectionId:
+                connection.id,
+            },
+
+            ...(
+              canClaimUnlinkedTasks
+                ? [
+                    {
+                      googleConnectionId:
+                        null,
+                    },
+                  ]
+                : []
+            ),
+          ],
+        },
+
+        /*
+         * Cancelamentos pendentes de
+         * limpeza precisam ser tentados
+         * novamente mesmo que estejam
+         * fora da janela de datas.
+         */
+        {
+          status:
+            TaskStatus.CANCELADA,
+
+          googleConnectionId:
+            connection.id,
+
+          googleEventId: {
+            not:
+              null,
+          },
+        },
+      ],
     },
 
     orderBy: [
@@ -988,6 +1179,76 @@ async function getLexFlowTasksForGoogle(
    PUBLICAR UMA TASK
 ========================================= */
 
+async function removeCancelledTaskFromGoogle(
+  connection:
+    GoogleConnection,
+
+  calendar:
+    calendar_v3.Calendar,
+
+  task:
+    LexFlowTaskForGoogle,
+) {
+  /*
+   * Esta função é chamada apenas para
+   * Tasks CANCELADAS que ainda mantêm
+   * vínculo externo.
+   */
+  if (
+    !task.googleEventId ||
+    task.googleConnectionId !==
+      connection.id
+  ) {
+    return;
+  }
+
+  try {
+    await calendar.events.delete({
+      calendarId:
+        task.googleCalendarId ??
+        connection.calendarId,
+
+      eventId:
+        task.googleEventId,
+    });
+  } catch (error) {
+    /*
+     * 404/410 significa que o evento
+     * já não existe no Google.
+     */
+    if (
+      !isMissingGoogleEvent(
+        error,
+      )
+    ) {
+      throw error;
+    }
+  }
+
+  /*
+   * Só limpamos o vínculo depois de
+   * confirmar a remoção externa ou
+   * saber que o evento já não existe.
+   */
+  await prisma.task.update({
+    where: {
+      id:
+        task.id,
+    },
+
+    data: {
+      googleConnectionId:
+        null,
+
+      googleCalendarId:
+        null,
+
+      googleEventId:
+        null,
+    },
+  });
+}
+
 async function publishTaskToGoogle(
   connection:
     GoogleConnection,
@@ -998,6 +1259,20 @@ async function publishTaskToGoogle(
   task:
     LexFlowTaskForGoogle,
 ) {
+  /*
+   * Proteção adicional. A consulta
+   * anterior já impede isso, mas não
+   * permitimos que uma conexão sobrescreva
+   * vínculo pertencente a outra.
+   */
+  if (
+    task.googleConnectionId &&
+    task.googleConnectionId !==
+      connection.id
+  ) {
+    return;
+  }
+
   const requestBody =
     buildGoogleEvent(
       task,
@@ -1005,6 +1280,10 @@ async function publishTaskToGoogle(
 
   let googleEventId =
     task.googleEventId;
+
+  let googleCalendarId =
+    task.googleCalendarId ??
+    connection.calendarId;
 
   if (
     googleEventId &&
@@ -1015,7 +1294,7 @@ async function publishTaskToGoogle(
       const response =
         await calendar.events.patch({
           calendarId:
-            connection.calendarId,
+            googleCalendarId,
 
           eventId:
             googleEventId,
@@ -1027,30 +1306,19 @@ async function publishTaskToGoogle(
         response.data.id ??
         googleEventId;
     } catch (error) {
-      const candidate =
-        error as {
-          code?: number;
-
-          response?: {
-            status?:
-              number;
-          };
-        };
-
-      const notFound =
-        candidate.code ===
-          404 ||
-        candidate.response
-          ?.status === 404;
-
-      if (!notFound) {
+      if (
+        !isMissingGoogleEvent(
+          error,
+        )
+      ) {
         throw error;
       }
 
       /*
        * Caso o evento tenha sido
-       * removido no Google e não
-       * exista mais, recriamos.
+       * removido no Google, recriamos
+       * no calendário atualmente
+       * configurado na conexão.
        */
       const response =
         await calendar.events.insert({
@@ -1063,6 +1331,9 @@ async function publishTaskToGoogle(
       googleEventId =
         response.data.id ??
         null;
+
+      googleCalendarId =
+        connection.calendarId;
     }
   } else {
     const response =
@@ -1076,6 +1347,9 @@ async function publishTaskToGoogle(
     googleEventId =
       response.data.id ??
       null;
+
+    googleCalendarId =
+      connection.calendarId;
   }
 
   if (!googleEventId) {
@@ -1094,8 +1368,7 @@ async function publishTaskToGoogle(
       googleConnectionId:
         connection.id,
 
-      googleCalendarId:
-        connection.calendarId,
+      googleCalendarId,
 
       googleEventId,
     },
@@ -1125,6 +1398,19 @@ async function pushLexFlowTasks(
     const task
     of tasks
   ) {
+    if (
+      task.status ===
+      TaskStatus.CANCELADA
+    ) {
+      await removeCancelledTaskFromGoogle(
+        connection,
+        calendar,
+        task,
+      );
+
+      continue;
+    }
+
     await publishTaskToGoogle(
       connection,
       calendar,

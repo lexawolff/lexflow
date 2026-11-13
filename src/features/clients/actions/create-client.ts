@@ -1,96 +1,268 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import {
+  redirect,
+} from "next/navigation";
 
-import { prisma } from "@/lib/prisma";
-import { Vault } from "@/lib/security/vault";
-import { getDefaultWorkspace } from "@/lib/workspace";
+import {
+  hasPermission,
+  requireWorkspacePermission,
+} from "@/lib/permissions";
 
-import { clientSchema } from "../schemas/client-schema";
+import {
+  prisma,
+} from "@/lib/prisma";
 
-export async function createClient(formData: FormData) {
-  const workspace = await getDefaultWorkspace();
+import {
+  Vault,
+} from "@/lib/security/vault";
 
-  const parsed = clientSchema.safeParse({
-    // Dados pessoais
-    name: formData.get("name"),
-    cpf: formData.get("cpf"),
-    rg: formData.get("rg"),
-    birthDate: formData.get("birthDate") || undefined,
+import {
+  clientSchema,
+} from "../schemas/client-schema";
 
-    motherName: formData.get("motherName"),
-    fatherName: formData.get("fatherName"),
+export async function createClient(
+  formData:
+    FormData,
+) {
+  const {
+    workspace,
+    membership,
+  } =
+    await requireWorkspacePermission(
+      "CLIENT_CREATE",
+    );
 
-    gender: formData.get("gender"),
-    maritalStatus: formData.get("maritalStatus"),
+  const canWriteFinance =
+    hasPermission(
+      membership.role,
+      "FINANCE_WRITE",
+    );
 
-    nationality: formData.get("nationality"),
-    education: formData.get("education"),
+  const canManageGov =
+    hasPermission(
+      membership.role,
+      "GOV_MANAGE",
+    );
 
-    profession: formData.get("profession"),
-    income: formData.get("income") || undefined,
+  const parsed =
+    clientSchema.safeParse({
+      name:
+        formData.get(
+          "name",
+        ),
 
-    // Contato
-    phone: formData.get("phone"),
-    whatsapp: formData.get("whatsapp"),
-    email: formData.get("email"),
+      cpf:
+        formData.get(
+          "cpf",
+        ),
 
-    // Endereço
-    cep: formData.get("cep"),
-    address: formData.get("address"),
-    addressNumber: formData.get("addressNumber"),
-    complement: formData.get("complement"),
-    neighborhood: formData.get("neighborhood"),
-    city: formData.get("city"),
-    state: formData.get("state"),
+      rg:
+        formData.get(
+          "rg",
+        ),
 
-    // Previdenciário
-    pis: formData.get("pis"),
+      birthDate:
+        formData.get(
+          "birthDate",
+        ) ||
+        undefined,
 
-    // Gov.br
-    govLogin: formData.get("govLogin"),
-    govPassword: formData.get("govPassword"),
+      motherName:
+        formData.get(
+          "motherName",
+        ),
 
-    // Observações
-    notes: formData.get("notes"),
-  });
+      fatherName:
+        formData.get(
+          "fatherName",
+        ),
+
+      gender:
+        formData.get(
+          "gender",
+        ),
+
+      maritalStatus:
+        formData.get(
+          "maritalStatus",
+        ),
+
+      nationality:
+        formData.get(
+          "nationality",
+        ),
+
+      education:
+        formData.get(
+          "education",
+        ),
+
+      profession:
+        formData.get(
+          "profession",
+        ),
+
+      income:
+        formData.get(
+          "income",
+        ) ||
+        undefined,
+
+      phone:
+        formData.get(
+          "phone",
+        ),
+
+      whatsapp:
+        formData.get(
+          "whatsapp",
+        ),
+
+      email:
+        formData.get(
+          "email",
+        ),
+
+      cep:
+        formData.get(
+          "cep",
+        ),
+
+      address:
+        formData.get(
+          "address",
+        ),
+
+      addressNumber:
+        formData.get(
+          "addressNumber",
+        ),
+
+      complement:
+        formData.get(
+          "complement",
+        ),
+
+      neighborhood:
+        formData.get(
+          "neighborhood",
+        ),
+
+      city:
+        formData.get(
+          "city",
+        ),
+
+      state:
+        formData.get(
+          "state",
+        ),
+
+      pis:
+        formData.get(
+          "pis",
+        ),
+
+      govLogin: canManageGov ? (formData.get("govLogin") ?? undefined) : undefined,
+
+      govPassword: canManageGov ? (formData.get("govPassword") ?? undefined) : undefined,
+
+      notes:
+        formData.get(
+          "notes",
+        ),
+    });
 
   if (!parsed.success) {
-    console.error(parsed.error.flatten());
+    console.error(
+      parsed.error.flatten(),
+    );
 
-    throw new Error("Dados inválidos.");
+    throw new Error(
+      parsed.error.issues[0]
+        ?.message ??
+        "Dados inválidos.",
+    );
   }
 
-  const existingClient = parsed.data.cpf
-    ? await prisma.client.findFirst({
-        where: {
-          workspaceId: workspace.id,
-          cpf: parsed.data.cpf,
-        },
-      })
-    : null;
+  const existingClient =
+    parsed.data.cpf
+      ? await prisma.client.findFirst({
+          where: {
+            workspaceId:
+              workspace.id,
+
+            cpf:
+              parsed.data.cpf,
+          },
+
+          select: {
+            id:
+              true,
+          },
+        })
+      : null;
 
   if (existingClient) {
-    throw new Error("Já existe um cliente cadastrado com este CPF.");
+    throw new Error(
+      "Já existe um cliente cadastrado com este CPF.",
+    );
   }
 
-  const { govPassword, birthDate, ...clientData } = parsed.data;
+  const {
+    birthDate,
+    income,
+    govLogin,
+    govPassword,
+    ...clientData
+  } =
+    parsed.data;
 
-  const client = await prisma.client.create({
-    data: {
-      workspaceId: workspace.id,
+  const client =
+    await prisma.client.create({
+      data: {
+        workspaceId:
+          workspace.id,
 
-      ...clientData,
+        ...clientData,
 
-      birthDate: birthDate
-        ? new Date(birthDate)
-        : null,
+        birthDate:
+          birthDate
+            ? new Date(
+                birthDate,
+              )
+            : null,
 
-      govPasswordEncrypted: govPassword
-        ? Vault.encrypt(govPassword)
-        : null,
-    },
-  });
+        /*
+         * Mesmo que um usuário
+         * tente adulterar o request,
+         * estes campos são ignorados
+         * sem a permissão adequada.
+         */
+        income:
+          canWriteFinance
+            ? income ??
+              null
+            : null,
 
-  redirect(`/clientes/${client.id}`);
+        govLogin:
+          canManageGov
+            ? govLogin ||
+              null
+            : null,
+
+        govPasswordEncrypted:
+          canManageGov &&
+          govPassword
+            ? Vault.encrypt(
+                govPassword,
+              )
+            : null,
+      },
+    });
+
+  redirect(
+    `/clientes/${client.id}`,
+  );
 }

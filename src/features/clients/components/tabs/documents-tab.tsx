@@ -1,30 +1,61 @@
 "use client";
 
-import { useState } from "react";
-import { Plus } from "lucide-react";
+import {
+  useState,
+} from "react";
 
-import { Button } from "@/components/ui/button";
+import {
+  Plus,
+} from "lucide-react";
 
-import { DocumentList } from "@/features/documents/components/document-list";
-import { UploadDocumentDialog } from "@/features/documents/components/upload-document-dialog";
+import {
+  Button,
+} from "@/components/ui/button";
 
-import type { ClientDetails } from "../../types";
+import {
+  DocumentList,
+} from "@/features/documents/components/document-list";
+
+import {
+  UploadDocumentDialog,
+} from "@/features/documents/components/upload-document-dialog";
+
+import type {
+  ClientDetails,
+} from "../../types";
 
 type DocumentsTabProps = {
-  client: ClientDetails;
+  clientId:
+    string;
+
+  documents:
+    ClientDetails["documents"];
+
+  canCreateDocuments:
+    boolean;
+
+  canDeleteDocuments:
+    boolean;
 };
 
 export function DocumentsTab({
-  client,
+  clientId,
+  documents,
+  canCreateDocuments,
+  canDeleteDocuments,
 }: DocumentsTabProps) {
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [
+    isUploadOpen,
+    setIsUploadOpen,
+  ] =
+    useState(false);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">
-            Documentos ({client.documents.length})
+            Documentos ({documents.length})
           </h2>
 
           <p className="text-sm text-muted-foreground">
@@ -32,22 +63,44 @@ export function DocumentsTab({
           </p>
         </div>
 
-        <Button
-          type="button"
-          onClick={() => setIsUploadOpen(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar documento
-        </Button>
+        {canCreateDocuments ? (
+          <Button
+            type="button"
+            onClick={() =>
+              setIsUploadOpen(
+                true,
+              )
+            }
+          >
+            <Plus className="mr-2 h-4 w-4" />
+
+            Adicionar documento
+          </Button>
+        ) : null}
       </div>
 
-      <DocumentList documents={client.documents} />
-
-      <UploadDocumentDialog
-        open={isUploadOpen}
-        onOpenChange={setIsUploadOpen}
-        clientId={client.id}
+      <DocumentList
+        documents={
+          documents
+        }
+        canDeleteDocuments={
+          canDeleteDocuments
+        }
       />
+
+      {canCreateDocuments ? (
+        <UploadDocumentDialog
+          open={
+            isUploadOpen
+          }
+          onOpenChange={
+            setIsUploadOpen
+          }
+          clientId={
+            clientId
+          }
+        />
+      ) : null}
     </div>
   );
 }

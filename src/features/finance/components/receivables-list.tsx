@@ -20,6 +20,9 @@ import { ReceivableCard } from "./receivable-card";
 
 type Props = {
   client: ClientDetails;
+
+  canWriteFinance:
+    boolean;
 };
 
 type FilterValue =
@@ -625,6 +628,7 @@ function sortDisplayUnits(
 
 export function ReceivablesList({
   client,
+  canWriteFinance,
 }: Props) {
   const [
     activeFilter,
@@ -795,6 +799,9 @@ export function ReceivablesList({
           caseOptions={
             caseOptions
           }
+          canWriteFinance={
+            canWriteFinance
+          }
         />
       ) : filteredReceivables.length >
         0 ? (
@@ -807,6 +814,9 @@ export function ReceivablesList({
           }
           caseOptions={
             caseOptions
+          }
+          canWriteFinance={
+            canWriteFinance
           }
         />
       ) : (
@@ -822,12 +832,16 @@ export function ReceivablesList({
 function AllReceivablesView({
   receivables,
   caseOptions,
+  canWriteFinance,
 }: {
   receivables:
     ReceivableItem[];
 
   caseOptions:
     ReceivableCaseOption[];
+
+  canWriteFinance:
+    boolean;
 }) {
   const units =
     buildDisplayUnits(
@@ -883,6 +897,9 @@ function AllReceivablesView({
         caseOptions={
           caseOptions
         }
+        canWriteFinance={
+          canWriteFinance
+        }
       />
 
       <ReceivableGroup
@@ -891,6 +908,9 @@ function AllReceivablesView({
         units={pending}
         caseOptions={
           caseOptions
+        }
+        canWriteFinance={
+          canWriteFinance
         }
       />
 
@@ -901,6 +921,9 @@ function AllReceivablesView({
         caseOptions={
           caseOptions
         }
+        canWriteFinance={
+          canWriteFinance
+        }
       />
 
       <ReceivableGroup
@@ -909,6 +932,9 @@ function AllReceivablesView({
         units={canceled}
         caseOptions={
           caseOptions
+        }
+        canWriteFinance={
+          canWriteFinance
         }
       />
     </div>
@@ -919,6 +945,7 @@ function FilteredReceivablesView({
   receivables,
   filter,
   caseOptions,
+  canWriteFinance,
 }: {
   receivables:
     ReceivableItem[];
@@ -930,6 +957,9 @@ function FilteredReceivablesView({
 
   caseOptions:
     ReceivableCaseOption[];
+
+  canWriteFinance:
+    boolean;
 }) {
   let sorted =
     receivables;
@@ -980,6 +1010,9 @@ function FilteredReceivablesView({
             caseOptions={
               caseOptions
             }
+            canWriteFinance={
+              canWriteFinance
+            }
           />
         ),
       )}
@@ -992,6 +1025,7 @@ function ReceivableGroup({
   description,
   units,
   caseOptions,
+  canWriteFinance,
 }: {
   title: string;
 
@@ -1001,6 +1035,9 @@ function ReceivableGroup({
 
   caseOptions:
     ReceivableCaseOption[];
+
+  canWriteFinance:
+    boolean;
 }) {
   if (
     units.length === 0
@@ -1044,6 +1081,9 @@ function ReceivableGroup({
                   caseOptions={
                     caseOptions
                   }
+                  canWriteFinance={
+                    canWriteFinance
+                  }
                 />
               );
             }
@@ -1056,6 +1096,9 @@ function ReceivableGroup({
                 }
                 caseOptions={
                   caseOptions
+                }
+                canWriteFinance={
+                  canWriteFinance
                 }
               />
             );

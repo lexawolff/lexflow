@@ -1,9 +1,21 @@
 "use client";
 
+import type {
+  ElementType,
+  ReactNode,
+} from "react";
+
 import {
   useState,
   useTransition,
 } from "react";
+
+import {
+  CalendarDays,
+  CircleDollarSign,
+  FileText,
+  ReceiptText,
+} from "lucide-react";
 
 import {
   PayableCategory,
@@ -17,12 +29,25 @@ import {
   useForm,
 } from "react-hook-form";
 
-import { CurrencyField } from "@/components/forms/currency-field";
-import { SelectField } from "@/components/forms/select-field";
-import { TextareaField } from "@/components/forms/textarea-field";
-import { TextField } from "@/components/forms/text-field";
+import {
+  CurrencyField,
+} from "@/components/forms/currency-field";
 
-import { createPayable } from "../actions/create-payable";
+import {
+  SelectField,
+} from "@/components/forms/select-field";
+
+import {
+  TextareaField,
+} from "@/components/forms/textarea-field";
+
+import {
+  TextField,
+} from "@/components/forms/text-field";
+
+import {
+  createPayable,
+} from "../actions/create-payable";
 
 import {
   createPayableFormSchema,
@@ -143,15 +168,21 @@ export function CreatePayableForm({
       getDefaultValues(),
     );
 
-    setErrorMessage(null);
+    setErrorMessage(
+      null,
+    );
 
     onCancel?.();
   }
 
   const submit =
     handleSubmit(
-      (values) => {
-        setErrorMessage(null);
+      (
+        values,
+      ) => {
+        setErrorMessage(
+          null,
+        );
 
         startTransition(
           async () => {
@@ -195,7 +226,9 @@ export function CreatePayableForm({
               );
 
               onSuccess?.();
-            } catch (error) {
+            } catch (
+              error
+            ) {
               console.error(
                 error,
               );
@@ -214,57 +247,110 @@ export function CreatePayableForm({
 
   return (
     <form
-      onSubmit={submit}
-      className="space-y-6"
+      onSubmit={
+        submit
+      }
+      className="space-y-5 px-6 pt-5"
     >
-      <div className="grid gap-4 md:grid-cols-2">
-        <TextField
-          control={control}
-          name="description"
-          label="Descrição"
-          placeholder="Ex.: Internet do escritório"
-        />
+      <FormSection
+        icon={
+          ReceiptText
+        }
+        title="Identificação"
+        description="Informe o que será pago e classifique a despesa."
+        tone="rose"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextField
+            control={
+              control
+            }
+            name="description"
+            label="Descrição"
+            placeholder="Ex.: Internet do escritório"
+          />
 
-        <SelectField
-          control={control}
-          name="category"
-          label="Categoria"
-          options={
-            categoryOptions
+          <SelectField
+            control={
+              control
+            }
+            name="category"
+            label="Categoria"
+            options={
+              categoryOptions
+            }
+          />
+        </div>
+      </FormSection>
+
+      <FormSection
+        icon={
+          CircleDollarSign
+        }
+        title="Valor e vencimento"
+        description="Defina o valor da obrigação e a data prevista para pagamento."
+        tone="amber"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <CurrencyField
+            control={
+              control
+            }
+            name="amount"
+            label="Valor"
+            placeholder="R$ 0,00"
+          />
+
+          <TextField
+            control={
+              control
+            }
+            name="dueDate"
+            label="Vencimento"
+            type="date"
+          />
+        </div>
+
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+          <CalendarDays className="mt-0.5 size-4 shrink-0" />
+
+          <p>
+            O vencimento será usado para
+            identificar automaticamente contas
+            pendentes e atrasadas.
+          </p>
+        </div>
+      </FormSection>
+
+      <FormSection
+        icon={
+          FileText
+        }
+        title="Observações"
+        description="Adicione informações internas relevantes sobre esta conta."
+        tone="neutral"
+      >
+        <TextareaField
+          control={
+            control
           }
+          name="notes"
+          label="Observações"
         />
-
-        <CurrencyField
-          control={control}
-          name="amount"
-          label="Valor"
-          placeholder="R$ 0,00"
-        />
-
-        <TextField
-          control={control}
-          name="dueDate"
-          label="Vencimento"
-          type="date"
-        />
-      </div>
-
-      <TextareaField
-        control={control}
-        name="notes"
-        label="Observações"
-      />
+      </FormSection>
 
       {errorMessage ? (
         <div
           role="alert"
-          className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
         >
-          {errorMessage}
+          {
+            errorMessage
+          }
         </div>
       ) : null}
 
-      <div className="flex justify-end gap-3">
+      <div className="sticky bottom-0 -mx-6 mt-6 flex flex-col-reverse gap-3 border-t bg-background/95 px-6 py-4 backdrop-blur sm:flex-row sm:justify-end">
         <button
           type="button"
           disabled={
@@ -273,7 +359,7 @@ export function CreatePayableForm({
           onClick={
             handleCancel
           }
-          className="rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-input bg-background px-4 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
         >
           Cancelar
         </button>
@@ -283,7 +369,7 @@ export function CreatePayableForm({
           disabled={
             isPending
           }
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-10 items-center justify-center rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-rose-600 dark:hover:bg-rose-500"
         >
           {isPending
             ? "Salvando..."
@@ -291,5 +377,102 @@ export function CreatePayableForm({
         </button>
       </div>
     </form>
+  );
+}
+
+function FormSection({
+  icon: Icon,
+  title,
+  description,
+  tone,
+  children,
+}: {
+  icon: ElementType;
+
+  title: string;
+
+  description: string;
+
+  tone:
+    | "rose"
+    | "amber"
+    | "neutral";
+
+  children:
+    ReactNode;
+}) {
+  const styles = {
+    rose: {
+      container:
+        "border-rose-200/80 dark:border-rose-900",
+
+      header:
+        "bg-rose-50/50 dark:bg-rose-950/15",
+
+      icon:
+        "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300",
+    },
+
+    amber: {
+      container:
+        "border-amber-200/80 dark:border-amber-900",
+
+      header:
+        "bg-amber-50/50 dark:bg-amber-950/15",
+
+      icon:
+        "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300",
+    },
+
+    neutral: {
+      container:
+        "border-border",
+
+      header:
+        "bg-muted/20",
+
+      icon:
+        "bg-muted text-muted-foreground",
+    },
+  }[
+    tone
+  ];
+
+  return (
+    <section
+      className={`overflow-hidden rounded-2xl border bg-card ${styles.container}`}
+    >
+      <div
+        className={`border-b px-4 py-3.5 ${styles.header}`}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${styles.icon}`}
+          >
+            <Icon className="size-4" />
+          </div>
+
+          <div>
+            <h3 className="font-semibold">
+              {
+                title
+              }
+            </h3>
+
+            <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+              {
+                description
+              }
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4">
+        {
+          children
+        }
+      </div>
+    </section>
   );
 }

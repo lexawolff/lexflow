@@ -18,17 +18,18 @@ import {
 } from "@/components/app-shell/app-shell";
 
 import {
-  prisma,
-} from "@/lib/prisma";
-
-import {
-  getDefaultWorkspace,
-} from "@/lib/workspace";
-
-import {
   CASE_STATUS_LABELS,
   PRACTICE_AREA_LABELS,
 } from "@/features/cases/constants";
+
+import {
+  hasPermission,
+  requireWorkspacePagePermission,
+} from "@/lib/permissions";
+
+import {
+  prisma,
+} from "@/lib/prisma";
 
 /* =========================================
    TIPOS
@@ -138,11 +139,22 @@ function formatDate(
 export default async function CasesPage({
   searchParams,
 }: Props) {
+  const {
+    workspace,
+    membership,
+  } =
+    await requireWorkspacePagePermission(
+      "CASE_VIEW",
+    );
+
+  const canCreateCase =
+    hasPermission(
+      membership.role,
+      "CASE_CREATE",
+    );
+
   const params =
     await searchParams;
-
-  const workspace =
-    await getDefaultWorkspace();
 
   const query =
     params.q
@@ -336,20 +348,22 @@ export default async function CasesPage({
             </h1>
 
             <p className="mt-1 text-muted-foreground">
-              Acompanhe todas as demandas
+              Acompanhe todas as casos
               administrativas e judiciais
               do escritório.
             </p>
           </div>
 
-          <Link
-            href="/clientes"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-          >
-            <Plus className="size-4" />
+          {canCreateCase ? (
+            <Link
+              href="/clientes"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            >
+              <Plus className="size-4" />
 
-            Nova demanda
-          </Link>
+              Novo caso
+            </Link>
+          ) : null}
         </div>
 
         {/* ================================
@@ -429,7 +443,7 @@ export default async function CasesPage({
                 defaultValue={
                   query
                 }
-                placeholder="Pesquisar por processo, cliente, NB ou parte contrária..."
+                placeholder="Pesquisar por título, processo, cliente, NB ou parte contrária..."
                 className="h-10 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
               />
             </div>
@@ -497,7 +511,7 @@ export default async function CasesPage({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="font-semibold">
-                  Demandas
+                  Casos
                 </h2>
 
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -520,7 +534,7 @@ export default async function CasesPage({
               <p className="mt-1 text-sm text-muted-foreground">
                 {hasFilters
                   ? "Tente alterar os filtros utilizados."
-                  : "As demandas cadastradas no escritório aparecerão aqui."}
+                  : "As casos cadastrados no escritório aparecerão aqui."}
               </p>
             </div>
           ) : (
