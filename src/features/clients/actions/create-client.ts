@@ -1,5 +1,7 @@
 "use server";
 
+import { recordGovAudit } from "@/lib/security/audit";
+
 import {
   redirect,
 } from "next/navigation";
@@ -219,8 +221,8 @@ export async function createClient(
   } =
     parsed.data;
 
-  const client =
-    await prisma.client.create({
+  const client = await prisma.$transaction(async (tx) => {
+    const savedClient = await tx.client.create({
       data: {
         workspaceId:
           workspace.id,
@@ -261,6 +263,17 @@ export async function createClient(
             : null,
       },
     });
+
+    if (canManageGov && (govLogin || govPassword)) {
+      await recordGovAudit(tx, {
+        workspaceId: workspace.id,
+        actorUserId: membership.userId,
+        clientId: savedClient.id,
+        action: "GOV_CREDENTIAL_CREATED",
+      });
+    }
+    return savedClient;
+  });
 
   redirect(
     `/clientes/${client.id}`,

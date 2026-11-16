@@ -1,5 +1,7 @@
 "use client";
 
+import { reportGovPasswordCopy } from "../../actions/report-gov-password-copy";
+
 import { usePathname } from "next/navigation";
 
 import {
@@ -134,16 +136,28 @@ export function GovTab({
     let value: string | null = null;
     try {
       // Revalida permissão e escritório inclusive para copiar uma senha visível.
-      value = await revealGovPassword(clientId);
+      const access = await revealGovPassword(clientId, mode);
       if (!stillCurrent()) return;
-      if (value === null || value === "") {
+      if (!access) {
         setError("Não há senha cadastrada para este cliente.");
         return;
       }
+      value = access.password;
+      access.password = "";
       if (mode === "copy") {
         if (!navigator.clipboard?.writeText) throw new Error("Clipboard indisponível");
         await navigator.clipboard.writeText(value);
+        value = null;
         if (stillCurrent()) showCopied("password");
+        // O sucesso do clipboard não depende do recebimento desta confirmação.
+        // Registra só o ID, mesmo se a área for ocultada durante a cópia.
+        try {
+          await reportGovPasswordCopy(access.accessId);
+        } catch {
+          if (stillCurrent()) {
+            setError("Senha copiada, mas a confirmação de cópia não pôde ser registrada. O acesso à senha já foi registrado.");
+          }
+        }
       } else {
         setPassword(value);
         // O prazo de exibição começa quando a resposta chega.

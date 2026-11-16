@@ -1069,3 +1069,28 @@ model BillingProfile {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
+
+// Auditoria de credenciais: somente identificadores e ações, nunca valores.
+enum AuditAction {
+  GOV_PASSWORD_RELEASED_FOR_REVEAL
+  GOV_PASSWORD_RELEASED_FOR_COPY
+  GOV_PASSWORD_COPY_REPORTED
+  GOV_CREDENTIAL_CREATED
+  GOV_CREDENTIAL_UPDATED
+}
+
+model AuditLog {
+  id            String      @id @default(uuid())
+  workspaceId   String
+  actorUserId   String
+  clientId      String
+  action        AuditAction
+  parentEventId String?     @unique
+  createdAt     DateTime    @default(now()) @db.Timestamptz(3)
+
+  // IDs históricos sem cascade: excluir cliente/membro não apaga a auditoria.
+  // Validação de usuário e escritório ocorre nas Server Actions.
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, clientId, createdAt])
+  @@index([workspaceId, actorUserId, createdAt])
+}

@@ -1,5 +1,7 @@
 "use server";
 
+import { recordGovAudit } from "@/lib/security/audit";
+
 import {
   revalidatePath,
 } from "next/cache";
@@ -309,14 +311,33 @@ export async function updateClient(
     }
   }
 
-  await prisma.client.update({
-    where: {
-      id:
-        client.id,
-    },
+  await prisma.$transaction(async (tx) => {
+    // Bloqueio da linha evita perder alterações concorrentes na comparação.
+    const rows = await tx.$queryRaw<Array<{ govLogin: string | null }>>`
+      SELECT "govLogin" FROM "Client"
+      WHERE "id" = ${client.id} AND "workspaceId" = ${workspace.id}
+      FOR UPDATE
+    `;
+    const current = rows[0];
+    if (!current) throw new Error("Cliente não encontrado neste escritório.");
 
-    data:
-      updateData,
+    const loginChanged = canManageGov && formData.has("govLogin") &&
+      (govLogin || null) !== current.govLogin;
+    const passwordSubmitted = canManageGov && Boolean(govPassword);
+
+    await tx.client.update({
+      where: { id: client.id, workspaceId: workspace.id },
+      data: updateData,
+    });
+
+    if (loginChanged || passwordSubmitted) {
+      await recordGovAudit(tx, {
+        workspaceId: workspace.id,
+        actorUserId: membership.userId,
+        clientId: client.id,
+        action: "GOV_CREDENTIAL_UPDATED",
+      });
+    }
   });
 
   revalidatePath(
