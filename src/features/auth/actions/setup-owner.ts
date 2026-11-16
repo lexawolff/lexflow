@@ -36,6 +36,10 @@ export async function setupOwnerAction(
   formData:
     FormData,
 ): Promise<SetupOwnerState> {
+  if (process.env.NODE_ENV !== "development") {
+    return { error: "A configuração inicial pela web não está disponível neste ambiente." };
+  }
+
   /*
    * Cadastro público fica
    * automaticamente bloqueado

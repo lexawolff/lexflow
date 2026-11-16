@@ -1,3 +1,4 @@
+import { safeErrorSummary } from "@/lib/security/safe-error";
 import "server-only";
 
 import {
@@ -750,7 +751,7 @@ export async function syncTaskToGoogleCalendar({
   } catch (error) {
     console.error(
       "Erro ao sincronizar Task com Google Agenda:",
-      error,
+      safeErrorSummary(error),
     );
 
     if (
@@ -775,9 +776,7 @@ export async function syncTaskToGoogleCalendar({
         "google-error",
 
       error:
-        error instanceof Error
-          ? error.message
-          : "Não foi possível sincronizar a tarefa com o Google Agenda.",
+        "Não foi possível sincronizar a tarefa com o Google Agenda.",
     };
   }
 }
@@ -894,7 +893,7 @@ export async function deleteTaskFromGoogleCalendar({
   } catch (error) {
     console.error(
       "Erro ao excluir evento do Google Agenda:",
-      error,
+      safeErrorSummary(error),
     );
 
     if (
@@ -919,9 +918,7 @@ export async function deleteTaskFromGoogleCalendar({
         "google-error",
 
       error:
-        error instanceof Error
-          ? error.message
-          : "Não foi possível excluir o evento do Google Agenda.",
+        "Não foi possível excluir o evento do Google Agenda.",
     };
   }
 }

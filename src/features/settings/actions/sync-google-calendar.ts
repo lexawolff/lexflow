@@ -1,5 +1,9 @@
 "use server";
 
+import { GOOGLE_REAUTH_MESSAGE, isGoogleReauthRequired } from "@/lib/google-oauth-error";
+import { safeErrorSummary } from "@/lib/security/safe-error";
+
+
 import {
   revalidatePath,
 } from "next/cache";
@@ -133,15 +137,15 @@ export async function syncGoogleCalendarAction(): Promise<SyncGoogleCalendarActi
   } catch (error) {
     console.error(
       "Erro na sincronização com Google Agenda:",
-      error,
+      safeErrorSummary(error),
     );
 
     return {
       success: false,
 
       error:
-        error instanceof Error
-          ? error.message
+        isGoogleReauthRequired(error)
+          ? GOOGLE_REAUTH_MESSAGE
           : "Não foi possível sincronizar o Google Agenda.",
     };
   }

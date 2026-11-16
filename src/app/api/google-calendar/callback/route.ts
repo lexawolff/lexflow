@@ -1,3 +1,4 @@
+import { safeErrorSummary } from "@/lib/security/safe-error";
 import {
   google,
 } from "googleapis";
@@ -325,7 +326,7 @@ export async function GET(
   } catch (error) {
     console.error(
       "Erro no callback do Google Agenda:",
-      error,
+      safeErrorSummary(error),
     );
 
     return redirectAndClearState(

@@ -1,5 +1,8 @@
 "use server";
 
+import { safeErrorSummary } from "@/lib/security/safe-error";
+
+
 import {
   revalidatePath,
 } from "next/cache";
@@ -84,7 +87,7 @@ export async function disconnectGoogleCalendarAction(): Promise<DisconnectGoogle
   } catch (error) {
     console.warn(
       "Não foi possível revogar o token no Google. A integração será desativada localmente:",
-      error,
+      safeErrorSummary(error),
     );
   }
 
@@ -147,7 +150,7 @@ export async function disconnectGoogleCalendarAction(): Promise<DisconnectGoogle
   } catch (error) {
     console.error(
       "Erro ao desconectar Google Agenda:",
-      error,
+      safeErrorSummary(error),
     );
 
     return {

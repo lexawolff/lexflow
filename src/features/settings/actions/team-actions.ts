@@ -1,427 +1,130 @@
 "use server";
 
-import {
-  UserRole,
-} from "@prisma/client";
-
-import {
-  revalidatePath,
-} from "next/cache";
-
-import {
-  requireCurrentUser,
-} from "@/lib/auth";
-
-import {
-  requireWorkspacePermission,
-} from "@/lib/permissions";
-
-import {
-  prisma,
-} from "@/lib/prisma";
+import { UserRole } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { hasPermission, requireWorkspacePermission } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
 
 type TeamActionResult =
-  | {
-      success: true;
-    }
-  | {
-      success: false;
-      error: string;
-    };
+  | { success: true }
+  | { success: false; error: string };
 
-const validRoles =
-  new Set<UserRole>([
-    UserRole.OWNER,
-    UserRole.ADMIN,
-    UserRole.LAWYER,
-    UserRole.INTERN,
-    UserRole.FINANCIAL,
-    UserRole.VIEWER,
-  ]);
+type LockedMembership = { id: string; userId: string; role: UserRole };
+const validRoles = new Set<UserRole>(Object.values(UserRole));
 
-async function getTeamContext() {
-  const user =
-    await requireCurrentUser();
-
-  const {
-    workspace,
-    membership,
-  } =
-    await requireWorkspacePermission(
-      "TEAM_MANAGE",
-    );
-
-  return {
-    user,
-    workspace,
-    membership,
-  };
-}
-
-export async function updateMemberRoleAction(
+async function changeMember(
+  operation: "role" | "remove",
   formData: FormData,
 ): Promise<TeamActionResult> {
-  const {
-    user,
-    workspace,
-    membership:
-      requesterMembership,
-  } =
-    await getTeamContext();
+  const { workspace, membership } = await requireWorkspacePermission("TEAM_MANAGE");
+  const membershipIdValue = formData.get("membershipId");
+  const roleValue = formData.get("role");
+  const membershipId = typeof membershipIdValue === "string" ? membershipIdValue : "";
+  const role = typeof roleValue === "string" && validRoles.has(roleValue as UserRole)
+    ? roleValue as UserRole : null;
 
-  const membershipIdValue =
-    formData.get(
-      "membershipId",
-    );
-
-  const roleValue =
-    formData.get(
-      "role",
-    );
-
-  const membershipId =
-    typeof membershipIdValue ===
-    "string"
-      ? membershipIdValue
-      : "";
-
-  const role =
-    typeof roleValue ===
-      "string" &&
-    validRoles.has(
-      roleValue as UserRole,
-    )
-      ? (
-          roleValue as UserRole
-        )
-      : null;
-
-  if (
-    !membershipId ||
-    !role
-  ) {
-    return {
-      success: false,
-
-      error:
-        "Dados inválidos para alteração da função.",
-    };
-  }
-
-  const target =
-    await prisma.membership.findFirst({
-      where: {
-        id:
-          membershipId,
-
-        workspaceId:
-          workspace.id,
-      },
-
-      select: {
-        id: true,
-
-        userId:
-          true,
-
-        role: true,
-      },
-    });
-
-  if (!target) {
-    return {
-      success: false,
-
-      error:
-        "Membro não encontrado.",
-    };
-  }
-
-  /*
-   * A própria função não pode ser
-   * alterada por esta tela.
-   */
-  if (
-    target.userId ===
-    user.id
-  ) {
-    return {
-      success: false,
-
-      error:
-        "Você não pode alterar sua própria função por esta tela.",
-    };
-  }
-
-  /*
-   * Administradores não podem
-   * modificar proprietários.
-   */
-  if (
-    requesterMembership.role ===
-      UserRole.ADMIN &&
-    target.role ===
-      UserRole.OWNER
-  ) {
-    return {
-      success: false,
-
-      error:
-        "Administradores não podem alterar a função de um proprietário.",
-    };
-  }
-
-  /*
-   * Apenas OWNER pode promover
-   * outra pessoa a OWNER.
-   */
-  if (
-    role ===
-      UserRole.OWNER &&
-    requesterMembership.role !==
-      UserRole.OWNER
-  ) {
-    return {
-      success: false,
-
-      error:
-        "Apenas um proprietário pode promover outro membro a proprietário.",
-    };
-  }
-
-  /*
-   * Se estamos rebaixando um OWNER,
-   * deve continuar existindo pelo
-   * menos um proprietário.
-   */
-  if (
-    target.role ===
-      UserRole.OWNER &&
-    role !==
-      UserRole.OWNER
-  ) {
-    const ownerCount =
-      await prisma.membership.count({
-        where: {
-          workspaceId:
-            workspace.id,
-
-          role:
-            UserRole.OWNER,
-        },
-      });
-
-    if (
-      ownerCount <= 1
-    ) {
-      return {
-        success: false,
-
-        error:
-          "O escritório precisa possuir pelo menos um proprietário.",
-      };
-    }
+  if (!membershipId || membershipId.length > 128 || (operation === "role" && !role)) {
+    return { success: false, error: "Dados inválidos para a operação." };
   }
 
   try {
-    await prisma.membership.update({
-      where: {
-        id:
-          target.id,
-      },
+    const result = await prisma.$transaction(async (tx): Promise<TeamActionResult> => {
+      // Serializa mudanças de equipe deste escritório, inclusive a contagem de OWNER.
+      const offices = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id" FROM "Workspace" WHERE "id" = ${workspace.id} FOR UPDATE
+      `;
+      if (!offices.length) return { success: false, error: "Escritório não encontrado." };
 
-      data: {
-        role,
-      },
+      // A função pode ter mudado enquanto esta requisição aguardava o bloqueio.
+      const requester = await tx.membership.findFirst({
+        where: { userId: membership.userId, workspaceId: workspace.id },
+        select: { id: true, role: true },
+      });
+      if (!requester || !hasPermission(requester.role, "TEAM_MANAGE")) {
+        return { success: false, error: "Você não possui permissão para gerenciar a equipe." };
+      }
+
+      // FOR UPDATE também impede nova FK de WorkItem enquanto contamos e removemos.
+      const targets = await tx.$queryRaw<LockedMembership[]>`
+        SELECT "id", "userId", "role" FROM "Membership"
+        WHERE "id" = ${membershipId} AND "workspaceId" = ${workspace.id}
+        FOR UPDATE
+      `;
+      const target = targets[0];
+      if (!target) return { success: false, error: "Membro não encontrado." };
+      if (target.userId === membership.userId) {
+        return { success: false, error: "Você não pode alterar sua função ou remover seu próprio vínculo por esta tela." };
+      }
+      if (target.role === UserRole.OWNER && requester.role !== UserRole.OWNER) {
+        return { success: false, error: "Apenas proprietários podem alterar ou remover outro proprietário." };
+      }
+      if (operation === "role" && role === UserRole.OWNER && requester.role !== UserRole.OWNER) {
+        return { success: false, error: "Apenas um proprietário pode promover outro membro a proprietário." };
+      }
+      if (target.role === UserRole.OWNER && (operation === "remove" || role !== UserRole.OWNER)) {
+        const owners = await tx.membership.count({
+          where: { workspaceId: workspace.id, role: UserRole.OWNER },
+        });
+        if (owners <= 1) {
+          return { success: false, error: "O escritório precisa manter pelo menos um proprietário." };
+        }
+      }
+
+      if (operation === "role") {
+        if (!role) return { success: false, error: "Função inválida." };
+        await tx.membership.update({
+          where: { id: target.id, workspaceId: workspace.id },
+          data: { role },
+        });
+      } else {
+        const workCount = await tx.workItem.count({
+          where: { assignedToMembershipId: target.id },
+        });
+        if (workCount > 0) {
+          return {
+            success: false,
+            error: "Este membro possui trabalhos vinculados, inclusive possíveis trabalhos concluídos. A remoção foi bloqueada para preservar o histórico. Regularize a responsabilidade pelos trabalhos antes de remover o vínculo.",
+          };
+        }
+
+        // Mantém os vínculos dos eventos, mas encerra a integração local do membro.
+        // Não afirma revogação do consentimento na conta Google.
+        await tx.googleCalendarConnection.updateMany({
+          where: { workspaceId: workspace.id, userId: target.userId },
+          data: {
+            syncFromGoogle: false,
+            syncToGoogle: false,
+            refreshTokenEncrypted: "",
+            syncToken: null,
+            watchChannelId: null,
+            watchResourceId: null,
+            watchExpiresAt: null,
+          },
+        });
+        await tx.membership.delete({
+          where: { id: target.id, workspaceId: workspace.id },
+        });
+      }
+      return { success: true };
     });
 
-    revalidatePath(
-      "/configuracoes",
-    );
-
-    revalidatePath(
-      "/configuracoes/equipe",
-    );
-
-    return {
-      success: true,
-    };
-  } catch (error) {
-    console.error(
-      "Erro ao alterar função do membro:",
-      error,
-    );
-
-    return {
-      success: false,
-
-      error:
-        "Não foi possível alterar a função do membro.",
-    };
+    if (result.success) {
+      revalidatePath("/configuracoes");
+      revalidatePath("/configuracoes/equipe");
+      revalidatePath("/configuracoes/integracoes");
+    }
+    return result;
+  } catch {
+    // Não registrar o objeto de erro do Prisma: pode incluir dados da consulta.
+    console.error("Falha ao alterar vínculo ou função da equipe.");
+    return { success: false, error: "Não foi possível concluir a operação na equipe. Tente novamente." };
   }
 }
 
-export async function removeMemberAction(
-  formData: FormData,
-): Promise<TeamActionResult> {
-  const {
-    user,
-    workspace,
-    membership:
-      requesterMembership,
-  } =
-    await getTeamContext();
+export async function updateMemberRoleAction(formData: FormData): Promise<TeamActionResult> {
+  return changeMember("role", formData);
+}
 
-  const membershipIdValue =
-    formData.get(
-      "membershipId",
-    );
-
-  const membershipId =
-    typeof membershipIdValue ===
-    "string"
-      ? membershipIdValue
-      : "";
-
-  if (!membershipId) {
-    return {
-      success: false,
-
-      error:
-        "Membro inválido.",
-    };
-  }
-
-  const target =
-    await prisma.membership.findFirst({
-      where: {
-        id:
-          membershipId,
-
-        workspaceId:
-          workspace.id,
-      },
-
-      select: {
-        id: true,
-
-        userId:
-          true,
-
-        role: true,
-      },
-    });
-
-  if (!target) {
-    return {
-      success: false,
-
-      error:
-        "Membro não encontrado.",
-    };
-  }
-
-  /*
-   * A própria conta não pode ser
-   * removida por esta tela.
-   */
-  if (
-    target.userId ===
-    user.id
-  ) {
-    return {
-      success: false,
-
-      error:
-        "Você não pode remover sua própria conta do escritório por esta tela.",
-    };
-  }
-
-  /*
-   * Administradores não podem
-   * remover proprietários.
-   */
-  if (
-    requesterMembership.role ===
-      UserRole.ADMIN &&
-    target.role ===
-      UserRole.OWNER
-  ) {
-    return {
-      success: false,
-
-      error:
-        "Administradores não podem remover proprietários.",
-    };
-  }
-
-  /*
-   * Nunca podemos deixar o workspace
-   * sem pelo menos um OWNER.
-   */
-  if (
-    target.role ===
-    UserRole.OWNER
-  ) {
-    const ownerCount =
-      await prisma.membership.count({
-        where: {
-          workspaceId:
-            workspace.id,
-
-          role:
-            UserRole.OWNER,
-        },
-      });
-
-    if (
-      ownerCount <= 1
-    ) {
-      return {
-        success: false,
-
-        error:
-          "O último proprietário do escritório não pode ser removido.",
-      };
-    }
-  }
-
-  try {
-    /*
-     * Remove somente o vínculo com
-     * este escritório.
-     *
-     * O User não é apagado.
-     */
-    await prisma.membership.delete({
-      where: {
-        id:
-          target.id,
-      },
-    });
-
-    revalidatePath(
-      "/configuracoes",
-    );
-
-    revalidatePath(
-      "/configuracoes/equipe",
-    );
-
-    return {
-      success: true,
-    };
-  } catch (error) {
-    console.error(
-      "Erro ao remover membro:",
-      error,
-    );
-
-    return {
-      success: false,
-
-      error:
-        "Não foi possível remover o membro.",
-    };
-  }
+export async function removeMemberAction(formData: FormData): Promise<TeamActionResult> {
+  return changeMember("remove", formData);
 }

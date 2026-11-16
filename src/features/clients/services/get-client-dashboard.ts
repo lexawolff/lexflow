@@ -1,3 +1,8 @@
+import "server-only";
+
+import { hasPermission, requireWorkspacePermission } from "@/lib/permissions";
+import { buildTimelineAccessWhere } from "@/features/timeline/data/timeline-access";
+
 import {
   prisma,
 } from "@/lib/prisma";
@@ -5,10 +10,6 @@ import {
 import {
   serializePrisma,
 } from "@/lib/prisma/serialize";
-
-import {
-  getDefaultWorkspace,
-} from "@/lib/workspace";
 
 import {
   clientDashboardBaseSelect,
@@ -31,32 +32,6 @@ type GetClientDashboardAccess = {
     boolean;
 };
 
-/*
- * Mantemos true como padrão
- * temporariamente porque outras
- * telas antigas ainda chamam
- * getClientDashboard(id).
- *
- * Na ficha principal passaremos
- * explicitamente as permissões.
- *
- * Depois migraremos as demais telas
- * e poderemos remover esse fallback.
- */
-const DEFAULT_ACCESS = {
-  canViewAgenda:
-    true,
-
-  canViewDocuments:
-    true,
-
-  canViewFinance:
-    true,
-
-  canViewGov:
-    true,
-};
-
 export async function getClientDashboard(
   id:
     string,
@@ -64,12 +39,14 @@ export async function getClientDashboard(
   access:
     GetClientDashboardAccess = {},
 ) {
-  const workspace =
-    await getDefaultWorkspace();
+  const { workspace, membership } = await requireWorkspacePermission("CLIENT_VIEW");
 
+  // O chamador pode pedir menos dados, mas não pode ampliar a permissão real.
   const permissions = {
-    ...DEFAULT_ACCESS,
-    ...access,
+    canViewAgenda: hasPermission(membership.role, "AGENDA_VIEW") && access.canViewAgenda !== false,
+    canViewDocuments: hasPermission(membership.role, "DOCUMENT_VIEW") && access.canViewDocuments !== false,
+    canViewFinance: hasPermission(membership.role, "FINANCE_VIEW") && access.canViewFinance !== false,
+    canViewGov: hasPermission(membership.role, "GOV_VIEW") && access.canViewGov !== false,
   };
 
   /*
@@ -88,8 +65,19 @@ export async function getClientDashboard(
           workspace.id,
       },
 
-      select:
-        clientDashboardBaseSelect,
+      select: {
+        ...clientDashboardBaseSelect,
+        timelineEvents: {
+          ...clientDashboardBaseSelect.timelineEvents,
+          where: {
+            workspaceId: workspace.id,
+            ...buildTimelineAccessWhere({
+              ...permissions,
+              canViewCases: hasPermission(membership.role, "CASE_VIEW"),
+            }),
+          },
+        },
+      },
     });
 
   if (!client) {

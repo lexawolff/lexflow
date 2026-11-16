@@ -15,6 +15,10 @@ import {
 } from "@/features/auth/components/setup-owner-form";
 
 export default async function SetupPage() {
+  if (process.env.NODE_ENV !== "development") {
+    redirect("/login");
+  }
+
   const userCount =
     await prisma.user.count();
 
