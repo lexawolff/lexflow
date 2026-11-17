@@ -111,7 +111,7 @@ export default async function LoginPage({
           </div>
 
           <h1 className="text-3xl font-bold tracking-tight">
-            Bem-vinda
+            Bem-vindo
           </h1>
 
           <p className="mt-2 text-muted-foreground">
