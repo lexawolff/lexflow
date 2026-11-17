@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import vm from 'node:vm';
 const root = new URL('../', import.meta.url);
-const read = p => readFileSync(new URL(p, root), 'utf8');
+// Exige Node >= 22.13 (stripTypeScriptTypes). Normaliza CRLF (checkout no Windows).
+const read = p => readFileSync(new URL(p, root), 'utf8').replace(/\r\n/g, '\n');
 // Exercita a lógica real do componente com hooks, relógio e rede controlados.
 let source=read('src/features/clients/components/tabs/gov-tab.tsx');
 source=source.slice(source.indexOf('  const [password'),source.indexOf('\n  return (\n'));

@@ -16,6 +16,8 @@ Documentação do produto em [`docs/`](docs/).
 
 ## Rodando no computador
 
+Requer **Node 22** (veja `.nvmrc`; com nvm-windows: `nvm use 22.14.0`).
+
 1. Instale as dependências (também gera o Prisma Client):
    ```bash
    npm install
@@ -39,6 +41,7 @@ Documentação do produto em [`docs/`](docs/).
 | `npm run build` | build de produção |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | checagem de tipos (TypeScript) |
+| `npm test` | todos os testes de `verificacao/` |
 | `npx prisma migrate deploy` | aplica migrations pendentes |
 
 ## Testes
@@ -47,10 +50,11 @@ Os testes ficam em [`verificacao/`](verificacao/) e executam o código real com
 banco e Supabase simulados (não acessam nada externo):
 
 ```bash
-node --test verificacao/test-pre-publicacao.mjs verificacao/test-convites.mjs verificacao/test-datas-upload.mjs
+npm test
 ```
 
-`test-audit.mjs` e `test-gov-ui.mjs` exigem Node 22.13 ou superior.
+Roda todos os arquivos `verificacao/test-*.mjs`. Requer Node 22.13 ou superior
+(`test-audit.mjs` e `test-gov-ui.mjs` usam `stripTypeScriptTypes`).
 
 ## Banco de dados
 
