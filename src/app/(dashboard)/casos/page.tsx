@@ -126,6 +126,9 @@ function formatDate(
 
       year:
         "numeric",
+
+      timeZone:
+        "America/Sao_Paulo",
     },
   ).format(
     value,

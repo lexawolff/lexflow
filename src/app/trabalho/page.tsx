@@ -36,6 +36,10 @@ function formatDate(
 
   return new Intl.DateTimeFormat(
     "pt-BR",
+    {
+      timeZone:
+        "America/Sao_Paulo",
+    },
   ).format(date);
 }
 

@@ -13,6 +13,7 @@ import {
 
 import {
   formatDate,
+  formatDateOnly,
 } from "@/lib/format/date";
 
 import type {
@@ -310,7 +311,7 @@ export function OverviewTab({
             label="DER"
             value={
               caseData.administrativeRequestDate
-                ? formatDate(
+                ? formatDateOnly(
                     caseData.administrativeRequestDate,
                   )
                 : "-"
@@ -375,7 +376,7 @@ export function OverviewTab({
             label="Distribuição"
             value={
               caseData.distributionDate
-                ? formatDate(
+                ? formatDateOnly(
                     caseData.distributionDate,
                   )
                 : "-"

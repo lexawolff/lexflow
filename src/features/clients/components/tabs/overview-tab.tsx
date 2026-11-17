@@ -26,7 +26,7 @@ import type {
 } from "../../types";
 
 import {
-  formatDate,
+  formatDateOnly,
 } from "@/lib/format/date";
 
 type OverviewTabProps = {
@@ -242,7 +242,7 @@ export function OverviewTab({
             label="Nascimento"
             value={
               client.birthDate
-                ? formatDate(
+                ? formatDateOnly(
                     client.birthDate,
                   )
                 : "-"
