@@ -14,6 +14,10 @@ import {
 } from "../actions/accept-invitation";
 
 import {
+  AcceptTermsField,
+} from "./accept-terms-field";
+
+import {
   authButtonClass,
   authErrorClass,
   authInputClass,
@@ -127,6 +131,8 @@ export function AcceptInvitationForm({
           className={authInputClass}
         />
       </div>
+
+      <AcceptTermsField />
 
       {state.error ? (
         <div

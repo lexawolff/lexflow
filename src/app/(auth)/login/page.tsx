@@ -2,12 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import {
+  Building2,
   Scale,
-  UserPlus,
 } from "lucide-react";
 
-import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { isSignupEnabled } from "@/features/auth/lib/signup";
 
 import {
   LoginForm,
@@ -33,15 +33,12 @@ export default async function LoginPage({
   }
 
   /*
-   * O link de criação da primeira conta
-   * só aparece enquanto ainda não existir
-   * nenhum usuário no LexFlow.
+   * O convite para cadastrar um novo
+   * escritório só aparece com o cadastro
+   * público aberto.
    */
-  const userCount =
-    await prisma.user.count();
-
-  const canSetup =
-    userCount === 0;
+  const canSignUp =
+    isSignupEnabled();
 
   return (
     <main className="grid min-h-screen bg-background lg:grid-cols-2">
@@ -129,6 +126,17 @@ export default async function LoginPage({
             </div>
           ) : null}
 
+          {erro === "confirmacao" ? (
+            <div
+              role="alert"
+              className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300"
+            >
+              Não foi possível abrir a sessão por este link (ele pode ter
+              expirado ou ter sido aberto em outro navegador). Se você acabou
+              de confirmar o cadastro, entre com seu e-mail e senha abaixo.
+            </div>
+          ) : null}
+
           <div className="mt-8">
             <LoginForm />
           </div>
@@ -143,40 +151,55 @@ export default async function LoginPage({
           </p>
 
           {/* ==========================
-              PRIMEIRO ACESSO
+              NOVO ESCRITÓRIO
           ========================== */}
 
-          {canSetup ? (
+          {canSignUp ? (
             <div className="mt-6 border-t pt-6">
               <div className="rounded-2xl border bg-muted/20 p-4">
                 <div className="flex items-start gap-3">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <UserPlus className="size-4" />
+                    <Building2 className="size-4" />
                   </div>
 
                   <div className="min-w-0">
                     <p className="text-sm font-semibold">
-                      Primeiro acesso?
+                      Ainda não usa o LexFlow?
                     </p>
 
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      Crie a primeira conta
-                      proprietária do LexFlow
-                      para configurar o
-                      escritório.
+                      Crie a conta do seu
+                      escritório e convide
+                      a equipe depois.
                     </p>
 
                     <Link
-                      href="/setup"
+                      href="/cadastro"
                       className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline"
                     >
-                      Criar primeiro usuário
+                      Cadastrar meu escritório
                     </Link>
                   </div>
                 </div>
               </div>
             </div>
           ) : null}
+
+          <p className="mt-8 text-center text-xs text-muted-foreground">
+            <Link
+              href="/termos"
+              className="hover:text-foreground hover:underline"
+            >
+              Termos de Uso
+            </Link>
+            {" · "}
+            <Link
+              href="/privacidade"
+              className="hover:text-foreground hover:underline"
+            >
+              Política de Privacidade
+            </Link>
+          </p>
         </div>
       </section>
     </main>

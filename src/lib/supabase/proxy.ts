@@ -17,7 +17,9 @@ function isPublicRoute(
 ): boolean {
   return (
     pathname === "/login" ||
-    pathname === "/setup" ||
+    pathname === "/cadastro" ||
+    pathname === "/termos" ||
+    pathname === "/privacidade" ||
     pathname === "/recuperar-senha" ||
     pathname.startsWith(
       "/convite/",

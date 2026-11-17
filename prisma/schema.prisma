@@ -224,6 +224,12 @@ model User {
   email    String  @unique
   imageUrl String?
 
+  // Aceite dos Termos de Uso e da Política de Privacidade
+  // (versão em src/features/legal/legal-info.ts). Nulo para contas
+  // anteriores ao aceite eletrônico.
+  termsVersion    String?
+  termsAcceptedAt DateTime? @db.Timestamptz(3)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -28,6 +28,10 @@ import {
 } from "@/features/settings/lib/invitations";
 
 import {
+  LEGAL_VERSION,
+} from "@/features/legal/legal-info";
+
+import {
   authErrorMessage,
 } from "../lib/auth-error-message";
 
@@ -63,6 +67,7 @@ export async function acceptInvitationAction(
       name: formData.get("name"),
       password: formData.get("password"),
       passwordConfirm: formData.get("passwordConfirm"),
+      acceptTerms: formData.get("acceptTerms") ?? undefined,
     });
 
   if (!parsed.success) {
@@ -169,6 +174,9 @@ export async function acceptInvitationAction(
           id: authUserId,
           name,
           email: invitation.email,
+          // Aceite registrado pelo servidor no momento do cadastro.
+          termsVersion: LEGAL_VERSION,
+          termsAcceptedAt: new Date(),
         },
       });
 

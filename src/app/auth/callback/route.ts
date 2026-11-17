@@ -11,6 +11,10 @@ import {
   createClient,
 } from "@/lib/supabase/server";
 
+import {
+  provisionSignupAccount,
+} from "@/features/auth/lib/signup";
+
 const EMAIL_OTP_TYPES = new Set<EmailOtpType>([
   "recovery",
   "invite",
@@ -78,6 +82,24 @@ export async function GET(
     ok = !error;
   }
 
+  /*
+   * Confirmação do cadastro público: cria o escritório agora que o
+   * e-mail foi confirmado (só na primeira vez).
+   */
+  if (ok) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        await provisionSignupAccount(user);
+      }
+    } catch {
+      console.error("Falha ao criar escritório após confirmar o cadastro.");
+    }
+  }
+
   const destination = request.nextUrl.clone();
   destination.search = "";
 
@@ -85,7 +107,12 @@ export async function GET(
     destination.pathname = next;
   } else {
     destination.pathname = "/login";
-    destination.searchParams.set("erro", "link-invalido");
+    destination.searchParams.set(
+      "erro",
+      // Recuperação de senha precisa de um novo link; já a confirmação
+      // de cadastro costuma valer mesmo sem sessão (outro navegador).
+      next === "/redefinir-senha" ? "link-invalido" : "confirmacao",
+    );
   }
 
   return NextResponse.redirect(destination);

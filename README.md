@@ -66,6 +66,60 @@ Roda todos os arquivos `verificacao/test-*.mjs`. Requer Node 22.13 ou superior
 - Conferência de segurança (somente leitura, no SQL Editor do Supabase):
   [`verificacao/supabase-somente-leitura.sql`](verificacao/supabase-somente-leitura.sql).
 
+## Contas e escritórios
+
+- **Novo escritório:** cadastro público em `/cadastro` (nome do escritório,
+  nome, e-mail e senha). O Supabase envia um e-mail de confirmação; o
+  escritório, o usuário e o vínculo de proprietário só são criados depois da
+  confirmação (no retorno do link ou no primeiro login).
+- **Equipe:** o proprietário convida membros em *Configurações → Equipe*
+  (link de convite, sem depender de e-mail).
+- **Abertura do cadastro:** controlada por `SIGNUP_ENABLED` (veja
+  `.env.example`). Em produção fica fechado até ser ativado.
+- **Antes de abrir em produção:**
+  - Supabase → *Authentication → Sign In / Providers → Email*: **Confirm email**
+    ligado; e cadastros permitidos ("Allow new users to sign up").
+  - SMTP próprio (o envio padrão do Supabase só entrega para membros do projeto).
+  - Proteção contra robôs: CAPTCHA do Supabase (Turnstile ou hCaptcha) em
+    *Authentication → Attack Protection*.
+  - Termos de uso e política de privacidade revisados e preenchidos (veja
+    abaixo). Em produção o cadastro não abre enquanto houver campos a preencher.
+
+## Termos de Uso e Política de Privacidade
+
+- Páginas públicas: `/termos` (com o Anexo de Tratamento de Dados) e
+  `/privacidade`. Textos em `src/app/termos/page.tsx` e
+  `src/app/privacidade/page.tsx`.
+- Suboperadores, e-mail de contato e versão: `src/features/legal/legal-info.ts`.
+- Nome, CPF, endereço e foro do fornecedor: variáveis `LEGAL_PROVIDER_*` no
+  `.env` (e na Vercel), fora do repositório. Campos ausentes aparecem entre
+  colchetes, destacados, e geram aviso de minuta.
+- O cadastro de escritório e o aceite de convite exigem a caixa de aceite; a
+  versão e a data ficam em `User.termsVersion` e `User.termsAcceptedAt`.
+- Mudança relevante no texto: aumente `LEGAL_VERSION`, atualize
+  `LEGAL_UPDATED_AT` e avise os clientes com a antecedência prevista nos Termos.
+
+## Endereços
+
+| Uso | Endereço |
+|---|---|
+| Sistema | `https://app.lexflowjuridico.com.br` |
+| Site de divulgação (futuro) | `https://lexflowjuridico.com.br` |
+| E-mails automáticos (confirmação, senha) | `nao-responda@lexflowjuridico.com.br` |
+| Contato, suporte e privacidade | `contato@lexflowjuridico.com.br` |
+
+## E-mail
+
+- **Envio** (confirmação de cadastro e redefinição de senha): serviço SMTP
+  com o domínio `lexflowjuridico.com.br` verificado (registros de DNS indicados
+  pelo serviço) e configurado no Supabase em *Authentication → Emails → SMTP
+  Settings*, remetente `nao-responda@lexflowjuridico.com.br`. Depois de
+  escolher o serviço, atualize o item de e-mail em `SUBPROCESSORS`
+  (`src/features/legal/legal-info.ts`).
+- **Recebimento**: `contato@lexflowjuridico.com.br` aparece nos Termos e na
+  Política e precisa de uma caixa de entrada ou de encaminhamento para um
+  e-mail pessoal antes da publicação.
+
 ## Publicação (Vercel)
 
 1. Importe o repositório na Vercel (plano Pro para uso comercial).
@@ -73,12 +127,18 @@ Roda todos os arquivos `verificacao/test-*.mjs`. Requer Node 22.13 ou superior
    Variables*, com `DATABASE_URL` no pooler em modo transação (porta 6543).
 3. As funções rodam em São Paulo (`gru1`, ver `vercel.json`), mesma região do
    banco.
-4. No Supabase, em *Authentication → URL Configuration*: troque o **Site URL**
-   pelo domínio de produção e adicione `https://SEU_DOMINIO/**` em
-   **Redirect URLs** (nunca use curingas como `*.vercel.app`).
-5. No Google Cloud, cadastre `https://SEU_DOMINIO/api/google-calendar/callback`
-   e publique o app OAuth (em modo "Testing" a conexão expira a cada 7 dias).
-6. Configure um SMTP próprio no Supabase para os e-mails de recuperação de senha.
+4. Em *Settings → Domains*, adicione `app.lexflowjuridico.com.br` e crie no DNS
+   do domínio o registro que a Vercel indicar.
+5. No Supabase, em *Authentication → URL Configuration*: **Site URL**
+   `https://app.lexflowjuridico.com.br` e, em **Redirect URLs**,
+   `https://app.lexflowjuridico.com.br/**` (mantenha
+   `http://localhost:3000/**` para desenvolvimento; nunca use curingas como
+   `*.vercel.app`).
+6. No Google Cloud, cadastre
+   `https://app.lexflowjuridico.com.br/api/google-calendar/callback`, use o
+   mesmo valor em `GOOGLE_REDIRECT_URI` na Vercel e publique o app OAuth (em
+   modo "Testing" a conexão expira a cada 7 dias).
+7. Configure o envio de e-mail (seção "E-mail" acima).
 
 ## Segredos
 

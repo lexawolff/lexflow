@@ -236,12 +236,13 @@ function setupAccept({ invitation, users = [], createUserError = null } = {}) {
     getInvitationStatus: inv.getInvitationStatus, hashInvitationToken: inv.hashInvitationToken,
     invitationUnavailableMessage: inv.invitationUnavailableMessage, isWellFormedInvitationToken: inv.isWellFormedInvitationToken,
     authErrorMessage, acceptInvitationSchema: schemas.acceptInvitationSchema,
+    LEGAL_VERSION: '1.0',
   });
   const accept = (values, useToken = token) => acceptInvitationAction(useToken, { error: null }, form(values));
   return { accept, state, calls, token };
 }
 
-const validForm = { name: 'Maria Souza', password: 'senhaForte123', passwordConfirm: 'senhaForte123' };
+const validForm = { name: 'Maria Souza', password: 'senhaForte123', passwordConfirm: 'senhaForte123', acceptTerms: 'on' };
 
 test('aceite: sucesso cria conta com e-mail e função do convite, marca aceito e entra', async () => {
   const { accept, state, calls } = setupAccept({ invitation: {} });
@@ -252,6 +253,8 @@ test('aceite: sucesso cria conta com e-mail e função do convite, marca aceito 
   assert.equal(calls.createUser[0].email_confirm, true);
   assert.equal(state.users.at(-1).id, 'auth-uuid-1');
   assert.equal(state.users.at(-1).name, 'Maria Souza');
+  assert.equal(state.users.at(-1).termsVersion, '1.0', 'versão dos termos registrada');
+  assert.ok(Date.now() - new Date(state.users.at(-1).termsAcceptedAt).getTime() < 60_000, 'data do aceite registrada');
   assert.deepEqual(normalized(state.memberships), [{ userId: 'auth-uuid-1', workspaceId: 'w1', role: 'INTERN' }]);
   assert.ok(state.invitations[0].acceptedAt);
   assert.deepEqual(normalized(calls.signIn), [{ email: 'novo@x.com', password: 'senhaForte123' }]);
@@ -280,6 +283,9 @@ test('aceite: senha curta, confirmação diferente ou nome vazio são recusados'
   assert.match((await ctx.accept({ ...validForm, passwordConfirm: 'outraSenha123' })).error, /não coincidem/);
   assert.match((await ctx.accept({ ...validForm, name: ' ' })).error, /nome/);
   assert.match((await ctx.accept({ ...validForm, password: 'a'.repeat(73), passwordConfirm: 'a'.repeat(73) })).error, /no máximo 72/);
+  const { acceptTerms, ...withoutTerms } = validForm;
+  assert.equal(acceptTerms, 'on');
+  assert.match((await ctx.accept(withoutTerms)).error, /aceite os Termos de Uso/);
   assert.equal(ctx.calls.createUser.length, 0);
 });
 

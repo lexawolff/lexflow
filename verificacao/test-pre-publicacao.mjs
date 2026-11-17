@@ -70,9 +70,10 @@ test('logs não contêm mensagens, tokens ou dados de resposta',()=>{
   assert.deepEqual(normalized(safeErrorSummary({code:'secret',response:{status:999}})),{status:null,code:null});
   assert.deepEqual(normalized(safeErrorSummary(null)),{status:null,code:null});
 });
-test('bootstrap em produção bloqueia antes de acessar Auth/banco',async()=>{
-  const {setupOwnerAction}=load('features/auth/actions/setup-owner.ts',['setupOwnerAction'],{process:{env:{NODE_ENV:'production'}}});
-  assert.match((await setupOwnerAction({},new FormData())).error,/não está disponível/);
+test('cadastro público em produção fica fechado sem SIGNUP_ENABLED e não acessa Auth/banco',async()=>{
+  const {isSignupEnabled}=load('features/auth/lib/signup.ts',['isSignupEnabled'],{process:{env:{NODE_ENV:'production'}}});
+  const {signUpAction}=load('features/auth/actions/signup.ts',['signUpAction'],{isSignupEnabled,createClient:async()=>{throw Error('não deveria acessar o Supabase');}});
+  assert.match((await signUpAction({},new FormData())).error,/não está disponível/);
 });
 const UserRole={OWNER:'OWNER',ADMIN:'ADMIN',LAWYER:'LAWYER',INTERN:'INTERN',FINANCIAL:'FINANCIAL',VIEWER:'VIEWER'};
 function team({requesterRole='OWNER',targetRole='LAWYER',work=0,owners=2,self=false,targetExists=true,failDelete=false}={}) {

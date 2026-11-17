@@ -1,16 +1,16 @@
 "use server";
 
 import {
-  headers,
-} from "next/headers";
-
-import {
   redirect,
 } from "next/navigation";
 
 import {
   createClient,
 } from "@/lib/supabase/server";
+
+import {
+  getAppOrigin,
+} from "../lib/app-origin";
 
 import {
   authErrorMessage,
@@ -29,27 +29,6 @@ export type RequestPasswordResetState = {
 export type UpdatePasswordState = {
   error: string | null;
 };
-
-async function getAppOrigin(): Promise<string> {
-  const headerList = await headers();
-
-  const origin = headerList.get("origin");
-
-  if (origin) {
-    return origin;
-  }
-
-  const host =
-    headerList.get("x-forwarded-host") ??
-    headerList.get("host") ??
-    "localhost:3000";
-
-  const protocol =
-    headerList.get("x-forwarded-proto") ??
-    (host.startsWith("localhost") ? "http" : "https");
-
-  return `${protocol}://${host}`;
-}
 
 /*
  * "Esqueci minha senha": o Supabase envia o e-mail com o link.
