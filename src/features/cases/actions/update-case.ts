@@ -353,6 +353,9 @@ async function updateCaseImpl(
     data.status
   ) {
     await createCaseEvent({
+      workspaceId:
+        workspace.id,
+
       caseId:
         existing.id,
 

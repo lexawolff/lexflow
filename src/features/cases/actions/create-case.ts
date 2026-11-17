@@ -346,6 +346,9 @@ async function createCaseImpl(
     });
 
   await createCaseEvent({
+    workspaceId:
+      workspace.id,
+
     caseId:
       createdCase.id,
 
