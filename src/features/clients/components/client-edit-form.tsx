@@ -14,6 +14,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { withFailureToast } from "@/lib/actions/action-feedback";
 import { updateClient } from "../actions/update-client";
 import {
   clientSchema,
@@ -182,9 +183,11 @@ export function ClientEditForm({
   } = form;
 
   const action =
-    updateClient.bind(
-      null,
-      client.id,
+    withFailureToast(
+      updateClient.bind(
+        null,
+        client.id,
+      ),
     );
 
   return (

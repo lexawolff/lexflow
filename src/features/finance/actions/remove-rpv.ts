@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   RpvStatus,
 } from "@prisma/client";
 
@@ -40,7 +48,7 @@ function revalidateFinance({
   revalidatePath(`/clientes/${clientId}/casos/${caseId}`);
 }
 
-export async function removeRpv(
+async function removeRpvImpl(
   formData: FormData,
 ) {
   const {
@@ -64,7 +72,7 @@ export async function removeRpv(
     });
 
   if (!parsed.success) {
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -103,7 +111,7 @@ export async function removeRpv(
           });
 
         if (!rpv) {
-          throw new Error(
+          throw new ActionError(
             "Requisição não encontrada.",
           );
         }
@@ -125,7 +133,7 @@ export async function removeRpv(
               RpvStatus.PAGA ||
             rpv.paidAt
           ) {
-            throw new Error(
+            throw new ActionError(
               "Não é possível cancelar uma requisição paga. Altere a situação primeiro.",
             );
           }
@@ -134,7 +142,7 @@ export async function removeRpv(
             rpv.status ===
             RpvStatus.CANCELADA
           ) {
-            throw new Error(
+            throw new ActionError(
               "Esta requisição já está cancelada.",
             );
           }
@@ -170,7 +178,7 @@ export async function removeRpv(
             RpvStatus.PAGA ||
           rpv.paidAt
         ) {
-          throw new Error(
+          throw new ActionError(
             "Não é possível excluir uma requisição paga. Altere a situação primeiro.",
           );
         }
@@ -191,4 +199,15 @@ export async function removeRpv(
   return {
     success: true,
   };
+}
+
+export async function removeRpv(
+  ...args: Parameters<typeof removeRpvImpl>
+) {
+  return runAction(
+    () =>
+      removeRpvImpl(
+        ...args,
+      ),
+  );
 }

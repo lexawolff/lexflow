@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
+import {
     useEffect,
     useMemo,
     useRef,
@@ -40,6 +44,10 @@ import {
     startWorkItemAction,
     updateWorkItemAction,
 } from "@/features/work/actions/work-items";
+
+import {
+    withFailureToast,
+} from "@/lib/actions/action-feedback";
 
 export type WorkQueueItem = {
     id: string;
@@ -600,7 +608,7 @@ function SortableWorkItem({
                                 !editing && (
                                     <form
                                         action={
-                                            moveWorkItemToTopAction
+                                            withFailureToast(moveWorkItemToTopAction)
                                         }
                                     >
                                         <input
@@ -629,7 +637,7 @@ function SortableWorkItem({
                                 !editing && (
                                     <form
                                         action={
-                                            startWorkItemAction
+                                            withFailureToast(startWorkItemAction)
                                         }
                                     >
                                         <input
@@ -656,7 +664,7 @@ function SortableWorkItem({
                                 !editing && (
                                     <form
                                         action={
-                                            completeWorkItemAction
+                                            withFailureToast(completeWorkItemAction)
                                         }
                                     >
                                         <input
@@ -683,7 +691,7 @@ function SortableWorkItem({
                                 !editing && (
                                     <form
                                         action={
-                                            deleteWorkItemAction
+                                            withFailureToast(deleteWorkItemAction)
                                         }
                                         onSubmit={
                                             (
@@ -760,7 +768,7 @@ function SortableWorkItem({
                     {editing && (
                         <form
                             action={
-                                updateWorkItemAction
+                                withFailureToast(updateWorkItemAction)
                             }
                             onSubmit={() =>
                                 setEditing(
@@ -1287,7 +1295,7 @@ export function WorkQueue({
                         );
 
                         try {
-                            await saveWorkQueueOrderAction(
+                            await throwOnFailure(saveWorkQueueOrderAction)(
                                 {
                                     [WorkPlanningPeriod.ESTA_SEMANA]:
                                         finalGroups[

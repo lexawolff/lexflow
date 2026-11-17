@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   FinancialStatus,
 } from "@prisma/client";
 
@@ -20,7 +28,7 @@ import {
   registerReceivablePaymentSchema,
 } from "../schemas/register-receivable-payment-schema";
 
-export async function registerReceivablePayment(
+async function registerReceivablePaymentImpl(
   formData:
     FormData,
 ) {
@@ -56,7 +64,7 @@ export async function registerReceivablePayment(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -97,7 +105,7 @@ export async function registerReceivablePayment(
     );
 
   if (!receivable) {
-    throw new Error(
+    throw new ActionError(
       "Recebimento não encontrado.",
     );
   }
@@ -106,7 +114,7 @@ export async function registerReceivablePayment(
     receivable.status ===
     FinancialStatus.CANCELADO
   ) {
-    throw new Error(
+    throw new ActionError(
       "Não é possível registrar pagamento em um recebimento cancelado.",
     );
   }
@@ -115,7 +123,7 @@ export async function registerReceivablePayment(
     receivable.status ===
     FinancialStatus.PAGO
   ) {
-    throw new Error(
+    throw new ActionError(
       "Este recebimento já está marcado como pago.",
     );
   }
@@ -161,4 +169,15 @@ revalidatePath(
     success:
       true,
   };
+}
+
+export async function registerReceivablePayment(
+  ...args: Parameters<typeof registerReceivablePaymentImpl>
+) {
+  return runAction(
+    () =>
+      registerReceivablePaymentImpl(
+        ...args,
+      ),
+  );
 }

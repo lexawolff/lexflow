@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   FinancialStatus,
 } from "@prisma/client";
 
@@ -95,7 +103,7 @@ function getTodayDateKey(): string {
     !month ||
     !day
   ) {
-    throw new Error(
+    throw new ActionError(
       "Não foi possível determinar a data atual.",
     );
   }
@@ -123,7 +131,7 @@ function getStatusAfterReversal(
   return FinancialStatus.PENDENTE;
 }
 
-export async function reverseReceivablePayment(
+async function reverseReceivablePaymentImpl(
   formData:
     FormData,
 ) {
@@ -149,7 +157,7 @@ export async function reverseReceivablePayment(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -195,7 +203,7 @@ export async function reverseReceivablePayment(
     );
 
   if (!receivable) {
-    throw new Error(
+    throw new ActionError(
       "Recebimento não encontrado.",
     );
   }
@@ -204,7 +212,7 @@ export async function reverseReceivablePayment(
     receivable.status !==
     FinancialStatus.PAGO
   ) {
-    throw new Error(
+    throw new ActionError(
       "Somente recebimentos marcados como pagos podem ser estornados.",
     );
   }
@@ -214,7 +222,7 @@ export async function reverseReceivablePayment(
       0,
     )
   ) {
-    throw new Error(
+    throw new ActionError(
       "Este recebimento não possui valor pago para estornar.",
     );
   }
@@ -264,4 +272,15 @@ revalidatePath(
     success:
       true,
   };
+}
+
+export async function reverseReceivablePayment(
+  ...args: Parameters<typeof reverseReceivablePaymentImpl>
+) {
+  return runAction(
+    () =>
+      reverseReceivablePaymentImpl(
+        ...args,
+      ),
+  );
 }

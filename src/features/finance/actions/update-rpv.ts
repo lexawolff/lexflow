@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   Prisma,
 } from "@prisma/client";
 
@@ -52,7 +60,7 @@ function revalidateFinance({
   revalidatePath(`/clientes/${clientId}/casos/${caseId}`);
 }
 
-export async function updateRpv(
+async function updateRpvImpl(
   formData: FormData,
 ) {
   const {
@@ -115,7 +123,7 @@ export async function updateRpv(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -145,7 +153,7 @@ export async function updateRpv(
     contractualFeeValue >
       data.grossAmount
   ) {
-    throw new Error(
+    throw new ActionError(
       "Os honorários contratuais não podem superar o crédito bruto.",
     );
   }
@@ -178,7 +186,7 @@ export async function updateRpv(
           });
 
         if (!existing) {
-          throw new Error(
+          throw new ActionError(
             "Requisição não encontrada.",
           );
         }
@@ -256,4 +264,15 @@ export async function updateRpv(
   return {
     success: true,
   };
+}
+
+export async function updateRpv(
+  ...args: Parameters<typeof updateRpvImpl>
+) {
+  return runAction(
+    () =>
+      updateRpvImpl(
+        ...args,
+      ),
+  );
 }

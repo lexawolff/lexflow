@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
 import type {
   ElementType,
   ReactNode,
@@ -217,7 +221,7 @@ export function CreatePayableForm({
                 values.notes,
               );
 
-              await createPayable(
+              await throwOnFailure(createPayable)(
                 formData,
               );
 

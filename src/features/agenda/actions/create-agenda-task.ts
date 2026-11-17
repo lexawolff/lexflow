@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   TaskStatus,
 } from "@prisma/client";
 
@@ -59,7 +67,7 @@ function buildStartsAt(
   );
 }
 
-export async function createAgendaTask(
+async function createAgendaTaskImpl(
   formData: FormData,
 ) {
   const {
@@ -118,7 +126,7 @@ export async function createAgendaTask(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -149,7 +157,7 @@ export async function createAgendaTask(
       });
 
     if (!clientCase) {
-      throw new Error(
+      throw new ActionError(
         "Caso não encontrado.",
       );
     }
@@ -175,7 +183,7 @@ export async function createAgendaTask(
       });
 
     if (!client) {
-      throw new Error(
+      throw new ActionError(
         "Cliente não encontrado.",
       );
     }
@@ -262,4 +270,15 @@ export async function createAgendaTask(
   return {
     success: true,
   };
+}
+
+export async function createAgendaTask(
+  ...args: Parameters<typeof createAgendaTaskImpl>
+) {
+  return runAction(
+    () =>
+      createAgendaTaskImpl(
+        ...args,
+      ),
+  );
 }

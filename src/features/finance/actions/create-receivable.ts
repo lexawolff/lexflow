@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   randomUUID,
 } from "crypto";
 
@@ -24,7 +32,7 @@ import {
   createReceivableSchema,
 } from "../schemas/create-receivable-schema";
 
-export async function createReceivable(
+async function createReceivableImpl(
   clientId:
     string,
 
@@ -91,7 +99,7 @@ export async function createReceivable(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -118,7 +126,7 @@ export async function createReceivable(
     });
 
   if (!client) {
-    throw new Error(
+    throw new ActionError(
       "Cliente não encontrado.",
     );
   }
@@ -145,7 +153,7 @@ export async function createReceivable(
       });
 
     if (!relatedCase) {
-      throw new Error(
+      throw new ActionError(
         "O caso selecionado não pertence a este cliente.",
       );
     }
@@ -160,7 +168,7 @@ export async function createReceivable(
     data.installmentDueDates.length !==
     installments
   ) {
-    throw new Error(
+    throw new ActionError(
       "A quantidade de vencimentos não corresponde à quantidade de parcelas.",
     );
   }
@@ -194,7 +202,7 @@ export async function createReceivable(
         if (
           !installmentDueDate
         ) {
-          throw new Error(
+          throw new ActionError(
             `O vencimento da parcela ${
               index + 1
             } não foi informado.`,
@@ -275,4 +283,15 @@ revalidatePath(
     success:
       true,
   };
+}
+
+export async function createReceivable(
+  ...args: Parameters<typeof createReceivableImpl>
+) {
+  return runAction(
+    () =>
+      createReceivableImpl(
+        ...args,
+      ),
+  );
 }

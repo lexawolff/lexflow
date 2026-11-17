@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   FinancialStatus,
 } from "@prisma/client";
 
@@ -97,7 +105,7 @@ function getTodayDateKey(): string {
     !month ||
     !day
   ) {
-    throw new Error(
+    throw new ActionError(
       "Não foi possível determinar a data atual.",
     );
   }
@@ -121,7 +129,7 @@ function getInitialStatus(
   return FinancialStatus.PENDENTE;
 }
 
-export async function createPayable(
+async function createPayableImpl(
   formData:
     FormData,
 ) {
@@ -165,7 +173,7 @@ export async function createPayable(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
       "Dados inválidos.",
@@ -219,4 +227,15 @@ export async function createPayable(
     success:
       true,
   };
+}
+
+export async function createPayable(
+  ...args: Parameters<typeof createPayableImpl>
+) {
+  return runAction(
+    () =>
+      createPayableImpl(
+        ...args,
+      ),
+  );
 }

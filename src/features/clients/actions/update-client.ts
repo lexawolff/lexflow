@@ -1,5 +1,13 @@
 "use server";
 
+import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
 import { recordGovAudit } from "@/lib/security/audit";
 
 import {
@@ -27,7 +35,7 @@ import {
   clientSchema,
 } from "../schemas/client-schema";
 
-export async function updateClient(
+async function updateClientImpl(
   clientId:
     string,
 
@@ -71,7 +79,7 @@ export async function updateClient(
     });
 
   if (!client) {
-    throw new Error(
+    throw new ActionError(
       "Cliente não encontrado neste escritório.",
     );
   }
@@ -210,7 +218,7 @@ export async function updateClient(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -241,7 +249,7 @@ export async function updateClient(
       : null;
 
   if (existingClient) {
-    throw new Error(
+    throw new ActionError(
       "Já existe outro cliente com este CPF.",
     );
   }
@@ -319,7 +327,7 @@ export async function updateClient(
       FOR UPDATE
     `;
     const current = rows[0];
-    if (!current) throw new Error("Cliente não encontrado neste escritório.");
+    if (!current) throw new ActionError("Cliente não encontrado neste escritório.");
 
     const loginChanged = canManageGov && formData.has("govLogin") &&
       (govLogin || null) !== current.govLogin;
@@ -350,5 +358,16 @@ export async function updateClient(
 
   redirect(
     `/clientes/${client.id}`,
+  );
+}
+
+export async function updateClient(
+  ...args: Parameters<typeof updateClientImpl>
+) {
+  return runAction(
+    () =>
+      updateClientImpl(
+        ...args,
+      ),
   );
 }

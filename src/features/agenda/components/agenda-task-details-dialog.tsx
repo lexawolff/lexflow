@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
+import {
   useEffect,
   useMemo,
   useState,
@@ -463,7 +467,7 @@ export function AgendaTaskDetailsDialog({
             action,
           );
 
-          await updateAgendaTaskStatus(
+          await throwOnFailure(updateAgendaTaskStatus)(
             formData,
           );
 
@@ -508,7 +512,7 @@ export function AgendaTaskDetailsDialog({
             currentTask.id,
           );
 
-          await deleteAgendaTask(
+          await throwOnFailure(deleteAgendaTask)(
             formData,
           );
 
@@ -1126,7 +1130,7 @@ function EditTaskContent({
                 values.description,
               );
 
-              await updateAgendaTask(
+              await throwOnFailure(updateAgendaTask)(
                 formData,
               );
 

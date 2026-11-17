@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   WorkItemStatus,
   WorkPlanningPeriod,
 } from "@prisma/client";
@@ -28,7 +36,7 @@ function getRequiredString(
     typeof value !== "string" ||
     !value.trim()
   ) {
-    throw new Error(
+    throw new ActionError(
       "Preencha os campos obrigatórios.",
     );
   }
@@ -97,7 +105,7 @@ function getOptionalDate(
       date.getTime(),
     )
   ) {
-    throw new Error(
+    throw new ActionError(
       "Data inválida.",
     );
   }
@@ -156,7 +164,7 @@ async function resolveRelations(
       });
 
     if (!client) {
-      throw new Error(
+      throw new ActionError(
         "Cliente inválido.",
       );
     }
@@ -182,7 +190,7 @@ async function resolveRelations(
       });
 
     if (!caseRecord) {
-      throw new Error(
+      throw new ActionError(
         "Caso inválido.",
       );
     }
@@ -192,7 +200,7 @@ async function resolveRelations(
       caseRecord.clientId !==
         clientId
     ) {
-      throw new Error(
+      throw new ActionError(
         "O caso selecionado não pertence ao cliente informado.",
       );
     }
@@ -209,7 +217,7 @@ async function resolveRelations(
   };
 }
 
-export async function createWorkItemAction(
+async function createWorkItemActionImpl(
   formData: FormData,
 ) {
   const {
@@ -363,7 +371,7 @@ export async function createWorkItemAction(
   );
 }
 
-export async function updateWorkItemAction(
+async function updateWorkItemActionImpl(
   formData: FormData,
 ) {
   const {
@@ -413,7 +421,7 @@ export async function updateWorkItemAction(
     });
 
   if (!currentItem) {
-    throw new Error(
+    throw new ActionError(
       "Trabalho não encontrado.",
     );
   }
@@ -651,7 +659,7 @@ export async function updateWorkItemAction(
   );
 }
 
-export async function deleteWorkItemAction(
+async function deleteWorkItemActionImpl(
   formData: FormData,
 ) {
   const {
@@ -698,7 +706,7 @@ export async function deleteWorkItemAction(
     });
 
   if (!item) {
-    throw new Error(
+    throw new ActionError(
       "Trabalho não encontrado.",
     );
   }
@@ -727,7 +735,7 @@ export async function deleteWorkItemAction(
       if (
         deleted.count !== 1
       ) {
-        throw new Error(
+        throw new ActionError(
           "Não foi possível remover o trabalho.",
         );
       }
@@ -769,7 +777,7 @@ export async function deleteWorkItemAction(
   );
 }
 
-export async function startWorkItemAction(
+async function startWorkItemActionImpl(
   formData: FormData,
 ) {
   const {
@@ -810,7 +818,7 @@ export async function startWorkItemAction(
   if (
     result.count === 0
   ) {
-    throw new Error(
+    throw new ActionError(
       "Trabalho não encontrado.",
     );
   }
@@ -820,7 +828,7 @@ export async function startWorkItemAction(
   );
 }
 
-export async function completeWorkItemAction(
+async function completeWorkItemActionImpl(
   formData: FormData,
 ) {
   const {
@@ -866,7 +874,7 @@ export async function completeWorkItemAction(
   if (
     result.count === 0
   ) {
-    throw new Error(
+    throw new ActionError(
       "Trabalho não encontrado.",
     );
   }
@@ -876,7 +884,7 @@ export async function completeWorkItemAction(
   );
 }
 
-export async function reopenWorkItemAction(
+async function reopenWorkItemActionImpl(
   formData: FormData,
 ) {
   const {
@@ -921,7 +929,7 @@ export async function reopenWorkItemAction(
     });
 
   if (!item) {
-    throw new Error(
+    throw new ActionError(
       "Trabalho não encontrado.",
     );
   }
@@ -1024,7 +1032,7 @@ export async function reopenWorkItemAction(
   );
 }
 
-export async function moveWorkItemToTopAction(
+async function moveWorkItemToTopActionImpl(
   formData: FormData,
 ) {
   const {
@@ -1068,7 +1076,7 @@ export async function moveWorkItemToTopAction(
     });
 
   if (!item) {
-    throw new Error(
+    throw new ActionError(
       "Trabalho não encontrado.",
     );
   }
@@ -1176,7 +1184,7 @@ type WorkQueueOrderInput = Record<
   string[]
 >;
 
-export async function saveWorkQueueOrderAction(
+async function saveWorkQueueOrderActionImpl(
   input: WorkQueueOrderInput,
 ) {
   const {
@@ -1209,7 +1217,7 @@ export async function saveWorkQueueOrderAction(
           !id.trim(),
       )
     ) {
-      throw new Error(
+      throw new ActionError(
         "Ordem de trabalho inválida.",
       );
     }
@@ -1244,7 +1252,7 @@ export async function saveWorkQueueOrderAction(
     ).size !==
     desiredIds.length
   ) {
-    throw new Error(
+    throw new ActionError(
       "A fila contém itens duplicados.",
     );
   }
@@ -1280,7 +1288,7 @@ export async function saveWorkQueueOrderAction(
     currentItems.length !==
     desiredItems.length
   ) {
-    throw new Error(
+    throw new ActionError(
       "A fila foi alterada. Atualize a página e tente novamente.",
     );
   }
@@ -1304,7 +1312,7 @@ export async function saveWorkQueueOrderAction(
         desired.id,
       )
     ) {
-      throw new Error(
+      throw new ActionError(
         "A fila contém um trabalho inválido.",
       );
     }
@@ -1360,5 +1368,93 @@ export async function saveWorkQueueOrderAction(
 
   revalidatePath(
     "/trabalho",
+  );
+}
+
+export async function createWorkItemAction(
+  ...args: Parameters<typeof createWorkItemActionImpl>
+) {
+  return runAction(
+    () =>
+      createWorkItemActionImpl(
+        ...args,
+      ),
+  );
+}
+
+export async function updateWorkItemAction(
+  ...args: Parameters<typeof updateWorkItemActionImpl>
+) {
+  return runAction(
+    () =>
+      updateWorkItemActionImpl(
+        ...args,
+      ),
+  );
+}
+
+export async function deleteWorkItemAction(
+  ...args: Parameters<typeof deleteWorkItemActionImpl>
+) {
+  return runAction(
+    () =>
+      deleteWorkItemActionImpl(
+        ...args,
+      ),
+  );
+}
+
+export async function startWorkItemAction(
+  ...args: Parameters<typeof startWorkItemActionImpl>
+) {
+  return runAction(
+    () =>
+      startWorkItemActionImpl(
+        ...args,
+      ),
+  );
+}
+
+export async function completeWorkItemAction(
+  ...args: Parameters<typeof completeWorkItemActionImpl>
+) {
+  return runAction(
+    () =>
+      completeWorkItemActionImpl(
+        ...args,
+      ),
+  );
+}
+
+export async function reopenWorkItemAction(
+  ...args: Parameters<typeof reopenWorkItemActionImpl>
+) {
+  return runAction(
+    () =>
+      reopenWorkItemActionImpl(
+        ...args,
+      ),
+  );
+}
+
+export async function moveWorkItemToTopAction(
+  ...args: Parameters<typeof moveWorkItemToTopActionImpl>
+) {
+  return runAction(
+    () =>
+      moveWorkItemToTopActionImpl(
+        ...args,
+      ),
+  );
+}
+
+export async function saveWorkQueueOrderAction(
+  ...args: Parameters<typeof saveWorkQueueOrderActionImpl>
+) {
+  return runAction(
+    () =>
+      saveWorkQueueOrderActionImpl(
+        ...args,
+      ),
   );
 }

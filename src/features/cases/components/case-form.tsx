@@ -33,6 +33,10 @@ import {
 } from "../actions/update-case";
 
 import {
+  notifyActionFailure,
+} from "@/lib/actions/action-feedback";
+
+import {
   ADMINISTRATIVE_STATUS_OPTIONS,
   CASE_ORIGIN_OPTIONS,
   CASE_STATUS_OPTIONS,
@@ -135,8 +139,14 @@ export function CaseForm({
             formElement,
           );
 
-        await action(
-          formData,
+        /*
+         * Sucesso: a action redireciona.
+         * Falha: mostramos o motivo.
+         */
+        notifyActionFailure(
+          await action(
+            formData,
+          ),
         );
       },
     );

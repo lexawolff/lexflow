@@ -1,5 +1,13 @@
 "use server";
 
+import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
 import { recordGovAudit } from "@/lib/security/audit";
 
 import {
@@ -23,7 +31,7 @@ import {
   clientSchema,
 } from "../schemas/client-schema";
 
-export async function createClient(
+async function createClientImpl(
   formData:
     FormData,
 ) {
@@ -181,7 +189,7 @@ export async function createClient(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -207,7 +215,7 @@ export async function createClient(
       : null;
 
   if (existingClient) {
-    throw new Error(
+    throw new ActionError(
       "Já existe um cliente cadastrado com este CPF.",
     );
   }
@@ -277,5 +285,16 @@ export async function createClient(
 
   redirect(
     `/clientes/${client.id}`,
+  );
+}
+
+export async function createClient(
+  ...args: Parameters<typeof createClientImpl>
+) {
+  return runAction(
+    () =>
+      createClientImpl(
+        ...args,
+      ),
   );
 }

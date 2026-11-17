@@ -9,6 +9,10 @@ import type {
 } from "@/lib/actions/action-result";
 
 import {
+  runActionResult,
+} from "@/lib/actions/run-action";
+
+import {
   requireWorkspacePermission,
 } from "@/lib/permissions";
 
@@ -21,6 +25,18 @@ import {
 } from "../services/delete-file";
 
 export async function deleteDocument(
+  documentId:
+    string,
+): Promise<ActionResult> {
+  return runActionResult(
+    () =>
+      deleteDocumentImpl(
+        documentId,
+      ),
+  );
+}
+
+async function deleteDocumentImpl(
   documentId:
     string,
 ): Promise<ActionResult> {

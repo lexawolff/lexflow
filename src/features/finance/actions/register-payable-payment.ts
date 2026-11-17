@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   FinancialStatus,
 } from "@prisma/client";
 
@@ -20,7 +28,7 @@ import {
   registerPayablePaymentSchema,
 } from "../schemas/payable-actions-schema";
 
-export async function registerPayablePayment(
+async function registerPayablePaymentImpl(
   formData:
     FormData,
 ) {
@@ -56,7 +64,7 @@ export async function registerPayablePayment(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
       "Dados inválidos.",
@@ -88,7 +96,7 @@ export async function registerPayablePayment(
     );
 
   if (!payable) {
-    throw new Error(
+    throw new ActionError(
       "Conta não encontrada.",
     );
   }
@@ -97,7 +105,7 @@ export async function registerPayablePayment(
     payable.status ===
     FinancialStatus.CANCELADO
   ) {
-    throw new Error(
+    throw new ActionError(
       "Não é possível pagar uma conta cancelada.",
     );
   }
@@ -106,7 +114,7 @@ export async function registerPayablePayment(
     payable.status ===
     FinancialStatus.PAGO
   ) {
-    throw new Error(
+    throw new ActionError(
       "Esta conta já está marcada como paga.",
     );
   }
@@ -144,4 +152,15 @@ export async function registerPayablePayment(
     success:
       true,
   };
+}
+
+export async function registerPayablePayment(
+  ...args: Parameters<typeof registerPayablePaymentImpl>
+) {
+  return runAction(
+    () =>
+      registerPayablePaymentImpl(
+        ...args,
+      ),
+  );
 }

@@ -18,6 +18,10 @@ import {
   getCurrentAuthUserId,
 } from "@/lib/auth";
 
+import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
 export type Permission =
   | "CLIENT_VIEW"
   | "CLIENT_CREATE"
@@ -256,7 +260,7 @@ async function getCurrentWorkspaceAccessUncached() {
     });
 
   if (!membership) {
-    throw new Error(
+    throw new ActionError(
       "Você não pertence a nenhum escritório.",
     );
   }
@@ -295,7 +299,7 @@ export async function requireWorkspacePermission(
       permission,
     )
   ) {
-    throw new Error(
+    throw new ActionError(
       "Você não possui permissão para realizar esta operação.",
     );
   }

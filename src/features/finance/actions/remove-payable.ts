@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   FinancialStatus,
 } from "@prisma/client";
 
@@ -20,7 +28,7 @@ import {
   removePayableSchema,
 } from "../schemas/payable-actions-schema";
 
-export async function removePayable(
+async function removePayableImpl(
   formData:
     FormData,
 ) {
@@ -45,7 +53,7 @@ export async function removePayable(
     });
 
   if (!parsed.success) {
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
       "Dados inválidos.",
@@ -80,7 +88,7 @@ export async function removePayable(
     );
 
   if (!payable) {
-    throw new Error(
+    throw new ActionError(
       "Conta não encontrada.",
     );
   }
@@ -95,7 +103,7 @@ export async function removePayable(
       payable.status ===
       FinancialStatus.PARCIAL
     ) {
-      throw new Error(
+      throw new ActionError(
         "Não é possível cancelar uma conta que possui pagamento registrado.",
       );
     }
@@ -104,7 +112,7 @@ export async function removePayable(
       payable.status ===
       FinancialStatus.CANCELADO
     ) {
-      throw new Error(
+      throw new ActionError(
         "Esta conta já está cancelada.",
       );
     }
@@ -138,7 +146,7 @@ export async function removePayable(
     FinancialStatus.PARCIAL ||
     payable.paidAt
   ) {
-    throw new Error(
+    throw new ActionError(
       "Não é possível excluir uma conta que possui pagamento registrado. Estorne o pagamento primeiro.",
     );
   }
@@ -165,4 +173,15 @@ export async function removePayable(
     success:
       true,
   };
+}
+
+export async function removePayable(
+  ...args: Parameters<typeof removePayableImpl>
+) {
+  return runAction(
+    () =>
+      removePayableImpl(
+        ...args,
+      ),
+  );
 }

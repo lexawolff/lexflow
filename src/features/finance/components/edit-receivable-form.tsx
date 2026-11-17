@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
+import {
   useState,
   useTransition,
 } from "react";
@@ -200,7 +204,7 @@ export function EditReceivableForm({
             values.notes,
           );
 
-          await updateReceivable(
+          await throwOnFailure(updateReceivable)(
             formData,
           );
 

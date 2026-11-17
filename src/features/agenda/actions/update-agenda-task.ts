@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   revalidatePath,
 } from "next/cache";
 
@@ -86,7 +94,7 @@ function revalidateAgenda({
   }
 }
 
-export async function updateAgendaTask(
+async function updateAgendaTaskImpl(
   formData: FormData,
 ) {
   const {
@@ -146,7 +154,7 @@ export async function updateAgendaTask(
     });
 
   if (!parsed.success) {
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -174,7 +182,7 @@ export async function updateAgendaTask(
     });
 
   if (!existing) {
-    throw new Error(
+    throw new ActionError(
       "Compromisso não encontrado.",
     );
   }
@@ -200,7 +208,7 @@ export async function updateAgendaTask(
       });
 
     if (!clientCase) {
-      throw new Error(
+      throw new ActionError(
         "Caso não encontrado.",
       );
     }
@@ -226,7 +234,7 @@ export async function updateAgendaTask(
       });
 
     if (!client) {
-      throw new Error(
+      throw new ActionError(
         "Cliente não encontrado.",
       );
     }
@@ -306,4 +314,15 @@ export async function updateAgendaTask(
   return {
     success: true,
   };
+}
+
+export async function updateAgendaTask(
+  ...args: Parameters<typeof updateAgendaTaskImpl>
+) {
+  return runAction(
+    () =>
+      updateAgendaTaskImpl(
+        ...args,
+      ),
+  );
 }

@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   FinancialStatus,
 } from "@prisma/client";
 
@@ -24,7 +32,7 @@ import {
   reversePayablePaymentSchema,
 } from "../schemas/payable-actions-schema";
 
-export async function reversePayablePayment(
+async function reversePayablePaymentImpl(
   formData:
     FormData,
 ) {
@@ -46,7 +54,7 @@ export async function reversePayablePayment(
     );
 
   if (!parsed.success) {
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
       "Dados inválidos.",
@@ -78,7 +86,7 @@ export async function reversePayablePayment(
     );
 
   if (!payable) {
-    throw new Error(
+    throw new ActionError(
       "Conta não encontrada.",
     );
   }
@@ -87,7 +95,7 @@ export async function reversePayablePayment(
     payable.status !==
     FinancialStatus.PAGO
   ) {
-    throw new Error(
+    throw new ActionError(
       "Somente contas pagas podem ter o pagamento estornado.",
     );
   }
@@ -128,4 +136,15 @@ export async function reversePayablePayment(
     success:
       true,
   };
+}
+
+export async function reversePayablePayment(
+  ...args: Parameters<typeof reversePayablePaymentImpl>
+) {
+  return runAction(
+    () =>
+      reversePayablePaymentImpl(
+        ...args,
+      ),
+  );
 }

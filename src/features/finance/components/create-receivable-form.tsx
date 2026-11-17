@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
+import {
   useEffect,
   useState,
   useTransition,
@@ -295,7 +299,7 @@ export function CreateReceivableForm({
             values.notes,
           );
 
-          await createReceivable(
+          await throwOnFailure(createReceivable)(
             clientId,
             formData,
           );

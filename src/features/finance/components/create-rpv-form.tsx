@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
 import type {
   ElementType,
   ReactNode,
@@ -348,7 +352,7 @@ export function CreateRpvForm({
                 values.notes,
               );
 
-              await createRpv(
+              await throwOnFailure(createRpv)(
                 formData,
               );
 

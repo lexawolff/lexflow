@@ -1,6 +1,11 @@
 "use client";
 
 import {
+  useState,
+  useTransition,
+} from "react";
+
+import {
   AlertDialog,
   AlertDialogCancel,
   AlertDialogContent,
@@ -12,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { Button } from "@/components/ui/button";
+import { notifyActionFailure } from "@/lib/actions/action-feedback";
 import { deleteClient } from "../actions/delete-client";
 
 type DeleteClientButtonProps = {
@@ -21,8 +27,37 @@ type DeleteClientButtonProps = {
 export function DeleteClientButton({
   clientId,
 }: DeleteClientButtonProps) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  function handleDelete() {
+    startTransition(async () => {
+      /*
+       * Em caso de sucesso a action
+       * redireciona para /clientes.
+       *
+       * Se o cliente tiver vínculos,
+       * a action devolve a falha e
+       * mostramos o motivo sem derrubar
+       * a página.
+       */
+      const result = await deleteClient(clientId);
+
+      if (notifyActionFailure(result)) {
+        setOpen(false);
+      }
+    });
+  }
+
   return (
-    <AlertDialog>
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!isPending) {
+          setOpen(nextOpen);
+        }
+      }}
+    >
       <AlertDialogTrigger asChild>
         <Button variant="destructive">
           Excluir
@@ -43,18 +78,18 @@ export function DeleteClientButton({
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>
             Cancelar
           </AlertDialogCancel>
 
-          <form action={deleteClient.bind(null, clientId)}>
-            <Button
-              type="submit"
-              variant="destructive"
-            >
-              Excluir Cliente
-            </Button>
-          </form>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={isPending}
+            onClick={handleDelete}
+          >
+            {isPending ? "Excluindo…" : "Excluir Cliente"}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

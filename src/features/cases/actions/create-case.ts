@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   revalidatePath,
 } from "next/cache";
 
@@ -77,7 +85,7 @@ function nullableText(
     : null;
 }
 
-export async function createCase(
+async function createCaseImpl(
   clientId: string,
   formData: FormData,
 ) {
@@ -109,7 +117,7 @@ export async function createCase(
     });
 
   if (!client) {
-    throw new Error(
+    throw new ActionError(
       "Cliente não encontrado neste escritório.",
     );
   }
@@ -225,7 +233,7 @@ export async function createCase(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Revise os campos obrigatórios do caso.",
@@ -362,5 +370,16 @@ export async function createCase(
 
   redirect(
     `/clientes/${clientId}/casos/${createdCase.id}`,
+  );
+}
+
+export async function createCase(
+  ...args: Parameters<typeof createCaseImpl>
+) {
+  return runAction(
+    () =>
+      createCaseImpl(
+        ...args,
+      ),
   );
 }

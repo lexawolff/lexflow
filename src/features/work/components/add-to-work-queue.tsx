@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
+import {
   type FormEvent,
   useRef,
   useState,
@@ -97,7 +101,7 @@ export function AddToWorkQueue({
     );
 
     try {
-      await createWorkItemAction(
+      await throwOnFailure(createWorkItemAction)(
         new FormData(
           form,
         ),

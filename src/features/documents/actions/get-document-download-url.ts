@@ -5,6 +5,10 @@ import type {
 } from "@/lib/actions/action-result";
 
 import {
+  runActionResult,
+} from "@/lib/actions/run-action";
+
+import {
   requireWorkspacePermission,
 } from "@/lib/permissions";
 
@@ -17,6 +21,18 @@ import {
 } from "../services/get-document-url";
 
 export async function getDocumentDownloadUrl(
+  documentId:
+    string,
+): Promise<ActionResult<string>> {
+  return runActionResult(
+    () =>
+      getDocumentDownloadUrlImpl(
+        documentId,
+      ),
+  );
+}
+
+async function getDocumentDownloadUrlImpl(
   documentId:
     string,
 ): Promise<ActionResult<string>> {

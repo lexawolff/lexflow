@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   revalidatePath,
 } from "next/cache";
 
@@ -20,7 +28,7 @@ import {
   deleteTaskFromGoogleCalendar,
 } from "../services/sync-task-google-calendar";
 
-export async function deleteAgendaTask(
+async function deleteAgendaTaskImpl(
   formData: FormData,
 ) {
   const {
@@ -39,7 +47,7 @@ export async function deleteAgendaTask(
     });
 
   if (!parsed.success) {
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -70,7 +78,7 @@ export async function deleteAgendaTask(
     });
 
   if (!task) {
-    throw new Error(
+    throw new ActionError(
       "Compromisso não encontrado.",
     );
   }
@@ -94,7 +102,7 @@ export async function deleteAgendaTask(
         googleSync.error,
       );
 
-      throw new Error(
+      throw new ActionError(
         "Não foi possível excluir o compromisso porque o evento vinculado ao Google Agenda não pôde ser removido. Tente novamente ou desconecte a integração antes de excluir.",
       );
     }
@@ -130,4 +138,15 @@ export async function deleteAgendaTask(
   return {
     success: true,
   };
+}
+
+export async function deleteAgendaTask(
+  ...args: Parameters<typeof deleteAgendaTaskImpl>
+) {
+  return runAction(
+    () =>
+      deleteAgendaTaskImpl(
+        ...args,
+      ),
+  );
 }

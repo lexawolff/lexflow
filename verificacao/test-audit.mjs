@@ -28,7 +28,7 @@ function harness() {
   try{return await fn(db)}catch(e){state.clients=backup.clients;state.logs=backup.logs;throw e}
  }};
  const ctx=vm.createContext({
-  prisma:db,Date,console,
+  prisma:db,Date,console,ActionError:class ActionError extends Error{},
   Vault:{encrypt:s=>'cifrado:'+s,decrypt:()=> 'senha-secreta'},
   requireWorkspacePermission:async p=>{if(!state.permissions.includes(p))throw new Error('denied');return {workspace:{id:'w1'},membership:{userId:'u1',role:'OWNER'}}},
   hasPermission:(_role,p)=>state.permissions.includes(p),
@@ -50,13 +50,13 @@ for(const property of ['actorUserId','workspaceId','action','createdAt']){
  h=harness();a=await h.ctx.revealGovPassword('c1','copy');h.state.logs[0][property]=property==='createdAt'?new Date(Date.now()-6*60_000):'invalid';
  await assert.rejects(h.ctx.reportGovPasswordCopy(a.accessId));assert.equal(h.state.logs.length,1);
 }
-h=harness();await h.ctx.createClient(form({govPassword:'nova-senha'}));assert.equal(h.state.logs[0].action,'GOV_CREDENTIAL_CREATED');assert.equal(h.state.clients.length,2);
-h=harness();h.state.failAudit=true;await assert.rejects(h.ctx.createClient(form({govPassword:'nova-senha'})));assert.equal(h.state.clients.length,1);assert.equal(h.state.logs.length,0);
-h=harness();await h.ctx.createClient(form());assert.equal(h.state.logs.length,0);
-h=harness();h.state.permissions=h.state.permissions.filter(p=>p!=='GOV_MANAGE');await h.ctx.createClient(form({govPassword:'forjada',govLogin:'forjado'}));assert.equal(h.state.clients[1].govPasswordEncrypted,null);assert.equal(h.state.clients[1].govLogin,null);assert.equal(h.state.logs.length,0);
-h=harness();await h.ctx.updateClient('c1',form({govPassword:'nova-senha'}));assert.equal(h.state.logs[0].action,'GOV_CREDENTIAL_UPDATED');assert.equal(h.state.clients[0].govPasswordEncrypted,'cifrado:nova-senha');
-h=harness();h.state.failAudit=true;await assert.rejects(h.ctx.updateClient('c1',form({govPassword:'nova-senha'})));assert.equal(h.state.clients[0].govPasswordEncrypted,'cifra');assert.equal(h.state.logs.length,0);
-h=harness();await h.ctx.updateClient('c1',form({govLogin:'login-antigo',govPassword:''}));assert.equal(h.state.logs.length,0);assert.equal(h.state.clients[0].govPasswordEncrypted,'cifra');
-h=harness();await h.ctx.updateClient('c1',form({govLogin:''}));assert.equal(h.state.logs.length,1);assert.equal(h.state.clients[0].govLogin,null);
-h=harness();h.state.permissions=h.state.permissions.filter(p=>p!=='GOV_MANAGE');await h.ctx.updateClient('c1',form({govLogin:'forjado',govPassword:'forjada'}));assert.equal(h.state.clients[0].govLogin,'login-antigo');assert.equal(h.state.clients[0].govPasswordEncrypted,'cifra');assert.equal(h.state.logs.length,0);
+h=harness();await h.ctx.createClientImpl(form({govPassword:'nova-senha'}));assert.equal(h.state.logs[0].action,'GOV_CREDENTIAL_CREATED');assert.equal(h.state.clients.length,2);
+h=harness();h.state.failAudit=true;await assert.rejects(h.ctx.createClientImpl(form({govPassword:'nova-senha'})));assert.equal(h.state.clients.length,1);assert.equal(h.state.logs.length,0);
+h=harness();await h.ctx.createClientImpl(form());assert.equal(h.state.logs.length,0);
+h=harness();h.state.permissions=h.state.permissions.filter(p=>p!=='GOV_MANAGE');await h.ctx.createClientImpl(form({govPassword:'forjada',govLogin:'forjado'}));assert.equal(h.state.clients[1].govPasswordEncrypted,null);assert.equal(h.state.clients[1].govLogin,null);assert.equal(h.state.logs.length,0);
+h=harness();await h.ctx.updateClientImpl('c1',form({govPassword:'nova-senha'}));assert.equal(h.state.logs[0].action,'GOV_CREDENTIAL_UPDATED');assert.equal(h.state.clients[0].govPasswordEncrypted,'cifrado:nova-senha');
+h=harness();h.state.failAudit=true;await assert.rejects(h.ctx.updateClientImpl('c1',form({govPassword:'nova-senha'})));assert.equal(h.state.clients[0].govPasswordEncrypted,'cifra');assert.equal(h.state.logs.length,0);
+h=harness();await h.ctx.updateClientImpl('c1',form({govLogin:'login-antigo',govPassword:''}));assert.equal(h.state.logs.length,0);assert.equal(h.state.clients[0].govPasswordEncrypted,'cifra');
+h=harness();await h.ctx.updateClientImpl('c1',form({govLogin:''}));assert.equal(h.state.logs.length,1);assert.equal(h.state.clients[0].govLogin,null);
+h=harness();h.state.permissions=h.state.permissions.filter(p=>p!=='GOV_MANAGE');await h.ctx.updateClientImpl('c1',form({govLogin:'forjado',govPassword:'forjada'}));assert.equal(h.state.clients[0].govLogin,'login-antigo');assert.equal(h.state.clients[0].govPasswordEncrypted,'cifra');assert.equal(h.state.logs.length,0);
 console.log('PASS: ações reais com banco simulado — autorização, escritório, liberação condicionada ao log, correlação/expiração/repetição de cópia, rollback de cadastro/edição e ausência de segredos nos logs.');

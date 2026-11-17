@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   revalidatePath,
 } from "next/cache";
 
@@ -75,7 +83,7 @@ function nullableText(
     : null;
 }
 
-export async function updateCase(
+async function updateCaseImpl(
   caseId:
     string,
 
@@ -112,7 +120,7 @@ export async function updateCase(
     });
 
   if (!existing) {
-    throw new Error(
+    throw new ActionError(
       "Caso não encontrado.",
     );
   }
@@ -227,7 +235,7 @@ export async function updateCase(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -377,5 +385,16 @@ export async function updateCase(
 
   redirect(
     casePath,
+  );
+}
+
+export async function updateCase(
+  ...args: Parameters<typeof updateCaseImpl>
+) {
+  return runAction(
+    () =>
+      updateCaseImpl(
+        ...args,
+      ),
   );
 }

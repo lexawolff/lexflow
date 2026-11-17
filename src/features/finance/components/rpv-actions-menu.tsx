@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
 import type {
   ElementType,
   ReactNode,
@@ -677,7 +681,7 @@ function EditRpvDialog({
                 values.notes,
               );
 
-              await updateRpv(
+              await throwOnFailure(updateRpv)(
                 formData,
               );
 
@@ -1030,7 +1034,7 @@ function ChangeRpvStatusDialog({
                   : "",
               );
 
-              await updateRpvStatus(
+              await throwOnFailure(updateRpvStatus)(
                 formData,
               );
 
@@ -1288,7 +1292,7 @@ function RemoveRpvDialog({
             mode,
           );
 
-          await removeRpv(
+          await throwOnFailure(removeRpv)(
             formData,
           );
 

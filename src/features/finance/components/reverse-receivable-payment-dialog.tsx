@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
+import {
   useState,
   useTransition,
 } from "react";
@@ -92,7 +96,7 @@ export function ReverseReceivablePaymentDialog({
             receivable.id,
           );
 
-          await reverseReceivablePayment(
+          await throwOnFailure(reverseReceivablePayment)(
             formData,
           );
 

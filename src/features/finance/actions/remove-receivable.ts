@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   FinancialStatus,
 } from "@prisma/client";
 
@@ -45,7 +53,7 @@ function hasPayment({
   );
 }
 
-export async function removeReceivable(
+async function removeReceivableImpl(
   formData:
     FormData,
 ) {
@@ -81,7 +89,7 @@ export async function removeReceivable(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -122,7 +130,7 @@ export async function removeReceivable(
     );
 
   if (!receivable) {
-    throw new Error(
+    throw new ActionError(
       "Recebimento não encontrado.",
     );
   }
@@ -151,7 +159,7 @@ export async function removeReceivable(
             receivable.status,
         })
       ) {
-        throw new Error(
+        throw new ActionError(
           "Não é possível cancelar um recebimento que já possui pagamento registrado.",
         );
       }
@@ -160,7 +168,7 @@ export async function removeReceivable(
         receivable.status ===
         FinancialStatus.CANCELADO
       ) {
-        throw new Error(
+        throw new ActionError(
           "Este recebimento já está cancelado.",
         );
       }
@@ -264,7 +272,7 @@ revalidatePath(
           receivable.status,
       })
     ) {
-      throw new Error(
+      throw new ActionError(
         "Não é possível excluir um recebimento que já possui pagamento registrado.",
       );
     }
@@ -339,7 +347,7 @@ revalidatePath(
   if (
     groupHasPayment
   ) {
-    throw new Error(
+    throw new ActionError(
       "Não é possível excluir todo o parcelamento porque existem parcelas com pagamento registrado. Você pode excluir individualmente apenas as parcelas ainda sem pagamento.",
     );
   }
@@ -376,4 +384,15 @@ revalidatePath(
     success:
       true,
   };
+}
+
+export async function removeReceivable(
+  ...args: Parameters<typeof removeReceivableImpl>
+) {
+  return runAction(
+    () =>
+      removeReceivableImpl(
+        ...args,
+      ),
+  );
 }

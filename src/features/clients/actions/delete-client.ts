@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   redirect,
 } from "next/navigation";
 
@@ -12,7 +20,7 @@ import {
   prisma,
 } from "@/lib/prisma";
 
-export async function deleteClient(
+async function deleteClientImpl(
   clientId: string,
 ) {
   const {
@@ -71,7 +79,7 @@ export async function deleteClient(
     });
 
   if (!client) {
-    throw new Error(
+    throw new ActionError(
       "Cliente não encontrado.",
     );
   }
@@ -84,7 +92,7 @@ export async function deleteClient(
     client.events.length > 0;
 
   if (hasDependencies) {
-    throw new Error(
+    throw new ActionError(
       "Não é possível excluir este cliente porque existem registros vinculados a ele.",
     );
   }
@@ -98,5 +106,16 @@ export async function deleteClient(
 
   redirect(
     "/clientes",
+  );
+}
+
+export async function deleteClient(
+  ...args: Parameters<typeof deleteClientImpl>
+) {
+  return runAction(
+    () =>
+      deleteClientImpl(
+        ...args,
+      ),
   );
 }

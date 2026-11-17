@@ -9,6 +9,10 @@ import {
   createWorkItemAction,
 } from "@/features/work/actions/work-items";
 
+import {
+  withFailureToast,
+} from "@/lib/actions/action-feedback";
+
 type ClientOption = {
   id: string;
   name: string;
@@ -65,9 +69,9 @@ export function WorkItemCreateForm({
       </summary>
 
       <form
-        action={
-          createWorkItemAction
-        }
+        action={withFailureToast(
+          createWorkItemAction,
+        )}
         className="grid gap-4 border-t p-5 md:grid-cols-2"
       >
         <div className="md:col-span-2">

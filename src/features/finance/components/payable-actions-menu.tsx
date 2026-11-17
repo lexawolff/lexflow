@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
 import type {
   ElementType,
   ReactNode,
@@ -642,7 +646,7 @@ function EditPayableDialog({
                 values.notes,
               );
 
-              await updatePayable(
+              await throwOnFailure(updatePayable)(
                 formData,
               );
 
@@ -880,7 +884,7 @@ function RegisterPayablePaymentDialog({
                 values.paymentMethod,
               );
 
-              await registerPayablePayment(
+              await throwOnFailure(registerPayablePayment)(
                 formData,
               );
 
@@ -1059,7 +1063,7 @@ function ReversePayablePaymentDialog({
             payable.id,
           );
 
-          await reversePayablePayment(
+          await throwOnFailure(reversePayablePayment)(
             formData,
           );
 
@@ -1239,7 +1243,7 @@ function RemovePayableDialog({
             mode,
           );
 
-          await removePayable(
+          await throwOnFailure(removePayable)(
             formData,
           );
 

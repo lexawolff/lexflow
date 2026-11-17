@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
+import {
   useEffect,
   useState,
   useTransition,
@@ -110,7 +114,7 @@ export function RemoveReceivableDialog({
             : "SINGLE",
         );
 
-        await removeReceivable(
+        await throwOnFailure(removeReceivable)(
           formData,
         );
 

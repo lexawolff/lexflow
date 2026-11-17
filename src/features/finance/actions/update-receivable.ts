@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   FinancialStatus,
   Prisma,
 } from "@prisma/client";
@@ -104,7 +112,7 @@ function getTodayDateKey(): string {
     !month ||
     !day
   ) {
-    throw new Error(
+    throw new ActionError(
       "Não foi possível determinar a data atual.",
     );
   }
@@ -180,7 +188,7 @@ function calculateStatus({
   return FinancialStatus.PENDENTE;
 }
 
-export async function updateReceivable(
+async function updateReceivableImpl(
   formData:
     FormData,
 ) {
@@ -234,7 +242,7 @@ export async function updateReceivable(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -278,7 +286,7 @@ export async function updateReceivable(
     );
 
   if (!receivable) {
-    throw new Error(
+    throw new ActionError(
       "Recebimento não encontrado.",
     );
   }
@@ -306,7 +314,7 @@ export async function updateReceivable(
       });
 
     if (!relatedCase) {
-      throw new Error(
+      throw new ActionError(
         "O caso selecionado não pertence a este cliente.",
       );
     }
@@ -322,7 +330,7 @@ export async function updateReceivable(
       receivable.paidAmount,
     )
   ) {
-    throw new Error(
+    throw new ActionError(
       "O novo valor não pode ser menor que o valor já recebido.",
     );
   }
@@ -398,4 +406,15 @@ revalidatePath(
     success:
       true,
   };
+}
+
+export async function updateReceivable(
+  ...args: Parameters<typeof updateReceivableImpl>
+) {
+  return runAction(
+    () =>
+      updateReceivableImpl(
+        ...args,
+      ),
+  );
 }

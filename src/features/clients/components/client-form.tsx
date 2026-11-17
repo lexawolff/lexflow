@@ -28,6 +28,10 @@ import {
 } from "../actions/update-client";
 
 import {
+  withFailureToast,
+} from "@/lib/actions/action-feedback";
+
+import {
   clientSchema,
   type ClientFormValues,
 } from "../schemas/client-schema";
@@ -253,12 +257,14 @@ export function ClientForm({
     });
 
   const action =
-    client
-      ? updateClient.bind(
-          null,
-          client.id,
-        )
-      : createClient;
+    withFailureToast(
+      client
+        ? updateClient.bind(
+            null,
+            client.id,
+          )
+        : createClient,
+    );
 
   const {
     control,

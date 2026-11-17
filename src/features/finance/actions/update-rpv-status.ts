@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   RpvStatus,
 } from "@prisma/client";
 
@@ -40,7 +48,7 @@ function revalidateFinance({
   revalidatePath(`/clientes/${clientId}/casos/${caseId}`);
 }
 
-export async function updateRpvStatus(
+async function updateRpvStatusImpl(
   formData: FormData,
 ) {
   const {
@@ -73,7 +81,7 @@ export async function updateRpvStatus(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
         "Dados inválidos.",
@@ -102,7 +110,7 @@ export async function updateRpvStatus(
           });
 
         if (!existing) {
-          throw new Error(
+          throw new ActionError(
             "Requisição não encontrada.",
           );
         }
@@ -140,4 +148,15 @@ export async function updateRpvStatus(
   return {
     success: true,
   };
+}
+
+export async function updateRpvStatus(
+  ...args: Parameters<typeof updateRpvStatusImpl>
+) {
+  return runAction(
+    () =>
+      updateRpvStatusImpl(
+        ...args,
+      ),
+  );
 }

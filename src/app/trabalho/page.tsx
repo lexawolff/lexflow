@@ -11,8 +11,8 @@ import {
 } from "@/features/work/components/work-queue";
 
 import {
-  reopenWorkItemAction,
-} from "@/features/work/actions/work-items";
+  ReopenWorkItemButton,
+} from "@/features/work/components/reopen-work-item-button";
 
 import {
   prisma,
@@ -346,26 +346,11 @@ export default async function WorkPage() {
                     </div>
 
                     {canEdit && (
-                      <form
-                        action={
-                          reopenWorkItemAction
+                      <ReopenWorkItemButton
+                        workItemId={
+                          item.id
                         }
-                      >
-                        <input
-                          type="hidden"
-                          name="id"
-                          value={
-                            item.id
-                          }
-                        />
-
-                        <button
-                          type="submit"
-                          className="cursor-pointer rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted active:scale-[0.98]"
-                        >
-                          Reabrir
-                        </button>
-                      </form>
+                      />
                     )}
                   </div>
                 ),

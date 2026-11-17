@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
+import {
   useState,
   useTransition,
 } from "react";
@@ -163,7 +167,7 @@ export function RegisterReceivablePaymentForm({
             values.paymentMethod,
           );
 
-          await registerReceivablePayment(
+          await throwOnFailure(registerReceivablePayment)(
             formData,
           );
 

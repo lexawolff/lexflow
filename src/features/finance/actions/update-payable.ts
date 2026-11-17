@@ -1,6 +1,14 @@
 "use server";
 
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
+  runAction,
+} from "@/lib/actions/run-action";
+
+import {
   Prisma,
 } from "@prisma/client";
 
@@ -24,7 +32,7 @@ import {
   updatePayableSchema,
 } from "../schemas/payable-actions-schema";
 
-export async function updatePayable(
+async function updatePayableImpl(
   formData:
     FormData,
 ) {
@@ -73,7 +81,7 @@ export async function updatePayable(
       parsed.error.flatten(),
     );
 
-    throw new Error(
+    throw new ActionError(
       parsed.error.issues[0]
         ?.message ??
       "Dados inválidos.",
@@ -105,7 +113,7 @@ export async function updatePayable(
     );
 
   if (!payable) {
-    throw new Error(
+    throw new ActionError(
       "Conta não encontrada.",
     );
   }
@@ -163,4 +171,15 @@ export async function updatePayable(
     success:
       true,
   };
+}
+
+export async function updatePayable(
+  ...args: Parameters<typeof updatePayableImpl>
+) {
+  return runAction(
+    () =>
+      updatePayableImpl(
+        ...args,
+      ),
+  );
 }

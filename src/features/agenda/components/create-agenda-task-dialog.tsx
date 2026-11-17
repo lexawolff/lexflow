@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  throwOnFailure,
+} from "@/lib/actions/action-result";
+
+import {
   useMemo,
   useState,
   useTransition,
@@ -541,7 +545,7 @@ export function CreateAgendaTaskDialog({
                 values.description,
               );
 
-              await createAgendaTask(
+              await throwOnFailure(createAgendaTask)(
                 formData,
               );
 
