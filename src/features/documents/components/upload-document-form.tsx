@@ -5,6 +5,11 @@ import { toast } from "sonner";
 
 import { uploadDocument } from "../actions/upload-document";
 import { DOCUMENT_CATEGORY_OPTIONS } from "../document-category";
+import {
+  DOCUMENT_INPUT_ACCEPT,
+  DOCUMENT_UPLOAD_HINT,
+  validateDocumentFile,
+} from "../document-upload-rules";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,8 +34,36 @@ export function UploadDocumentForm({
     const form = event.currentTarget;
     const formData = new FormData(form);
 
+    /*
+     * Validamos antes de enviar para não
+     * transferir um arquivo que o servidor
+     * vai recusar (o servidor valida de novo).
+     */
+    const file = formData.get("file");
+
+    if (file instanceof File) {
+      const fileError = validateDocumentFile(file);
+
+      if (fileError) {
+        toast.error(fileError);
+        return;
+      }
+    }
+
     startTransition(async () => {
-      const result = await uploadDocument(formData);
+      let result: Awaited<ReturnType<typeof uploadDocument>>;
+
+      try {
+        result = await uploadDocument(formData);
+      } catch (error) {
+        console.error(error);
+
+        toast.error(
+          "Não foi possível enviar o documento. Verifique sua conexão e tente novamente."
+        );
+
+        return;
+      }
 
       if (!result.success) {
         toast.error(result.message);
@@ -100,8 +133,17 @@ export function UploadDocumentForm({
           id="file"
           name="file"
           type="file"
+          accept={DOCUMENT_INPUT_ACCEPT}
+          aria-describedby="file-hint"
           required
         />
+
+        <p
+          id="file-hint"
+          className="text-xs text-muted-foreground"
+        >
+          {DOCUMENT_UPLOAD_HINT}
+        </p>
       </div>
 
       <div className="flex justify-end">

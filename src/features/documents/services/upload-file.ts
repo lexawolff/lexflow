@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { getStorage } from "@/lib/supabase/storage";
+import { getFileExtension } from "../document-upload-rules";
 
 type UploadFileInput = {
   workspaceId: string;
@@ -14,7 +15,13 @@ export async function uploadFile({
 }: UploadFileInput) {
   const storage = getStorage();
 
-  const extension = file.name.split(".").pop() ?? "";
+  /*
+   * A extensão já foi validada pela lista
+   * de permissões; normalizamos para
+   * minúsculas e nunca usamos o nome
+   * original no caminho do Storage.
+   */
+  const extension = getFileExtension(file.name) ?? "bin";
 
   const filename = `${randomUUID()}.${extension}`;
 

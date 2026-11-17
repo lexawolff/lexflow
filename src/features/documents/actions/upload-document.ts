@@ -40,18 +40,22 @@ import {
   uploadFile,
 } from "../services/upload-file";
 
+import {
+  deleteFile,
+} from "../services/delete-file";
+
 export async function uploadDocument(
   formData:
     FormData,
 ): Promise<ActionResult<Document>> {
-  const {
-    workspace,
-  } =
-    await requireWorkspacePermission(
-      "DOCUMENT_CREATE",
-    );
-
   try {
+    const {
+      workspace,
+    } =
+      await requireWorkspacePermission(
+        "DOCUMENT_CREATE",
+      );
+
     const {
       clientId,
       category,
@@ -122,48 +126,83 @@ export async function uploadDocument(
         file,
       });
 
-    const document =
-      await prisma.document.create({
-        data: {
-          workspaceId:
-            workspace.id,
+    let document: Document;
 
-          clientId:
-            client.id,
+    try {
+      document =
+        await prisma.document.create({
+          data: {
+            workspaceId:
+              workspace.id,
 
-          originalName:
-            uploaded.originalName,
+            clientId:
+              client.id,
 
-          storagePath:
-            uploaded.storagePath,
+            originalName:
+              uploaded.originalName,
 
-          fileType:
-            uploaded.fileType,
+            storagePath:
+              uploaded.storagePath,
 
-          size:
-            uploaded.size,
+            fileType:
+              uploaded.fileType,
 
-          category,
-        },
+            size:
+              uploaded.size,
+
+            category,
+          },
+        });
+    } catch (error) {
+      /*
+       * O arquivo já foi para o Storage,
+       * mas o registro falhou: removemos
+       * o arquivo para não deixar dado
+       * sensível órfão.
+       */
+      await deleteFile({
+        storagePath:
+          uploaded.storagePath,
+      }).catch((cleanupError) => {
+        console.error(
+          "Falha ao remover arquivo órfão do Storage:",
+          uploaded.storagePath,
+          cleanupError,
+        );
       });
 
-    await registerDocumentUploaded({
-      workspaceId:
-        workspace.id,
+      throw error;
+    }
 
-      clientId:
-        client.id,
+    /*
+     * O documento já está salvo; uma
+     * falha ao registrar o histórico
+     * não deve parecer falha no upload.
+     */
+    try {
+      await registerDocumentUploaded({
+        workspaceId:
+          workspace.id,
 
-      documentId:
-        document.id,
+        clientId:
+          client.id,
 
-      fileName:
-        document.originalName,
+        documentId:
+          document.id,
 
-      category:
-        document.category ??
-        "OUTROS",
-    });
+        fileName:
+          document.originalName,
+
+        category:
+          document.category ??
+          "OUTROS",
+      });
+    } catch (error) {
+      console.error(
+        "Documento enviado, mas o evento de histórico falhou:",
+        error,
+      );
+    }
 
     revalidatePath(
       `/clientes/${client.id}`,
@@ -193,6 +232,17 @@ export async function uploadDocument(
       };
     }
 
-    throw error;
+    console.error(
+      "Erro inesperado no upload de documento:",
+      error,
+    );
+
+    return {
+      success:
+        false,
+
+      message:
+        "Não foi possível enviar o documento. Tente novamente.",
+    };
   }
 }
