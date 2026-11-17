@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   Crown,
   Loader2,
-  Mail,
   ShieldCheck,
   Trash2,
   UserRound,
@@ -396,21 +395,6 @@ export function TeamMembers({
               </p>
             </div>
           </div>
-
-          <button
-            type="button"
-            disabled
-            title="O convite será ativado quando integrarmos o fluxo de cadastro e autenticação."
-            className="inline-flex h-10 cursor-not-allowed items-center justify-center gap-2 rounded-xl border bg-muted/40 px-4 text-sm font-medium text-muted-foreground opacity-70"
-          >
-            <Mail className="size-4" />
-
-            Convidar membro
-
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase">
-              Em breve
-            </span>
-          </button>
         </div>
 
         <div className="divide-y">

@@ -15,6 +15,15 @@ import {
 } from "@/features/settings/components/team-members";
 
 import {
+  TeamInvitations,
+  type PendingInvitation,
+} from "@/features/settings/components/team-invitations";
+
+import {
+  getInvitationStatus,
+} from "@/features/settings/lib/invitations";
+
+import {
   requireCurrentUser,
 } from "@/lib/auth";
 
@@ -73,6 +82,66 @@ export default async function EquipePage() {
       },
     });
 
+  const openInvitations =
+    await prisma.workspaceInvitation.findMany({
+      where: {
+        workspaceId:
+          workspace.id,
+
+        acceptedAt:
+          null,
+
+        revokedAt:
+          null,
+      },
+
+      orderBy: {
+        createdAt:
+          "desc",
+      },
+
+      take: 50,
+
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        expiresAt: true,
+        acceptedAt: true,
+        revokedAt: true,
+      },
+    });
+
+  const now =
+    new Date();
+
+  const invitations: PendingInvitation[] =
+    openInvitations.map(
+      (
+        invitation,
+      ) => ({
+        id:
+          invitation.id,
+
+        email:
+          invitation.email,
+
+        role:
+          invitation.role,
+
+        status:
+          getInvitationStatus(
+            invitation,
+            now,
+          ) === "EXPIRADO"
+            ? "EXPIRADO"
+            : "PENDENTE",
+
+        expiresAt:
+          invitation.expiresAt.toISOString(),
+      }),
+    );
+
   const members =
     memberships.map(
       (
@@ -123,6 +192,20 @@ export default async function EquipePage() {
 
           <SettingsNav />
         </header>
+
+        <TeamInvitations
+          invitations={
+            invitations
+          }
+
+          currentRole={
+            membership.role
+          }
+
+          workspaceName={
+            workspace.name
+          }
+        />
 
         <TeamMembers
           members={

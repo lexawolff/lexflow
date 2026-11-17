@@ -286,7 +286,8 @@ model Workspace {
   // RELAÇÕES
   //
 
-  members Membership[]
+  members     Membership[]
+  invitations WorkspaceInvitation[]
 
   clients Client[]
   cases   Case[]
@@ -307,6 +308,38 @@ model Workspace {
   clientEvents              ClientEvent[]
   caseEvents                CaseEvent[]
   googleCalendarConnections GoogleCalendarConnection[]
+}
+
+//
+// CONVITE PARA O ESCRITÓRIO
+//
+// O link de convite carrega um token aleatório; aqui fica apenas o
+// hash SHA-256 dele. Quem tiver acesso ao banco não consegue montar
+// o link a partir deste registro.
+
+model WorkspaceInvitation {
+  id String @id @default(uuid())
+
+  workspaceId String
+
+  email String
+  role  UserRole
+
+  tokenHash String @unique
+
+  invitedByUserId String
+
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  revokedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([email])
 }
 
 //

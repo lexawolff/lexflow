@@ -13,7 +13,18 @@ import {
   LoginForm,
 } from "@/features/auth/components/login-form";
 
-export default async function LoginPage() {
+type LoginPageProps = {
+  searchParams: Promise<{
+    erro?: string;
+  }>;
+};
+
+export default async function LoginPage({
+  searchParams,
+}: LoginPageProps) {
+  const { erro } =
+    await searchParams;
+
   const user =
     await getCurrentUser();
 
@@ -108,9 +119,28 @@ export default async function LoginPage() {
             acessar o escritório.
           </p>
 
+          {erro === "link-invalido" ? (
+            <div
+              role="alert"
+              className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300"
+            >
+              O link expirou ou foi aberto em outro navegador. Solicite um novo
+              em &quot;Esqueci minha senha&quot;.
+            </div>
+          ) : null}
+
           <div className="mt-8">
             <LoginForm />
           </div>
+
+          <p className="mt-4 text-center text-sm">
+            <Link
+              href="/recuperar-senha"
+              className="font-medium text-primary hover:underline"
+            >
+              Esqueci minha senha
+            </Link>
+          </p>
 
           {/* ==========================
               PRIMEIRO ACESSO

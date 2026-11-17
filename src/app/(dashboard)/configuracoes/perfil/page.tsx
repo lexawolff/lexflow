@@ -19,6 +19,10 @@ import {
 } from "@/features/settings/components/profile-form";
 
 import {
+  ChangePasswordForm,
+} from "@/features/settings/components/change-password-form";
+
+import {
   requireCurrentUser,
 } from "@/lib/auth";
 
@@ -157,6 +161,8 @@ export default async function PerfilPage() {
             workspace.name
           }
         />
+
+        <ChangePasswordForm />
       </div>
     </AppShell>
   );
