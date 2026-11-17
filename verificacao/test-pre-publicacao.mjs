@@ -25,9 +25,12 @@ test('lista projeta apenas campos necessários e mantém escritório', async () 
   const source = {id:'c',name:'Teste',cpf:'000',phone:null,whatsapp:null,city:null,state:null,_count:{cases:0},govLogin:'segredo',govPasswordEncrypted:'cifra',income:999};
   const {getClients} = load('features/clients/services/get-clients.ts', ['getClients'], {
     requireWorkspacePermission: async p => {assert.equal(p,'CLIENT_VIEW'); return {workspace:{id:'w'}};},
-    prisma:{client:{findMany:async q => {query=q; return [Object.fromEntries(Object.keys(q.select).map(k=>[k,source[k]]))];}}},
+    prisma:{client:{
+      count:async q => {assert.equal(q.where.workspaceId,'w'); return 1;},
+      findMany:async q => {query=q; return [Object.fromEntries(Object.keys(q.select).map(k=>[k,source[k]]))];},
+    }},
   });
-  const rows=await getClients();
+  const {clients:rows}=await getClients();
   assert.equal(query.where.workspaceId,'w');
   assert.deepEqual(Object.keys(rows[0]).sort(),['id','name','cpf','phone','whatsapp','city','state','_count'].sort());
 });

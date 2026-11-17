@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import {
   CaseStatus,
+  type Prisma,
 } from "@prisma/client";
 
 import {
@@ -16,6 +17,12 @@ import {
 import {
   AppShell,
 } from "@/components/app-shell/app-shell";
+
+import {
+  PaginationBar,
+} from "@/components/pagination/pagination-bar";
+
+const CASES_PAGE_SIZE = 20;
 
 import {
   CASE_STATUS_LABELS,
@@ -39,6 +46,7 @@ type Props = {
   searchParams: Promise<{
     q?: string;
     status?: string;
+    pagina?: string;
   }>;
 };
 
@@ -171,6 +179,90 @@ export default async function CasesPage({
       ? params.status
       : undefined;
 
+  const requestedPage =
+    Number(
+      params.pagina ?? "1",
+    );
+
+  /*
+   * Mesmo critério para a contagem e para a listagem paginada.
+   */
+  const filterWhere: Prisma.CaseWhereInput = {
+    workspaceId:
+      workspace.id,
+
+    status:
+      selectedStatus,
+
+    ...(query
+      ? {
+          OR: [
+            {
+              title: {
+                contains:
+                  query,
+
+                mode:
+                  "insensitive",
+              },
+            },
+
+            {
+              number: {
+                contains:
+                  query,
+
+                mode:
+                  "insensitive",
+              },
+            },
+
+            {
+              administrativeNumber: {
+                contains:
+                  query,
+
+                mode:
+                  "insensitive",
+              },
+            },
+
+            {
+              administrativeProcess: {
+                contains:
+                  query,
+
+                mode:
+                  "insensitive",
+              },
+            },
+
+            {
+              opposingParty: {
+                contains:
+                  query,
+
+                mode:
+                  "insensitive",
+              },
+            },
+
+            {
+              client: {
+                name: {
+                  contains:
+                    query,
+
+                  mode:
+                    "insensitive",
+                },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
   /* =======================================
      RESUMOS
   ======================================= */
@@ -179,7 +271,7 @@ export default async function CasesPage({
     totalCases,
     activeCases,
     closedCases,
-    cases,
+    filteredTotal,
   ] =
     await Promise.all([
       prisma.case.count({
@@ -211,125 +303,134 @@ export default async function CasesPage({
         },
       }),
 
-      prisma.case.findMany({
-        where: {
-          workspaceId:
-            workspace.id,
+      prisma.case.count({
+        where:
+          filterWhere,
+      }),
+    ]);
 
-          status:
-            selectedStatus,
+  const pageCount =
+    Math.max(
+      1,
+      Math.ceil(
+        filteredTotal /
+          CASES_PAGE_SIZE,
+      ),
+    );
 
-          ...(query
-            ? {
-                OR: [
-                  {
-                    title: {
-                      contains:
-                        query,
+  const currentPage =
+    Math.min(
+      Math.max(
+        1,
+        Number.isFinite(
+          requestedPage,
+        )
+          ? Math.trunc(
+              requestedPage,
+            )
+          : 1,
+      ),
+      pageCount,
+    );
 
-                      mode:
-                        "insensitive",
-                    },
-                  },
+  const cases =
+    await prisma.case.findMany({
+      where:
+        filterWhere,
 
-                  {
-                    number: {
-                      contains:
-                        query,
+      select: {
+        id:
+          true,
 
-                      mode:
-                        "insensitive",
-                    },
-                  },
+        clientId:
+          true,
 
-                  {
-                    administrativeNumber: {
-                      contains:
-                        query,
+        title:
+          true,
 
-                      mode:
-                        "insensitive",
-                    },
-                  },
+        number:
+          true,
 
-                  {
-                    administrativeProcess: {
-                      contains:
-                        query,
+        administrativeNumber:
+          true,
 
-                      mode:
-                        "insensitive",
-                    },
-                  },
+        practiceArea:
+          true,
 
-                  {
-                    opposingParty: {
-                      contains:
-                        query,
+        status:
+          true,
 
-                      mode:
-                        "insensitive",
-                    },
-                  },
+        updatedAt:
+          true,
 
-                  {
-                    client: {
-                      name: {
-                        contains:
-                          query,
+        client: {
+          select: {
+            id:
+              true,
 
-                        mode:
-                          "insensitive",
-                      },
-                    },
-                  },
-                ],
-              }
-            : {}),
-        },
-
-        select: {
-          id:
-            true,
-
-          clientId:
-            true,
-
-          title:
-            true,
-
-          number:
-            true,
-
-          administrativeNumber:
-            true,
-
-          practiceArea:
-            true,
-
-          status:
-            true,
-
-          updatedAt:
-            true,
-
-          client: {
-            select: {
-              id:
-                true,
-
-              name:
-                true,
-            },
+            name:
+              true,
           },
         },
+      },
 
-        orderBy: {
+      // id desempata: a mesma ordem em todas as páginas.
+      orderBy: [
+        {
           updatedAt:
             "desc",
         },
-      }),
-    ]);
+        {
+          id:
+            "asc",
+        },
+      ],
+
+      skip:
+        (currentPage - 1) *
+        CASES_PAGE_SIZE,
+
+      take:
+        CASES_PAGE_SIZE,
+    });
+
+  /*
+   * Links de página preservam busca e status.
+   */
+  function hrefForPage(
+    target: number,
+  ) {
+    const pageParams =
+      new URLSearchParams();
+
+    if (query) {
+      pageParams.set(
+        "q",
+        query,
+      );
+    }
+
+    if (selectedStatus) {
+      pageParams.set(
+        "status",
+        selectedStatus,
+      );
+    }
+
+    if (target > 1) {
+      pageParams.set(
+        "pagina",
+        String(target),
+      );
+    }
+
+    const queryString =
+      pageParams.toString();
+
+    return queryString
+      ? `/casos?${queryString}`
+      : "/casos";
+  }
 
   const hasFilters =
     Boolean(
@@ -518,9 +619,9 @@ export default async function CasesPage({
                 </h2>
 
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {cases.length === 1
+                  {filteredTotal === 1
                     ? "1 caso encontrado"
-                    : `${cases.length} casos encontrados`}
+                    : `${filteredTotal} casos encontrados`}
                 </p>
               </div>
             </div>
@@ -627,6 +728,28 @@ export default async function CasesPage({
               )}
             </div>
           )}
+
+          <PaginationBar
+            page={
+              currentPage
+            }
+            pageCount={
+              pageCount
+            }
+            total={
+              filteredTotal
+            }
+            shown={
+              cases.length
+            }
+            itemLabel={{
+              singular: "caso",
+              plural: "casos",
+            }}
+            hrefForPage={
+              hrefForPage
+            }
+          />
         </section>
       </div>
     </AppShell>

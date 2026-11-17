@@ -3,14 +3,24 @@
 import Link from "next/link";
 
 import {
+  useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
+  useTransition,
 } from "react";
+
+import {
+  usePathname,
+  useRouter,
+} from "next/navigation";
 
 import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  Loader2,
   MapPin,
   Search,
   UserRound,
@@ -22,8 +32,6 @@ import {
   type SortingState,
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 
@@ -69,22 +77,6 @@ type Client = {
       number;
   };
 };
-
-function normalizeText(
-  value:
-    string,
-): string {
-  return value
-    .normalize(
-      "NFD",
-    )
-    .replace(
-      /[\u0300-\u036f]/g,
-      "",
-    )
-    .toLowerCase()
-    .trim();
-}
 
 function onlyNumbers(
   value:
@@ -438,111 +430,226 @@ const columns: ColumnDef<Client>[] =
     },
   ];
 
+/*
+ * Coluna da tabela <-> valor de "ordem" na URL
+ * (mesmos valores aceitos por getClients).
+ */
+const SORT_PARAM_BY_COLUMN: Record<
+  string,
+  string
+> = {
+  name: "nome",
+  city: "cidade",
+  cases: "processos",
+};
+
+function sortParamToState(
+  sort: string,
+): SortingState {
+  const key =
+    sort.replace("-", "");
+
+  const columnId =
+    Object.entries(
+      SORT_PARAM_BY_COLUMN,
+    ).find(
+      ([, value]) =>
+        value === key,
+    )?.[0] ?? "name";
+
+  return [
+    {
+      id: columnId,
+      desc: sort.startsWith("-"),
+    },
+  ];
+}
+
+function sortStateToParam(
+  state: SortingState,
+): string {
+  const first = state[0];
+
+  if (!first) {
+    return "nome";
+  }
+
+  const key =
+    SORT_PARAM_BY_COLUMN[first.id] ??
+    "nome";
+
+  return first.desc
+    ? `-${key}`
+    : key;
+}
+
+type ClientsTableProps = {
+  clients: Client[];
+  total: number;
+  page: number;
+  pageCount: number;
+  query: string;
+  sort: string;
+};
+
+/*
+ * Busca, ordenação e paginação acontecem no servidor (getClients).
+ * Esta tabela só exibe a página recebida e atualiza a URL.
+ */
 export function ClientsTable({
   clients,
-}: {
-  clients:
-    Client[];
-}) {
+  total,
+  page,
+  pageCount,
+  query,
+  sort,
+}: ClientsTableProps) {
+  const router =
+    useRouter();
+
+  const pathname =
+    usePathname();
+
+  const [
+    isPending,
+    startTransition,
+  ] =
+    useTransition();
+
   const [
     search,
     setSearch,
   ] =
-    useState("");
+    useState(query);
 
-  const [
-    sorting,
-    setSorting,
-  ] =
-    useState<SortingState>(
-      [],
-    );
+  // Último termo enviado por esta tela (para não sobrescrever a digitação).
+  const lastSentQuery =
+    useRef(query);
 
-  const filteredClients =
-    useMemo(
-      () => {
-        const term =
-          normalizeText(
-            search,
-          );
+  // Voltar/avançar no navegador: o campo acompanha a URL.
+  useEffect(() => {
+    if (
+      query !==
+      lastSentQuery.current
+    ) {
+      lastSentQuery.current =
+        query;
 
-        const numericTerm =
-          onlyNumbers(
-            search,
-          );
+      setSearch(query);
+    }
+  }, [query]);
 
-        if (
-          !term
-        ) {
-          return clients;
+  const navigate =
+    useCallback(
+      (
+        changes: Record<
+          string,
+          string | null
+        >,
+        mode:
+          | "push"
+          | "replace" = "push",
+      ) => {
+        const params =
+          new URLSearchParams();
+
+        const current: Record<
+          string,
+          string | null
+        > = {
+          q: query || null,
+          ordem:
+            sort === "nome"
+              ? null
+              : sort,
+          pagina:
+            page > 1
+              ? String(page)
+              : null,
+          ...changes,
+        };
+
+        for (const [
+          key,
+          value,
+        ] of Object.entries(
+          current,
+        )) {
+          if (value) {
+            params.set(
+              key,
+              value,
+            );
+          }
         }
 
-        return clients.filter(
-          (
-            client,
-          ) => {
-            const searchableText =
-              normalizeText(
-                [
-                  client.name,
-                  client.city,
-                  client.state,
-                ]
-                  .filter(
-                    Boolean,
-                  )
-                  .join(
-                    " ",
-                  ),
-              );
+        const queryString =
+          params.toString();
 
-            const searchableNumbers =
-              [
-                client.cpf,
-                client.phone,
-                client.whatsapp,
-              ]
-                .filter(
-                  Boolean,
-                )
-                .map(
-                  (
-                    value,
-                  ) =>
-                    onlyNumbers(
-                      String(
-                        value,
-                      ),
-                    ),
-                )
-                .join(
-                  " ",
-                );
-
-            return (
-              searchableText.includes(
-                term,
-              ) ||
-              Boolean(
-                numericTerm &&
-                  searchableNumbers.includes(
-                    numericTerm,
-                  ),
-              )
-            );
-          },
-        );
+        startTransition(() => {
+          router[mode](
+            queryString
+              ? `${pathname}?${queryString}`
+              : pathname,
+            {
+              scroll: false,
+            },
+          );
+        });
       },
       [
-        clients,
-        search,
+        page,
+        pathname,
+        query,
+        router,
+        sort,
       ],
+    );
+
+  // Só consulta o servidor quando a pessoa para de digitar.
+  useEffect(() => {
+    const trimmed =
+      search.trim();
+
+    if (
+      trimmed ===
+      lastSentQuery.current
+    ) {
+      return;
+    }
+
+    const timer =
+      setTimeout(() => {
+        lastSentQuery.current =
+          trimmed;
+
+        navigate(
+          {
+            q: trimmed || null,
+            pagina: null,
+          },
+          "replace",
+        );
+      }, 350);
+
+    return () =>
+      clearTimeout(timer);
+  }, [
+    navigate,
+    search,
+  ]);
+
+  const sorting =
+    useMemo(
+      () =>
+        sortParamToState(sort),
+      [sort],
     );
 
   const table =
     useReactTable({
       data:
-        filteredClients,
+        clients,
 
       columns,
 
@@ -550,37 +657,64 @@ export function ClientsTable({
         sorting,
       },
 
-      onSortingChange:
-        setSorting,
+      manualSorting:
+        true,
+
+      manualPagination:
+        true,
+
+      pageCount,
+
+      onSortingChange: (
+        updater,
+      ) => {
+        const next =
+          typeof updater ===
+          "function"
+            ? updater(sorting)
+            : updater;
+
+        const param =
+          sortStateToParam(next);
+
+        navigate({
+          ordem:
+            param === "nome"
+              ? null
+              : param,
+          pagina: null,
+        });
+      },
 
       getCoreRowModel:
         getCoreRowModel(),
-
-      getSortedRowModel:
-        getSortedRowModel(),
-
-      getPaginationRowModel:
-        getPaginationRowModel(),
-
-      initialState: {
-        pagination: {
-          pageSize:
-            8,
-        },
-      },
     });
 
-  const currentPage =
-    table.getState()
-      .pagination
-      .pageIndex +
-    1;
+  function goToPage(
+    target: number,
+  ) {
+    navigate({
+      pagina:
+        target > 1
+          ? String(target)
+          : null,
+    });
+  }
 
-  const pageCount =
-    Math.max(
-      table.getPageCount(),
-      1,
+  function clearSearch() {
+    setSearch("");
+
+    lastSentQuery.current =
+      "";
+
+    navigate(
+      {
+        q: null,
+        pagina: null,
+      },
+      "replace",
     );
+  }
 
   return (
     <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
@@ -622,14 +756,18 @@ export function ClientsTable({
                     .target
                     .value,
                 );
-
-                table.setPageIndex(
-                  0,
-                );
               }}
               placeholder="Buscar cliente..."
-              className="h-10 bg-background pl-9"
+              aria-label="Buscar cliente por nome, CPF, telefone ou cidade"
+              className="h-10 bg-background pl-9 pr-9"
             />
+
+            {isPending ? (
+              <Loader2
+                className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground"
+                aria-label="Carregando"
+              />
+            ) : null}
           </div>
         </div>
       </div>
@@ -640,24 +778,18 @@ export function ClientsTable({
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3 sm:px-6">
         <p className="text-sm text-muted-foreground">
-          {filteredClients.length ===
+          {total ===
           1
             ? "1 cliente encontrado"
-            : `${filteredClients.length} clientes encontrados`}
+            : `${total} clientes encontrados`}
         </p>
 
         {search ? (
           <button
             type="button"
-            onClick={() => {
-              setSearch(
-                "",
-              );
-
-              table.setPageIndex(
-                0,
-              );
-            }}
+            onClick={
+              clearSearch
+            }
             className="text-xs font-medium text-primary transition hover:underline"
           >
             Limpar busca
@@ -669,7 +801,12 @@ export function ClientsTable({
           TABELA
       ========================== */}
 
-      <div className="overflow-x-auto">
+      <div
+        className={`overflow-x-auto transition-opacity ${isPending ? "opacity-60" : ""}`}
+        aria-busy={
+          isPending
+        }
+      >
         <Table>
           <TableHeader>
             {table
@@ -806,7 +943,7 @@ export function ClientsTable({
           de{" "}
           <span className="font-medium text-foreground">
             {
-              filteredClients.length
+              total
             }
           </span>{" "}
           clientes
@@ -817,7 +954,7 @@ export function ClientsTable({
             Página{" "}
             <span className="font-medium text-foreground">
               {
-                currentPage
+                page
               }
             </span>{" "}
             de{" "}
@@ -835,10 +972,13 @@ export function ClientsTable({
               size="sm"
               className="size-9 p-0"
               onClick={() =>
-                table.previousPage()
+                goToPage(
+                  page - 1,
+                )
               }
               disabled={
-                !table.getCanPreviousPage()
+                page <= 1 ||
+                isPending
               }
               aria-label="Página anterior"
             >
@@ -851,10 +991,13 @@ export function ClientsTable({
               size="sm"
               className="size-9 p-0"
               onClick={() =>
-                table.nextPage()
+                goToPage(
+                  page + 1,
+                )
               }
               disabled={
-                !table.getCanNextPage()
+                page >= pageCount ||
+                isPending
               }
               aria-label="Próxima página"
             >

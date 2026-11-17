@@ -17,7 +17,17 @@ import {
   requireWorkspacePagePermission,
 } from "@/lib/permissions";
 
-export default async function ClientesPage() {
+type Props = {
+  searchParams: Promise<{
+    q?: string;
+    pagina?: string;
+    ordem?: string;
+  }>;
+};
+
+export default async function ClientesPage({
+  searchParams,
+}: Props) {
   const {
     membership,
   } =
@@ -31,8 +41,26 @@ export default async function ClientesPage() {
       "CLIENT_CREATE",
     );
 
-  const clients =
-    await getClients();
+  const params =
+    await searchParams;
+
+  /*
+   * Busca, página e ordenação ficam na URL:
+   * o banco devolve só a página pedida.
+   */
+  const result =
+    await getClients({
+      q:
+        params.q ?? "",
+
+      page:
+        Number(
+          params.pagina ?? "1",
+        ),
+
+      sort:
+        params.ordem,
+    });
 
   return (
     <AppShell>
@@ -61,7 +89,22 @@ export default async function ClientesPage() {
         <div className="rounded-xl border bg-card">
           <ClientsTable
             clients={
-              clients
+              result.clients
+            }
+            total={
+              result.total
+            }
+            page={
+              result.page
+            }
+            pageCount={
+              result.pageCount
+            }
+            query={
+              result.q
+            }
+            sort={
+              result.sort
             }
           />
         </div>
