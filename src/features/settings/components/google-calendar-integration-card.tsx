@@ -158,7 +158,7 @@ export function GoogleCalendarIntegrationCard({
         }
 
         setSuccessMessage(
-          `Sincronização concluída: ${result.imported} importado(s), ${result.updated} atualizado(s), ${result.cancelled} cancelado(s) e ${result.exported} enviado(s) ao Google.`,
+          `Sincronização concluída: ${result.exported} enviado(s) ao Google, ${result.updated} atualizado(s) e ${result.cancelled} cancelado(s) a partir do Google.`,
         );
 
         window.location.reload();
@@ -234,6 +234,10 @@ export function GoogleCalendarIntegrationCard({
 
             <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
               Mantenha prazos, audiências, perícias e outros compromissos sincronizados entre o LexFlow e o Google Agenda.
+            </p>
+
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              Só os compromissos criados no LexFlow são sincronizados. Eventos pessoais do seu Google Agenda não aparecem para o escritório.
             </p>
           </div>
         </div>
@@ -369,7 +373,7 @@ export function GoogleCalendarIntegrationCard({
             </p>
 
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Conecte uma conta para enviar compromissos do LexFlow ao Google Agenda e trazer alterações do calendário para o sistema.
+              Conecte uma conta para enviar compromissos do LexFlow ao Google Agenda e receber as alterações feitas neles pelo calendário. Seus eventos pessoais não são trazidos para o LexFlow.
             </p>
 
             {email ? (

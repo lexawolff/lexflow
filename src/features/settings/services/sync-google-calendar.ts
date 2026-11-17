@@ -507,6 +507,31 @@ async function applyGoogleEvent(
   }
 
   /*
+   * Só sincronizamos compromissos do
+   * LexFlow: eventos com a marca do
+   * LexFlow ou ligados a uma Task que
+   * nasceu no LexFlow (versões antigas
+   * publicavam sem a marca).
+   *
+   * Eventos pessoais criados direto no
+   * Google nunca viram Tasks: a agenda
+   * do escritório é vista por toda a
+   * equipe.
+   */
+  if (
+    !tag.isTagged &&
+    existingTask?.source !==
+      TaskSource.LEXFLOW
+  ) {
+    return {
+      imported: 0,
+      updated: 0,
+      cancelled: 0,
+      skippedRecurring: 0,
+    };
+  }
+
+  /*
    * Uma conexão Google não pode assumir
    * uma Task que já está vinculada a
    * outra conexão do mesmo workspace.

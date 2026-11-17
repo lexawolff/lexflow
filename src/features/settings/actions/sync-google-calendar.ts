@@ -74,9 +74,11 @@ export async function syncGoogleCalendarAction(): Promise<SyncGoogleCalendarActi
     );
 
   /*
-   * A sincronização pode importar
-   * novos compromissos e também
-   * atualizar/cancelar existentes.
+   * A sincronização envia compromissos
+   * do LexFlow ao Google e também
+   * atualiza/cancela os existentes.
+   * Eventos pessoais do Google não são
+   * importados.
    */
   if (
     !canCreateAgenda ||
