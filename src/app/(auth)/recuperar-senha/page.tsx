@@ -17,7 +17,7 @@ import {
 } from "@/features/auth/components/request-password-reset-form";
 
 export const metadata: Metadata = {
-  title: "Recuperar senha | LexFlow",
+  title: "Recuperar senha",
 };
 
 export default function RecuperarSenhaPage() {

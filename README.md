@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LexFlow
 
-## Getting Started
+Gestão jurídica para escritórios de advocacia, com foco em direito
+previdenciário: clientes, processos, agenda (com Google Agenda), documentos,
+financeiro (recebimentos, RPVs/precatórios, contas a pagar), fila de trabalho
+e equipe com permissões por função.
 
-First, run the development server:
+Documentação do produto em [`docs/`](docs/).
+
+## Tecnologias
+
+- Next.js 15 (App Router, Server Actions) e React 19
+- Prisma 6 + PostgreSQL no Supabase (região São Paulo)
+- Supabase Auth (login) e Supabase Storage (documentos)
+- Tailwind CSS 4 e shadcn/ui
+
+## Rodando no computador
+
+1. Instale as dependências (também gera o Prisma Client):
+   ```bash
+   npm install
+   ```
+2. Copie `.env.example` para `.env` e preencha os valores.
+3. Aplique as migrations no banco:
+   ```bash
+   npx prisma migrate deploy
+   ```
+4. Inicie:
+   ```bash
+   npm run dev
+   ```
+   e abra http://localhost:3000.
+
+## Comandos
+
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | servidor de desenvolvimento |
+| `npm run build` | build de produção |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | checagem de tipos (TypeScript) |
+| `npx prisma migrate deploy` | aplica migrations pendentes |
+
+## Testes
+
+Os testes ficam em [`verificacao/`](verificacao/) e executam o código real com
+banco e Supabase simulados (não acessam nada externo):
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+node --test verificacao/test-pre-publicacao.mjs verificacao/test-convites.mjs verificacao/test-datas-upload.mjs
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`test-audit.mjs` e `test-gov-ui.mjs` exigem Node 22.13 ou superior.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Banco de dados
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Toda alteração de estrutura é feita por migration em `prisma/migrations`.
+- Todas as tabelas têm RLS ativo e nenhum acesso para os papéis públicos do
+  Supabase (`anon`/`authenticated`); o app acessa o banco só pelo Prisma.
+  Migrations novas que criam tabelas devem incluir
+  `ALTER TABLE "NovaTabela" ENABLE ROW LEVEL SECURITY;`.
+- Conferência de segurança (somente leitura, no SQL Editor do Supabase):
+  [`verificacao/supabase-somente-leitura.sql`](verificacao/supabase-somente-leitura.sql).
 
-## Learn More
+## Publicação (Vercel)
 
-To learn more about Next.js, take a look at the following resources:
+1. Importe o repositório na Vercel (plano Pro para uso comercial).
+2. Cadastre as variáveis do `.env.example` em *Settings → Environment
+   Variables*, com `DATABASE_URL` no pooler em modo transação (porta 6543).
+3. As funções rodam em São Paulo (`gru1`, ver `vercel.json`), mesma região do
+   banco.
+4. No Supabase, em *Authentication → URL Configuration*: troque o **Site URL**
+   pelo domínio de produção e adicione `https://SEU_DOMINIO/**` em
+   **Redirect URLs** (nunca use curingas como `*.vercel.app`).
+5. No Google Cloud, cadastre `https://SEU_DOMINIO/api/google-calendar/callback`
+   e publique o app OAuth (em modo "Testing" a conexão expira a cada 7 dias).
+6. Configure um SMTP próprio no Supabase para os e-mails de recuperação de senha.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Segredos
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`ENCRYPTION_KEY` (senhas Gov.br) e `APP_ENCRYPTION_KEY` (tokens do Google)
+cifram dados gravados no banco. Guarde cópias seguras e nunca as troque em um
+banco que já tem dados: os dados cifrados ficariam ilegíveis.

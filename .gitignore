@@ -33,6 +33,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 .env
+# modelo sem segredos, versionado de propósito
+!.env.example
+
+# cópias locais do projeto
+/lexflow-revisao.zip
 
 # vercel
 .vercel

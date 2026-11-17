@@ -23,7 +23,7 @@ import {
 } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Nova senha | LexFlow",
+  title: "Nova senha",
 };
 
 /*

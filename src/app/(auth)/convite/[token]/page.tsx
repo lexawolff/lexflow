@@ -46,7 +46,7 @@ import {
 } from "@/lib/prisma";
 
 export const metadata: Metadata = {
-  title: "Convite | LexFlow",
+  title: "Convite",
   robots: {
     index: false,
     follow: false,
