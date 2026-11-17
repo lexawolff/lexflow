@@ -7,6 +7,14 @@ import {
 
 import Link from "next/link";
 
+import {
+  PaginationBar,
+} from "@/components/pagination/pagination-bar";
+
+import {
+  useListPagination,
+} from "@/components/pagination/use-list-pagination";
+
 import type {
   FinancialStatus,
 } from "@prisma/client";
@@ -618,6 +626,21 @@ export function OfficeReceivablesList({
     "TODOS" ||
     Boolean(search);
 
+  /*
+   * Mostra 20 itens por vez (grupo de parcelas conta como um item).
+   * Mudar qualquer filtro volta para a página 1.
+   */
+  const pagination =
+    useListPagination(
+      displayUnits,
+      [
+        clientFilter,
+        statusFilter,
+        periodFilter,
+        normalizedSearch,
+      ].join("|"),
+    );
+
   return (
     <section className="space-y-5">
       <div className="flex items-start gap-3">
@@ -817,7 +840,7 @@ export function OfficeReceivablesList({
         </div>
       ) : (
         <div className="space-y-3">
-          {displayUnits.map(
+          {pagination.pageItems.map(
             (unit) => {
               if (
                 unit.kind ===
@@ -859,6 +882,30 @@ export function OfficeReceivablesList({
               );
             },
           )}
+
+          <div className="overflow-hidden rounded-2xl border">
+            <PaginationBar
+              page={
+                pagination.page
+              }
+              pageCount={
+                pagination.pageCount
+              }
+              total={
+                pagination.total
+              }
+              shown={
+                pagination.pageItems.length
+              }
+              itemLabel={{
+                singular: "lançamento",
+                plural: "lançamentos",
+              }}
+              onPageChange={
+                pagination.setPage
+              }
+            />
+          </div>
         </div>
       )}
     </section>

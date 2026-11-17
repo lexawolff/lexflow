@@ -7,6 +7,14 @@ import {
 
 import Link from "next/link";
 
+import {
+  PaginationBar,
+} from "@/components/pagination/pagination-bar";
+
+import {
+  useListPagination,
+} from "@/components/pagination/use-list-pagination";
+
 import type {
   ReactNode,
 } from "react";
@@ -430,6 +438,19 @@ export function OfficeRpvDashboard({
     typeFilter !==
     "TODOS";
 
+  /*
+   * Mostra 20 requisições por vez; mudar um filtro volta para a página 1.
+   */
+  const pagination =
+    useListPagination(
+      filtered,
+      [
+        statusFilter,
+        typeFilter,
+        normalizedSearch,
+      ].join("|"),
+    );
+
   return (
     <div className="space-y-8">
       <section>
@@ -666,7 +687,7 @@ export function OfficeRpvDashboard({
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map(
+            {pagination.pageItems.map(
               (rpv) => (
                 <RpvCard
   key={
@@ -681,6 +702,30 @@ export function OfficeRpvDashboard({
 />
               ),
             )}
+
+            <div className="overflow-hidden rounded-2xl border">
+              <PaginationBar
+                page={
+                  pagination.page
+                }
+                pageCount={
+                  pagination.pageCount
+                }
+                total={
+                  pagination.total
+                }
+                shown={
+                  pagination.pageItems.length
+                }
+                itemLabel={{
+                  singular: "requisição",
+                  plural: "requisições",
+                }}
+                onPageChange={
+                  pagination.setPage
+                }
+              />
+            </div>
           </div>
         )}
       </section>

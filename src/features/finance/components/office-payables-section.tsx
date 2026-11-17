@@ -5,6 +5,14 @@ import {
   useState,
 } from "react";
 
+import {
+  PaginationBar,
+} from "@/components/pagination/pagination-bar";
+
+import {
+  useListPagination,
+} from "@/components/pagination/use-list-pagination";
+
 import type {
   ReactNode,
 } from "react";
@@ -681,6 +689,20 @@ export function OfficePayablesSection({
     categoryFilter !==
     "TODAS";
 
+  /*
+   * Mostra 20 contas por vez; mudar um filtro volta para a página 1.
+   */
+  const pagination =
+    useListPagination(
+      filtered,
+      [
+        statusFilter,
+        periodFilter,
+        categoryFilter,
+        normalizedSearch,
+      ].join("|"),
+    );
+
   return (
     <div className="space-y-8">
       {/* ==========================
@@ -1034,7 +1056,7 @@ export function OfficePayablesSection({
           />
         ) : (
           <div className="space-y-3">
-            {filtered.map(
+            {pagination.pageItems.map(
               (payable) => (
                 <PayableCard
                   key={
@@ -1049,6 +1071,30 @@ export function OfficePayablesSection({
                 />
               ),
             )}
+
+            <div className="overflow-hidden rounded-2xl border">
+              <PaginationBar
+                page={
+                  pagination.page
+                }
+                pageCount={
+                  pagination.pageCount
+                }
+                total={
+                  pagination.total
+                }
+                shown={
+                  pagination.pageItems.length
+                }
+                itemLabel={{
+                  singular: "conta",
+                  plural: "contas",
+                }}
+                onPageChange={
+                  pagination.setPage
+                }
+              />
+            </div>
           </div>
         )}
       </section>
