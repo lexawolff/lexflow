@@ -3,11 +3,11 @@
  * o navegador (aviso imediato) e o
  * servidor (validação definitiva).
  *
- * O limite precisa ficar ABAIXO de
- * experimental.serverActions.bodySizeLimit
- * e experimental.middlewareClientMaxBodySize
- * em next.config.ts (16 MB), pois o envio
- * multipart adiciona alguns bytes.
+ * O arquivo vai direto do navegador para o
+ * Supabase Storage. O mesmo limite (15 MB)
+ * deve estar configurado no bucket
+ * "documents" (file_size_limit), que o
+ * aplica no próprio upload.
  */
 export const MAX_DOCUMENT_SIZE_MB = 15;
 

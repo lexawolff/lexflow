@@ -1,9 +1,15 @@
 "use client";
 
-import { FormEvent, useRef, useTransition } from "react";
+import { FormEvent, useRef, useState, useTransition } from "react";
+import type { DocumentCategory } from "@prisma/client";
 import { toast } from "sonner";
 
-import { uploadDocument } from "../actions/upload-document";
+import { createClient } from "@/lib/supabase/client";
+
+import {
+  prepareDocumentUpload,
+  registerUploadedDocument,
+} from "../actions/upload-document";
 import { DOCUMENT_CATEGORY_OPTIONS } from "../document-category";
 import {
   DOCUMENT_INPUT_ACCEPT,
@@ -28,55 +34,113 @@ export function UploadDocumentForm({
 
   const [isPending, startTransition] = useTransition();
 
+  const [stage, setStage] = useState<string | null>(null);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const form = event.currentTarget;
     const formData = new FormData(form);
 
+    const file = formData.get("file");
+
+    if (!(file instanceof File) || file.size === 0) {
+      toast.error("Selecione um arquivo.");
+      return;
+    }
+
     /*
      * Validamos antes de enviar para não
      * transferir um arquivo que o servidor
      * vai recusar (o servidor valida de novo).
      */
-    const file = formData.get("file");
+    const fileError = validateDocumentFile(file);
 
-    if (file instanceof File) {
-      const fileError = validateDocumentFile(file);
-
-      if (fileError) {
-        toast.error(fileError);
-        return;
-      }
+    if (fileError) {
+      toast.error(fileError);
+      return;
     }
 
-    startTransition(async () => {
-      let result: Awaited<ReturnType<typeof uploadDocument>>;
+    const categoryValue = formData.get("category");
 
+    const category =
+      typeof categoryValue === "string" && categoryValue
+        ? (categoryValue as DocumentCategory)
+        : undefined;
+
+    startTransition(async () => {
       try {
-        result = await uploadDocument(formData);
+        // 1. O servidor confere permissão e autoriza o upload.
+        setStage("Preparando...");
+
+        const prepared = await prepareDocumentUpload({
+          clientId,
+          category,
+          fileName: file.name,
+          size: file.size,
+        });
+
+        if (!prepared.success) {
+          toast.error(prepared.message);
+          return;
+        }
+
+        // 2. O arquivo vai direto do navegador para o Storage.
+        setStage("Enviando arquivo...");
+
+        const { error: uploadError } = await createClient()
+          .storage
+          .from("documents")
+          .uploadToSignedUrl(
+            prepared.data.storagePath,
+            prepared.data.token,
+            file,
+            {
+              contentType: file.type || "application/octet-stream",
+            },
+          );
+
+        if (uploadError) {
+          console.error(uploadError);
+
+          toast.error(
+            "Não foi possível enviar o arquivo. Verifique sua conexão e tente novamente."
+          );
+
+          return;
+        }
+
+        // 3. O servidor confere o arquivo no Storage e registra.
+        setStage("Registrando...");
+
+        const result = await registerUploadedDocument({
+          clientId,
+          category,
+          originalName: file.name,
+          storagePath: prepared.data.storagePath,
+        });
+
+        if (!result.success) {
+          toast.error(result.message);
+          return;
+        }
+
+        toast.success(
+          result.message ?? "Documento enviado com sucesso."
+        );
+
+        formRef.current?.reset();
+
+        onSuccess?.();
       } catch (error) {
         console.error(error);
 
         toast.error(
           "Não foi possível enviar o documento. Verifique sua conexão e tente novamente."
         );
-
-        return;
+      } finally {
+        setStage(null);
       }
-
-      if (!result.success) {
-        toast.error(result.message);
-        return;
-      }
-
-      toast.success(
-        result.message ?? "Documento enviado com sucesso."
-      );
-
-      formRef.current?.reset();
-
-      onSuccess?.();
     });
   }
 
@@ -151,7 +215,7 @@ export function UploadDocumentForm({
           type="submit"
           disabled={isPending}
         >
-          {isPending ? "Enviando..." : "Enviar documento"}
+          {isPending ? stage ?? "Enviando..." : "Enviar documento"}
         </Button>
       </div>
     </form>
