@@ -22,6 +22,11 @@ import {
   ActionError,
 } from "@/lib/actions/action-error";
 
+import {
+  isWorkspaceReadOnly,
+  TRIAL_ENDED_MESSAGE,
+} from "@/lib/trial";
+
 export type Permission =
   | "CLIENT_VIEW"
   | "CLIENT_CREATE"
@@ -226,6 +231,42 @@ export function hasPermission(
   );
 }
 
+/*
+ * Com o teste grátis encerrado, o escritório fica só para consulta. Continuam
+ * liberados ver os dados, cuidar da cobrança e gerenciar a equipe, para que o
+ * proprietário possa retirar o acesso de quem saiu.
+ */
+export function isAllowedWhileReadOnly(
+  permission: Permission,
+) {
+  return (
+    permission.endsWith("_VIEW") ||
+    permission === "BILLING_MANAGE" ||
+    permission === "TEAM_MANAGE"
+  );
+}
+
+export function canUsePermission(
+  member: {
+    role: UserRole;
+    workspaceReadOnly: boolean;
+  },
+  permission: Permission,
+) {
+  return (
+    hasPermission(
+      member.role,
+      permission,
+    ) &&
+    (
+      !member.workspaceReadOnly ||
+      isAllowedWhileReadOnly(
+        permission,
+      )
+    )
+  );
+}
+
 async function getCurrentWorkspaceAccessUncached() {
   const userId =
     await getCurrentAuthUserId();
@@ -249,8 +290,19 @@ async function getCurrentWorkspaceAccessUncached() {
         user:
           true,
 
-        workspace:
-          true,
+        workspace: {
+          include: {
+            subscription: {
+              select: {
+                status:
+                  true,
+
+                trialEndsAt:
+                  true,
+              },
+            },
+          },
+        },
       },
 
       orderBy: {
@@ -265,14 +317,33 @@ async function getCurrentWorkspaceAccessUncached() {
     );
   }
 
+  const {
+    subscription,
+    ...workspace
+  } =
+    membership.workspace;
+
+  const readOnly =
+    isWorkspaceReadOnly(
+      subscription,
+    );
+
   return {
     user:
       membership.user,
 
-    workspace:
-      membership.workspace,
+    workspace,
 
-    membership,
+    membership: {
+      ...membership,
+
+      workspace,
+
+      workspaceReadOnly:
+        readOnly,
+    },
+
+    readOnly,
   };
 }
 
@@ -304,6 +375,17 @@ export async function requireWorkspacePermission(
     );
   }
 
+  if (
+    !canUsePermission(
+      access.membership,
+      permission,
+    )
+  ) {
+    throw new ActionError(
+      TRIAL_ENDED_MESSAGE,
+    );
+  }
+
   return access;
 }
 
@@ -328,6 +410,19 @@ export async function requireWorkspacePagePermission(
   ) {
     redirect(
       "/sem-acesso",
+    );
+  }
+
+  // A página do escritório continua visível, com os campos bloqueados.
+  if (
+    permission !== "OFFICE_MANAGE" &&
+    !canUsePermission(
+      access.membership,
+      permission,
+    )
+  ) {
+    redirect(
+      "/assinar",
     );
   }
 

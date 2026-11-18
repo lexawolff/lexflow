@@ -26,6 +26,10 @@ function isPublicRoute(
     ) ||
     pathname.startsWith(
       "/auth/",
+    ) ||
+    // Protegida pelo CRON_SECRET na própria rota.
+    pathname.startsWith(
+      "/api/cron/",
     )
   );
 }

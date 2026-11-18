@@ -1,6 +1,11 @@
 "use server";
 
 import {
+  isValidTaxId,
+  normalizeTaxId,
+} from "@/lib/br-documents";
+
+import {
   revalidatePath,
 } from "next/cache";
 
@@ -130,14 +135,15 @@ export async function updateBillingProfileAction(
     ).toUpperCase();
 
   const taxId =
-    digits(
+    normalizeTaxId(
       taxIdRaw,
     );
 
   if (
     taxId &&
-    taxId.length !== 11 &&
-    taxId.length !== 14
+    !isValidTaxId(
+      taxId,
+    )
   ) {
     return {
       success: false,

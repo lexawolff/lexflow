@@ -71,7 +71,7 @@ test('logs não contêm mensagens, tokens ou dados de resposta',()=>{
   assert.deepEqual(normalized(safeErrorSummary(null)),{status:null,code:null});
 });
 test('cadastro público em produção fica fechado sem SIGNUP_ENABLED e não acessa Auth/banco',async()=>{
-  const {isSignupEnabled}=load('features/auth/lib/signup.ts',['isSignupEnabled'],{process:{env:{NODE_ENV:'production'}}});
+  const {isSignupEnabled}=load('features/auth/lib/signup.ts',['isSignupEnabled'],{process:{env:{NODE_ENV:'production'}},LEGAL_CONTACT_EMAIL:'contato@example.com'});
   const {signUpAction}=load('features/auth/actions/signup.ts',['signUpAction'],{isSignupEnabled,createClient:async()=>{throw Error('não deveria acessar o Supabase');}});
   assert.match((await signUpAction({},new FormData())).error,/não está disponível/);
 });

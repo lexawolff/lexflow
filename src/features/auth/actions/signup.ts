@@ -1,8 +1,16 @@
 "use server";
 
 import {
+  encryptSecret,
+} from "@/lib/crypto";
+
+import {
   redirect,
 } from "next/navigation";
+
+import {
+  createAdminClient,
+} from "@/lib/supabase/admin";
 
 import {
   createClient,
@@ -17,8 +25,11 @@ import {
 } from "../lib/auth-error-message";
 
 import {
+  isDevConfirmationLinkEnabled,
   isSignupEnabled,
   provisionSignupAccount,
+  refreshSessionAfterSignup,
+  SIGNUP_REJECTED_MESSAGE,
 } from "../lib/signup";
 
 import {
@@ -30,14 +41,54 @@ import {
   signUpSchema,
 } from "../schemas/auth-schema";
 
+import {
+  getSignUpFieldErrors,
+  SIGN_UP_FIELDS,
+  type SignUpFieldErrors,
+} from "../lib/signup-validation";
+
 export type SignUpState = {
   error: string | null;
   // E-mail para o qual a confirmação foi enviada ("" = não mostrar).
   sentTo: string | null;
+  // Erros ligados a um campo específico do formulário.
+  fieldErrors?: SignUpFieldErrors;
+  // Só em desenvolvimento: confirma o cadastro sem depender de e-mail.
+  devConfirmationUrl?: string;
 };
 
 const SIGNUP_CLOSED_MESSAGE =
   "O cadastro de novos escritórios não está disponível no momento.";
+
+function textField(
+  formData: FormData,
+  name: string,
+): string {
+  const value = formData.get(name);
+
+  return typeof value === "string" ? value : "";
+}
+
+function signupFieldError(
+  error: { code?: string },
+  message: string,
+): SignUpFieldErrors | undefined {
+  if (
+    error.code === "user_already_exists" ||
+    error.code === "email_exists"
+  ) {
+    return { email: message };
+  }
+
+  if (
+    error.code === "weak_password" ||
+    error.code === "same_password"
+  ) {
+    return { password: message };
+  }
+
+  return undefined;
+}
 
 function signupErrorMessage(
   error: { code?: string; status?: number },
@@ -57,6 +108,23 @@ function signupErrorMessage(
     error,
     "Não foi possível criar a conta. Tente novamente.",
   );
+}
+
+function signUpFailure(
+  error: { code?: string; status?: number },
+): SignUpState {
+  console.error(
+    "Falha no cadastro de escritório:",
+    error.code ?? error.status ?? "sem código",
+  );
+
+  const message = signupErrorMessage(error);
+
+  return {
+    error: message,
+    sentTo: null,
+    fieldErrors: signupFieldError(error, message),
+  };
 }
 
 /*
@@ -86,27 +154,53 @@ export async function signUpAction(
     };
   }
 
-  const parsed = signUpSchema.safeParse({
-    officeName: formData.get("officeName"),
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-    passwordConfirm: formData.get("passwordConfirm"),
+  const values = {
+    officeName: textField(formData, "officeName"),
+    taxId: textField(formData, "taxId"),
+    city: textField(formData, "city"),
+    state: textField(formData, "state"),
+    name: textField(formData, "name"),
+    whatsapp: textField(formData, "whatsapp"),
+    oabNumber: textField(formData, "oabNumber"),
+    oabState: textField(formData, "oabState"),
+    email: textField(formData, "email"),
+    password: textField(formData, "password"),
+    passwordConfirm: textField(formData, "passwordConfirm"),
     acceptTerms: formData.get("acceptTerms") ?? undefined,
-  });
+  };
+
+  const fieldErrors = getSignUpFieldErrors(values);
+
+  const firstError = SIGN_UP_FIELDS
+    .map((field) => fieldErrors[field])
+    .find(Boolean);
+
+  if (firstError) {
+    return {
+      error: firstError,
+      sentTo: null,
+      fieldErrors,
+    };
+  }
+
+  const parsed = signUpSchema.safeParse(values);
 
   if (!parsed.success) {
     return {
-      error:
-        parsed.error.issues[0]?.message ??
-        "Dados inválidos.",
+      error: "Dados inválidos.",
       sentTo: null,
     };
   }
 
   const {
     officeName,
+    taxId,
+    city,
+    state,
     name,
+    whatsapp,
+    oabNumber,
+    oabState,
     email,
     password,
   } = parsed.data;
@@ -114,32 +208,60 @@ export async function signUpAction(
   const supabase = await createClient();
   const origin = await getAppOrigin();
 
+  const metadata = {
+    name,
+    signup_office_name: officeName,
+    // Fica aqui só até a confirmação do e-mail, sempre cifrado.
+    signup_tax_id: encryptSecret(taxId),
+    // Opcionais; também são apagados depois da confirmação.
+    signup_whatsapp: whatsapp,
+    signup_city: city,
+    signup_state: state,
+    signup_oab_number: oabNumber,
+    signup_oab_state: oabState,
+    // Aceite registrado pelo servidor, não pelo navegador.
+    terms_version: LEGAL_VERSION,
+    terms_accepted_at: new Date().toISOString(),
+  };
+
+  if (isDevConfirmationLinkEnabled()) {
+    const { data, error } =
+      await createAdminClient().auth.admin.generateLink({
+        type: "signup",
+        email,
+        password,
+        options: { data: metadata },
+      });
+
+    if (error) {
+      return signUpFailure(error);
+    }
+
+    const params = new URLSearchParams({
+      token_hash: data.properties.hashed_token,
+      type: data.properties.verification_type,
+      next: "/dashboard",
+    });
+
+    return {
+      error: null,
+      sentTo: email,
+      devConfirmationUrl: `${origin}/auth/callback?${params}`,
+    };
+  }
+
   const { data, error } =
     await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${origin}/auth/callback?next=/dashboard`,
-        data: {
-          name,
-          signup_office_name: officeName,
-          // Aceite registrado pelo servidor, não pelo navegador.
-          terms_version: LEGAL_VERSION,
-          terms_accepted_at: new Date().toISOString(),
-        },
+        data: metadata,
       },
     });
 
   if (error) {
-    console.error(
-      "Falha no cadastro de escritório:",
-      error.code ?? error.status ?? "sem código",
-    );
-
-    return {
-      error: signupErrorMessage(error),
-      sentTo: null,
-    };
+    return signUpFailure(error);
   }
 
   /*
@@ -156,6 +278,19 @@ export async function signUpAction(
         error: "Não foi possível concluir o cadastro. Tente novamente.",
         sentTo: null,
       };
+    }
+
+    if (result === "rejected") {
+      await supabase.auth.signOut({ scope: "local" });
+
+      return {
+        error: SIGNUP_REJECTED_MESSAGE,
+        sentTo: null,
+      };
+    }
+
+    if (result === "created") {
+      await refreshSessionAfterSignup(supabase);
     }
 
     redirect("/dashboard");

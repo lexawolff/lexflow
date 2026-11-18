@@ -14,6 +14,8 @@ import {
 
 import {
   provisionSignupAccount,
+  refreshSessionAfterSignup,
+  SIGNUP_REJECTED_MESSAGE,
 } from "../lib/signup";
 
 import {
@@ -114,10 +116,30 @@ export async function loginAction(
     let provisioned = false;
 
     try {
-      provisioned =
-        (await provisionSignupAccount(
+      const result =
+        await provisionSignupAccount(
           data.user,
-        )) !== "not-eligible";
+        );
+
+      if (result === "rejected") {
+        await supabase.auth.signOut({
+          scope: "local",
+        });
+
+        return {
+          error:
+            SIGNUP_REJECTED_MESSAGE,
+        };
+      }
+
+      provisioned =
+        result !== "not-eligible";
+
+      if (result === "created") {
+        await refreshSessionAfterSignup(
+          supabase,
+        );
+      }
     } catch {
       console.error(
         "Falha ao criar escritório no primeiro acesso.",

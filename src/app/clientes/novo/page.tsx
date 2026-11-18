@@ -7,7 +7,7 @@ import {
 } from "@/features/clients/components/client-form";
 
 import {
-  hasPermission,
+  canUsePermission,
   requireWorkspacePagePermission,
 } from "@/lib/permissions";
 
@@ -20,14 +20,14 @@ export default async function NovoClientePage() {
     );
 
   const canWriteFinance =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "FINANCE_WRITE",
     );
 
   const canManageGov =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "GOV_MANAGE",
     );
 

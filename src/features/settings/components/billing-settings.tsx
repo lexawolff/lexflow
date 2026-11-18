@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  maskTaxId,
+} from "@/lib/br-documents";
+
+import {
   type ChangeEvent,
   type FormEvent,
   useState,
@@ -125,54 +129,6 @@ function digits(
   );
 }
 
-function formatTaxId(
-  value: string,
-) {
-  const number =
-    digits(
-      value,
-    ).slice(
-      0,
-      14,
-    );
-
-  if (
-    number.length <= 11
-  ) {
-    return number
-      .replace(
-        /(\d{3})(\d)/,
-        "$1.$2",
-      )
-      .replace(
-        /(\d{3})(\d)/,
-        "$1.$2",
-      )
-      .replace(
-        /(\d{3})(\d{1,2})$/,
-        "$1-$2",
-      );
-  }
-
-  return number
-    .replace(
-      /^(\d{2})(\d)/,
-      "$1.$2",
-    )
-    .replace(
-      /^(\d{2})\.(\d{3})(\d)/,
-      "$1.$2.$3",
-    )
-    .replace(
-      /\.(\d{3})(\d)/,
-      ".$1/$2",
-    )
-    .replace(
-      /(\d{4})(\d)/,
-      "$1-$2",
-    );
-}
-
 function formatPhone(
   value: string,
 ) {
@@ -295,7 +251,7 @@ export function BillingSettings({
     setTaxId,
   ] =
     useState(
-      formatTaxId(
+      maskTaxId(
         billingProfile
           ?.taxId ??
           "",
@@ -587,7 +543,7 @@ export function BillingSettings({
                     ChangeEvent<HTMLInputElement>,
                 ) =>
                   setTaxId(
-                    formatTaxId(
+                    maskTaxId(
                       event.target.value,
                     ),
                   )
@@ -595,7 +551,7 @@ export function BillingSettings({
                 disabled={
                   !isOwner
                 }
-                inputMode="numeric"
+                autoCapitalize="characters"
                 className={
                   inputClass
                 }

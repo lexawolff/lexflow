@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  maskCnpj,
+} from "@/lib/br-documents";
+
+import {
   type ChangeEvent,
   type FormEvent,
   useState,
@@ -88,36 +92,6 @@ function digits(
   );
 }
 
-function formatCnpj(
-  value: string,
-) {
-  const number =
-    digits(
-      value,
-    ).slice(
-      0,
-      14,
-    );
-
-  return number
-    .replace(
-      /^(\d{2})(\d)/,
-      "$1.$2",
-    )
-    .replace(
-      /^(\d{2})\.(\d{3})(\d)/,
-      "$1.$2.$3",
-    )
-    .replace(
-      /\.(\d{3})(\d)/,
-      ".$1/$2",
-    )
-    .replace(
-      /(\d{4})(\d)/,
-      "$1-$2",
-    );
-}
-
 function formatCep(
   value: string,
 ) {
@@ -202,7 +176,7 @@ export function WorkspaceForm({
     setCnpj,
   ] =
     useState(
-      formatCnpj(
+      maskCnpj(
         workspace.cnpj ??
           "",
       ),
@@ -315,7 +289,7 @@ export function WorkspaceForm({
             </p>
 
             <p className="mt-1 text-muted-foreground">
-              Apenas proprietários e administradores podem alterar os dados do escritório.
+              Seu teste grátis terminou. Assine para voltar a alterar os dados do escritório.
             </p>
           </div>
         </div>
@@ -383,7 +357,7 @@ export function WorkspaceForm({
                   ChangeEvent<HTMLInputElement>,
               ) =>
                 setCnpj(
-                  formatCnpj(
+                  maskCnpj(
                     event.target.value,
                   ),
                 )
@@ -391,7 +365,7 @@ export function WorkspaceForm({
               disabled={
                 !canEdit
               }
-              inputMode="numeric"
+              autoCapitalize="characters"
               placeholder="00.000.000/0000-00"
               className={
                 inputClass

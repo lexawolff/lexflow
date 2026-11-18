@@ -13,7 +13,7 @@ import {
 } from "@/features/clients/services/get-clients";
 
 import {
-  hasPermission,
+  canUsePermission,
   requireWorkspacePagePermission,
 } from "@/lib/permissions";
 
@@ -36,8 +36,8 @@ export default async function ClientesPage({
     );
 
   const canCreateClient =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "CLIENT_CREATE",
     );
 

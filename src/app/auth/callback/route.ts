@@ -13,6 +13,7 @@ import {
 
 import {
   provisionSignupAccount,
+  refreshSessionAfterSignup,
 } from "@/features/auth/lib/signup";
 
 const EMAIL_OTP_TYPES = new Set<EmailOtpType>([
@@ -86,24 +87,46 @@ export async function GET(
    * Confirmação do cadastro público: cria o escritório agora que o
    * e-mail foi confirmado (só na primeira vez).
    */
+  let signupRejected = false;
+  let signupIncomplete = false;
+
   if (ok) {
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (user) {
-        await provisionSignupAccount(user);
+      const result = user
+        ? await provisionSignupAccount(user)
+        : null;
+
+      if (result === "created") {
+        await refreshSessionAfterSignup(supabase);
+      } else if (result === "rejected") {
+        signupRejected = true;
+        await supabase.auth.signOut({ scope: "local" });
       }
     } catch {
       console.error("Falha ao criar escritório após confirmar o cadastro.");
+
+      // O login tenta criar de novo; o painel não abriria sem escritório.
+      if (next === "/dashboard") {
+        signupIncomplete = true;
+        await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+      }
     }
   }
 
   const destination = request.nextUrl.clone();
   destination.search = "";
 
-  if (ok) {
+  if (signupRejected) {
+    destination.pathname = "/login";
+    destination.searchParams.set("erro", "cadastro-indisponivel");
+  } else if (signupIncomplete) {
+    destination.pathname = "/login";
+    destination.searchParams.set("erro", "cadastro-pendente");
+  } else if (ok) {
     destination.pathname = next;
   } else {
     destination.pathname = "/login";

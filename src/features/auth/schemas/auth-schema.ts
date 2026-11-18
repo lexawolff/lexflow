@@ -2,6 +2,17 @@ import {
   z,
 } from "zod";
 
+import {
+  BRAZIL_STATES,
+} from "@/features/clients/constants";
+
+import {
+  isValidBrazilPhone,
+  isValidTaxId,
+  normalizeTaxId,
+  onlyDigits,
+} from "@/lib/br-documents";
+
 export const loginSchema =
   z.object({
     email:
@@ -205,6 +216,86 @@ const officeNameSchema =
       "O nome do escritório deve ter no máximo 120 caracteres.",
     );
 
+function isBrazilState(
+  value: string,
+) {
+  return BRAZIL_STATES.includes(
+    value.toUpperCase(),
+  );
+}
+
+function isOabNumber(
+  value: string,
+) {
+  return /^[0-9A-Za-z./ -]{1,20}$/.test(value);
+}
+
+function emptyToUndefined(
+  value: string | undefined,
+) {
+  return value || undefined;
+}
+
+const taxIdSchema =
+  z
+    .string({ error: "Informe o CPF ou CNPJ." })
+    .trim()
+    .min(
+      1,
+      "Informe o CPF ou CNPJ.",
+    )
+    .refine(
+      (value) => isValidTaxId(value),
+      "Confira o CPF ou CNPJ informado.",
+    )
+    .transform((value) => normalizeTaxId(value));
+
+// Dados opcionais: em branco é válido; preenchido precisa estar correto.
+
+const optionalWhatsappSchema =
+  z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) => !value || isValidBrazilPhone(value),
+      "Informe o WhatsApp com DDD.",
+    )
+    .transform((value) => emptyToUndefined(onlyDigits(value ?? "")));
+
+const optionalCitySchema =
+  z
+    .string()
+    .trim()
+    .max(
+      100,
+      "A cidade deve ter no máximo 100 caracteres.",
+    )
+    .optional()
+    .transform(emptyToUndefined);
+
+const optionalStateSchema =
+  z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) => !value || isBrazilState(value),
+      "Selecione uma UF válida.",
+    )
+    .transform((value) => emptyToUndefined(value?.toUpperCase()));
+
+const optionalOabNumberSchema =
+  z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) => !value || isOabNumber(value),
+      "Confira o número da OAB.",
+    )
+    .transform((value) => emptyToUndefined(value?.toUpperCase()));
+
 /*
  * Cadastro público de um novo escritório (/cadastro).
  */
@@ -214,8 +305,26 @@ export const signUpSchema =
       officeName:
         officeNameSchema,
 
+      taxId:
+        taxIdSchema,
+
+      city:
+        optionalCitySchema,
+
+      state:
+        optionalStateSchema,
+
       name:
         personNameSchema,
+
+      whatsapp:
+        optionalWhatsappSchema,
+
+      oabNumber:
+        optionalOabNumberSchema,
+
+      oabState:
+        optionalStateSchema,
 
       email:
         z
@@ -275,4 +384,24 @@ export const signupMetadataSchema =
 
     terms_accepted_at:
       z.string().datetime(),
+
+    // Cifrado pelo servidor e conferido ao criar o escritório.
+    signup_tax_id:
+      z.string().min(1).max(500),
+
+    // Opcionais: valor inválido é ignorado e não impede criar o escritório.
+    signup_whatsapp:
+      z.string().refine((value) => isValidBrazilPhone(value)).optional().catch(undefined),
+
+    signup_city:
+      z.string().trim().min(1).max(100).optional().catch(undefined),
+
+    signup_state:
+      z.string().refine(isBrazilState).optional().catch(undefined),
+
+    signup_oab_number:
+      z.string().refine(isOabNumber).optional().catch(undefined),
+
+    signup_oab_state:
+      z.string().refine(isBrazilState).optional().catch(undefined),
   });

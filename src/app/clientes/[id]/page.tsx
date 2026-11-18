@@ -27,6 +27,7 @@ import {
 } from "@/features/clients/services/get-client-dashboard";
 
 import {
+  canUsePermission,
   hasPermission,
   requireWorkspacePagePermission,
 } from "@/lib/permissions";
@@ -48,26 +49,26 @@ export default async function ClientePage({
     );
 
   const canCreateCase =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "CASE_CREATE",
     );
 
   const canCreateWork =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "WORK_CREATE",
     );
 
   const canEditClient =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "CLIENT_EDIT",
     );
 
   const canDeleteClient =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "CLIENT_DELETE",
     );
 
@@ -78,8 +79,8 @@ export default async function ClientePage({
     );
 
   const canCreateAgenda =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "AGENDA_CREATE",
     );
 
@@ -90,14 +91,14 @@ export default async function ClientePage({
     );
 
   const canCreateDocuments =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "DOCUMENT_CREATE",
     );
 
   const canDeleteDocuments =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "DOCUMENT_DELETE",
     );
 
@@ -108,8 +109,8 @@ export default async function ClientePage({
     );
 
   const canWriteFinance =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "FINANCE_WRITE",
     );
 

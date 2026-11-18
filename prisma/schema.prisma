@@ -302,6 +302,8 @@ model Workspace {
   subscription   Subscription?
   billingProfile BillingProfile?
 
+  signupTaxIdClaims SignupTaxIdClaim[]
+
   payables    Payable[]
   receivables Receivable[]
   rpvs        Rpv[]
@@ -1108,6 +1110,23 @@ model BillingProfile {
   updatedAt DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+//
+// CONTROLE DO CADASTRO
+//
+
+// Um CPF, ou um CNPJ com suas filiais, abre um único escritório pelo cadastro
+// público. Guarda só um HMAC do documento, não muda quando os dados do
+// escritório são editados e permanece se o escritório for excluído.
+model SignupTaxIdClaim {
+  taxIdHash   String   @id
+  workspaceId String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
 }
 
 // Auditoria de credenciais: somente identificadores e ações, nunca valores.

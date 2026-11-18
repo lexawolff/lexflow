@@ -15,6 +15,7 @@ import {
 } from "@/features/settings/components/workspace-form";
 
 import {
+  canUsePermission,
   requireWorkspacePagePermission,
 } from "@/lib/permissions";
 
@@ -25,6 +26,7 @@ import {
 export default async function EscritorioPage() {
   const {
     workspace: currentWorkspace,
+    membership,
   } =
     await requireWorkspacePagePermission(
       "OFFICE_MANAGE",
@@ -114,7 +116,12 @@ export default async function EscritorioPage() {
           workspace={
             workspace
           }
-          canEdit
+          canEdit={
+            canUsePermission(
+              membership,
+              "OFFICE_MANAGE",
+            )
+          }
         />
       </div>
     </AppShell>

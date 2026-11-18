@@ -55,9 +55,17 @@ export default function PrivacidadePage() {
         <LegalList>
           <li>
             <strong>Cadastro e conta:</strong> nome, e-mail, nome do
-            escritório, função na equipe e data de aceite destes documentos.
-            A senha é guardada pelo provedor de autenticação em formato
-            protegido; o Fornecedor não tem acesso a ela.
+            escritório, CPF ou CNPJ informado ao cadastrar o escritório, função
+            na equipe e data de aceite destes documentos. Se informados:
+            WhatsApp, cidade, UF e número da OAB. A senha é guardada pelo
+            provedor de autenticação em formato protegido; o Fornecedor não tem
+            acesso a ela.
+          </li>
+          <li>
+            <strong>Controle de cadastro e do teste gratuito:</strong> código
+            gerado com chave secreta a partir do CPF ou da parte do CNPJ comum
+            à matriz e às filiais, usado para impedir que o mesmo titular abra
+            mais de um escritório pelo cadastro público.
           </li>
           <li>
             <strong>Uso e segurança:</strong> registros de acesso (como data,
@@ -88,6 +96,10 @@ export default function PrivacidadePage() {
             Proteger as contas, investigar acessos indevidos e prevenir
             fraudes: legítimo interesse (art. 7º, IX) e cumprimento de
             obrigação legal (art. 7º, II), quando aplicável.
+          </li>
+          <li>
+            Impedir a repetição do período de teste gratuito e o uso indevido
+            do cadastro: legítimo interesse (art. 7º, IX).
           </li>
           <li>
             Enviar e-mails do serviço, como confirmação de cadastro e
@@ -141,6 +153,15 @@ export default function PrivacidadePage() {
       <LegalSection title="7. Por quanto tempo guardamos">
         <LegalList>
           <li>Dados da conta: enquanto a conta existir.</li>
+          <li>
+            Cadastros não confirmados: apagados automaticamente cerca de 7 dias
+            depois da solicitação.
+          </li>
+          <li>
+            Código de controle do cadastro: mantido mesmo após o encerramento
+            da conta, enquanto for necessário para impedir a repetição do teste
+            gratuito.
+          </li>
           <li>
             Após o encerramento: conforme a cláusula 10 dos Termos de Uso
             (30 dias para exportação e exclusão em até 60 dias).

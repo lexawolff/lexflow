@@ -24,6 +24,7 @@ import {
 
 import {
   getCurrentWorkspaceAccess,
+  canUsePermission,
   hasPermission,
 } from "@/lib/permissions";
 
@@ -65,14 +66,14 @@ export async function CaseView({
     await getCurrentWorkspaceAccess();
 
   const canEditCase =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "CASE_EDIT",
     );
 
   const canCreateWork =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "WORK_CREATE",
     );
 
@@ -83,8 +84,8 @@ export async function CaseView({
     );
 
   const canCreateAgenda =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "AGENDA_CREATE",
     );
 

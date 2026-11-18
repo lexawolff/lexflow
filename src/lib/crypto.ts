@@ -3,6 +3,8 @@ import "server-only";
 import {
   createCipheriv,
   createDecipheriv,
+  createHmac,
+  hkdfSync,
   randomBytes,
 } from "crypto";
 
@@ -32,6 +34,36 @@ function getEncryptionKey(): Buffer {
   }
 
   return key;
+}
+
+/*
+ * Código determinístico que não revela o valor sem a chave. Cada finalidade
+ * usa uma chave derivada própria.
+ */
+export function keyedHash(
+  purpose: string,
+  value: string,
+): string {
+  const key =
+    Buffer.from(
+      hkdfSync(
+        "sha256",
+        getEncryptionKey(),
+        Buffer.alloc(0),
+        `lexflow:${purpose}`,
+        32,
+      ),
+    );
+
+  return createHmac(
+    "sha256",
+    key,
+  )
+    .update(
+      value,
+      "utf8",
+    )
+    .digest("hex");
 }
 
 export function encryptSecret(

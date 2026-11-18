@@ -1,6 +1,11 @@
 "use server";
 
 import {
+  isValidCnpj,
+  normalizeTaxId,
+} from "@/lib/br-documents";
+
+import {
   revalidatePath,
 } from "next/cache";
 
@@ -221,19 +226,21 @@ export async function updateWorkspaceAction(
   }
 
   const cnpj =
-    onlyDigits(
+    normalizeTaxId(
       cnpjRaw,
     );
 
   if (
     cnpj &&
-    cnpj.length !== 14
+    !isValidCnpj(
+      cnpj,
+    )
   ) {
     return {
       success: false,
 
       error:
-        "Informe um CNPJ válido com 14 dígitos.",
+        "Informe um CNPJ válido.",
     };
   }
 

@@ -157,6 +157,16 @@ export default function TermosPage() {
             área de assinatura do sistema.
           </li>
           <li>
+            O período de teste gratuito é de 10 (dez) dias, contados da
+            confirmação do cadastro. Ao terminar, o escritório fica disponível
+            apenas para consulta até a contratação de uma assinatura.
+          </li>
+          <li>
+            Cada CPF ou CNPJ, considerados em conjunto a matriz e as filiais,
+            pode abrir um único escritório pelo cadastro público e usar o
+            período de teste gratuito uma única vez.
+          </li>
+          <li>
             Em caso de atraso no pagamento, o Fornecedor poderá suspender o
             acesso após aviso prévio, sem apagar os dados durante o período
             previsto na cláusula 10.

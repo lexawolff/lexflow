@@ -11,7 +11,7 @@ import {
 } from "@/features/agenda/services/get-agenda-data";
 
 import {
-  hasPermission,
+  canUsePermission,
   requireWorkspacePagePermission,
 } from "@/lib/permissions";
 
@@ -36,20 +36,20 @@ export default async function AgendaPage({
     );
 
   const canCreateAgenda =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "AGENDA_CREATE",
     );
 
   const canEditAgenda =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "AGENDA_EDIT",
     );
 
   const canDeleteAgenda =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "AGENDA_DELETE",
     );
 

@@ -30,7 +30,7 @@ import {
 } from "@/features/cases/constants";
 
 import {
-  hasPermission,
+  canUsePermission,
   requireWorkspacePagePermission,
 } from "@/lib/permissions";
 
@@ -159,8 +159,8 @@ export default async function CasesPage({
     );
 
   const canCreateCase =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "CASE_CREATE",
     );
 

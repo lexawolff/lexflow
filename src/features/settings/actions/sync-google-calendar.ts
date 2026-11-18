@@ -14,7 +14,7 @@ import {
 
 import {
   getCurrentWorkspaceAccess,
-  hasPermission,
+  canUsePermission,
 } from "@/lib/permissions";
 
 import {
@@ -62,14 +62,14 @@ export async function syncGoogleCalendarAction(): Promise<SyncGoogleCalendarActi
     await getCurrentWorkspaceAccess();
 
   const canCreateAgenda =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "AGENDA_CREATE",
     );
 
   const canEditAgenda =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "AGENDA_EDIT",
     );
 

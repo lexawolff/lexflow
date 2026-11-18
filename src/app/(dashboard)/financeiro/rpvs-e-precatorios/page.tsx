@@ -15,7 +15,7 @@ import {
 } from "@/features/finance/services/get-office-rpv-data";
 
 import {
-  hasPermission,
+  canUsePermission,
   requireWorkspacePagePermission,
 } from "@/lib/permissions";
 
@@ -28,8 +28,8 @@ export default async function RpvsEPrecatoriosPage() {
     );
 
   const canWriteFinance =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "FINANCE_WRITE",
     );
 

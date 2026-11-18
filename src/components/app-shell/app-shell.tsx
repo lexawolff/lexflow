@@ -1,5 +1,6 @@
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
+import { TrialBanner } from "./trial-banner";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -12,6 +13,8 @@ export function AppShell({ children }: AppShellProps) {
 
       <div className="flex min-h-screen flex-1 flex-col lg:ml-64">
         <Header />
+
+        <TrialBanner />
 
         <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
           <div className="mx-auto max-w-7xl">

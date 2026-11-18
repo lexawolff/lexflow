@@ -19,7 +19,7 @@ import {
 } from "@/lib/prisma";
 
 import {
-  hasPermission,
+  canUsePermission,
   requireWorkspacePagePermission,
 } from "@/lib/permissions";
 
@@ -65,20 +65,20 @@ export default async function WorkPage() {
     );
 
   const canCreate =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "WORK_CREATE",
     );
 
   const canEdit =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "WORK_EDIT",
     );
 
   const canDelete =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "WORK_DELETE",
     );
 

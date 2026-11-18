@@ -15,7 +15,7 @@ import {
 } from "@/features/finance/services/get-office-financial-data";
 
 import {
-  hasPermission,
+  canUsePermission,
   requireWorkspacePagePermission,
 } from "@/lib/permissions";
 
@@ -28,8 +28,8 @@ export default async function ContasAPagarPage() {
     );
 
   const canWriteFinance =
-    hasPermission(
-      membership.role,
+    canUsePermission(
+      membership,
       "FINANCE_WRITE",
     );
 
