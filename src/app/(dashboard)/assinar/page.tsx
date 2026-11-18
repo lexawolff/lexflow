@@ -15,19 +15,28 @@ import {
 } from "@/features/settings/components/subscribe-panel";
 
 import {
+  formatDate,
+} from "@/lib/format/date";
+
+import {
   getCurrentWorkspaceAccess,
   hasPermission,
 } from "@/lib/permissions";
+
+import {
+  getTrialDataDeletionAt,
+} from "@/lib/trial";
 
 export default async function AssinarPage() {
   const {
     workspace,
     membership,
     readOnly,
+    trialEndsAt,
   } =
     await getCurrentWorkspaceAccess();
 
-  if (!readOnly) {
+  if (!readOnly || !trialEndsAt) {
     redirect("/dashboard");
   }
 
@@ -47,6 +56,11 @@ export default async function AssinarPage() {
         }
         contactHref={
           `mailto:${LEGAL_CONTACT_EMAIL}?subject=${subject}`
+        }
+        deletionDate={
+          formatDate(
+            getTrialDataDeletionAt(trialEndsAt),
+          )
         }
       />
     </AppShell>

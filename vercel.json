@@ -5,6 +5,10 @@
     {
       "path": "/api/cron/limpar-cadastros",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/excluir-testes-vencidos",
+      "schedule": "30 6 * * *"
     }
   ]
 }

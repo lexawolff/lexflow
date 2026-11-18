@@ -158,6 +158,11 @@ export default function PrivacidadePage() {
             depois da solicitação.
           </li>
           <li>
+            Escritórios em teste que não contrataram assinatura: dados, arquivos
+            e contas ligadas somente a eles são excluídos 90 dias após o fim do
+            teste, e as cópias de segurança seguem o ciclo de renovação delas.
+          </li>
+          <li>
             Código de controle do cadastro: mantido mesmo após o encerramento
             da conta, enquanto for necessário para impedir a repetição do teste
             gratuito.

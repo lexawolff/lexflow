@@ -11,11 +11,13 @@ import {
 type SubscribePanelProps = {
   canSubscribe: boolean;
   contactHref: string;
+  deletionDate: string;
 };
 
 export function SubscribePanel({
   canSubscribe,
   contactHref,
+  deletionDate,
 }: SubscribePanelProps) {
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center">
@@ -32,6 +34,12 @@ export function SubscribePanel({
           Os {TRIAL_DAYS} dias de teste grátis terminaram. Nada foi apagado: você
           continua consultando os dados do escritório e volta a cadastrar e
           editar assim que a assinatura for ativada.
+        </p>
+
+        <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          Sem assinatura até <strong>{deletionDate}</strong>, os dados, os
+          arquivos e as contas ligadas só a este escritório serão apagados
+          definitivamente.
         </p>
 
         {canSubscribe ? (

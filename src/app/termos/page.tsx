@@ -162,6 +162,14 @@ export default function TermosPage() {
             apenas para consulta até a contratação de uma assinatura.
           </li>
           <li>
+            Se nenhuma assinatura for contratada em até 90 (noventa) dias após
+            o fim do teste, os dados e arquivos do escritório e as contas de
+            usuário ligadas somente a ele serão excluídos definitivamente,
+            inclusive das cópias de segurança conforme o ciclo de renovação
+            delas. A data da exclusão é informada no sistema durante esse
+            prazo.
+          </li>
+          <li>
             Cada CPF ou CNPJ, considerados em conjunto a matriz e as filiais,
             pode abrir um único escritório pelo cadastro público e usar o
             período de teste gratuito uma única vez.

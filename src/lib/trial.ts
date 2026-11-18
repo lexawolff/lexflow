@@ -4,6 +4,9 @@
  */
 export const TRIAL_DAYS = 10;
 
+// Prazo para assinar depois do fim do teste, antes de os dados serem apagados.
+export const TRIAL_DATA_RETENTION_DAYS = 90;
+
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export const TRIAL_ENDED_MESSAGE =
@@ -13,6 +16,23 @@ export function getTrialEndsAt(
   start: Date,
 ): Date {
   return new Date(start.getTime() + TRIAL_DAYS * DAY_IN_MS);
+}
+
+export function getTrialDataDeletionAt(
+  trialEndsAt: Date,
+): Date {
+  return new Date(
+    trialEndsAt.getTime() + TRIAL_DATA_RETENTION_DAYS * DAY_IN_MS,
+  );
+}
+
+// Testes encerrados até este momento já podem ser apagados.
+export function getTrialDataCutoff(
+  now: Date,
+): Date {
+  return new Date(
+    now.getTime() - TRIAL_DATA_RETENTION_DAYS * DAY_IN_MS,
+  );
 }
 
 /*

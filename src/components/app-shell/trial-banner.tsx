@@ -5,10 +5,22 @@ import {
 } from "lucide-react";
 
 import {
+  formatDate,
+} from "@/lib/format/date";
+
+import {
   getCurrentWorkspaceAccess,
 } from "@/lib/permissions";
 
-export function TrialEndedBanner() {
+import {
+  getTrialDataDeletionAt,
+} from "@/lib/trial";
+
+export function TrialEndedBanner({
+  deletionDate,
+}: {
+  deletionDate: string;
+}) {
   return (
     <div
       role="status"
@@ -24,7 +36,8 @@ export function TrialEndedBanner() {
           <strong className="font-semibold">
             Seu teste grátis terminou.
           </strong>{" "}
-          Seus dados continuam disponíveis só para consulta.
+          Seus dados ficam disponíveis só para consulta até {deletionDate} e
+          depois serão apagados.
         </p>
       </div>
 
@@ -41,8 +54,21 @@ export function TrialEndedBanner() {
 export async function TrialBanner() {
   const {
     readOnly,
+    trialEndsAt,
   } =
     await getCurrentWorkspaceAccess();
 
-  return readOnly ? <TrialEndedBanner /> : null;
+  if (!readOnly || !trialEndsAt) {
+    return null;
+  }
+
+  return (
+    <TrialEndedBanner
+      deletionDate={
+        formatDate(
+          getTrialDataDeletionAt(trialEndsAt),
+        )
+      }
+    />
+  );
 }

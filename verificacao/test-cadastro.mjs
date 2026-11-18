@@ -24,7 +24,7 @@ function load(file, names, deps = {}) {
 const normalized = (value) => JSON.parse(JSON.stringify(value));
 const UserRole = { OWNER: 'OWNER', ADMIN: 'ADMIN', LAWYER: 'LAWYER' };
 const documents = load('lib/br-documents.ts', ['onlyDigits', 'normalizeTaxId', 'isValidCpf', 'isValidCnpj', 'isValidTaxId', 'getTaxIdOwnerKey', 'isValidBrazilPhone', 'maskTaxId', 'maskCnpj']);
-const trial = load('lib/trial.ts', ['TRIAL_DAYS', 'TRIAL_ENDED_MESSAGE', 'getTrialEndsAt', 'isWorkspaceReadOnly']);
+const trial = load('lib/trial.ts', ['TRIAL_DAYS', 'TRIAL_DATA_RETENTION_DAYS', 'TRIAL_ENDED_MESSAGE', 'getTrialEndsAt', 'getTrialDataDeletionAt', 'getTrialDataCutoff', 'isWorkspaceReadOnly']);
 const encryptSecret = (value) => `enc:${value}`;
 const decryptSecret = (value) => { if (!value.startsWith('enc:')) throw new Error('cifra inválida'); return value.slice(4); };
 const keyedHash = (purpose, value) => `${purpose}|${value}`;
@@ -672,9 +672,12 @@ test('limpeza: percorre todas as páginas e conta falhas', async () => {
 });
 
 function loadCronRoute(env, cleanup = async () => ({ deleted: 2, failed: 0 })) {
-  const { GET } = load('app/api/cron/limpar-cadastros/route.ts', ['GET'], {
-    process: { env }, createHash, timingSafeEqual, Buffer,
+  const { runCronJob } = load('lib/cron-route.ts', ['runCronJob'], {
+    process: { env }, createHash, timingSafeEqual,
     NextResponse: { json: (body, init) => ({ body, status: init?.status ?? 200 }) },
+  });
+  const { GET } = load('app/api/cron/limpar-cadastros/route.ts', ['GET'], {
+    runCronJob,
     deleteExpiredUnconfirmedSignups: cleanup,
   });
   return (authorization) => GET({ headers: { get: () => authorization ?? null } });
@@ -885,4 +888,144 @@ test('retorno do e-mail: falha ao criar o escritório leva ao login, sem abrir o
   const recovery = loadCallback({ db: makeDb({ failUserCreate: () => { throw new Error('banco fora do ar'); } }).db });
   assert.equal((await recovery.call('/auth/callback?code=abc&next=/redefinir-senha')).location, 'http://localhost:3000/redefinir-senha');
   assert.equal(recovery.refreshed.signOut, 0, 'recuperação de senha não é afetada');
+});
+
+// ---------- Exclusão 90 dias depois do fim do teste ----------
+const officeId = (n) => `aaaaaaaa-aaaa-4aaa-8aaa-${String(n).padStart(12, '0')}`;
+const endedDaysAgo = (days) => new Date(NOW.getTime() - days * DAY);
+const trialRow = (workspaceId, days, extra = {}) => ({ workspaceId, status: 'TRIALING', trialEndsAt: endedDaysAgo(days), providerCustomerId: null, providerSubscriptionId: null, ...extra });
+
+function loadTrialPurge({ subscriptions, memberships = [], users = [], audit = [], documents = [], folders = {}, removeError = null, deleteUserError = null }) {
+  const state = {
+    subscriptions: [...subscriptions], memberships: [...memberships], users: [...users], audit: [...audit], documents: [...documents],
+    workspaces: subscriptions.map((row) => row.workspaceId), removedFiles: [], authDeleted: [], listed: [],
+  };
+  const matches = (row, where) => row.status === where.status && row.trialEndsAt && row.trialEndsAt.getTime() <= where.trialEndsAt.lte.getTime()
+    && row.providerCustomerId === null && row.providerSubscriptionId === null && (!where.workspaceId || row.workspaceId === where.workspaceId);
+  const exclusive = (where) => state.users.filter((user) => where.id.in.includes(user.id)
+    && !state.memberships.some((item) => item.userId === user.id && item.workspaceId !== where.memberships.none.workspaceId.not));
+  const db = {
+    subscription: {
+      findMany: async ({ where, take }) => state.subscriptions.filter((row) => matches(row, where)).slice(0, take),
+      findFirst: async ({ where }) => state.subscriptions.find((row) => matches(row, where)) ?? null,
+    },
+    document: { findMany: async ({ where }) => state.documents.filter((row) => row.workspaceId === where.workspaceId) },
+    membership: { findMany: async ({ where }) => state.memberships.filter((row) => row.workspaceId === where.workspaceId) },
+    user: {
+      findMany: async ({ where }) => exclusive(where),
+      deleteMany: async ({ where }) => { const gone = exclusive(where).map((user) => user.id); state.users = state.users.filter((user) => !gone.includes(user.id)); state.memberships = state.memberships.filter((row) => !gone.includes(row.userId)); },
+    },
+    auditLog: { deleteMany: async ({ where }) => { state.audit = state.audit.filter((row) => row.workspaceId !== where.workspaceId); } },
+    workspace: {
+      deleteMany: async ({ where }) => {
+        const row = state.subscriptions.find((item) => item.workspaceId === where.id);
+        if (!row || !matches(row, where.subscription.is)) return;
+        state.workspaces = state.workspaces.filter((id) => id !== where.id);
+        state.subscriptions = state.subscriptions.filter((item) => item !== row);
+        state.memberships = state.memberships.filter((item) => item.workspaceId !== where.id);
+        state.documents = state.documents.filter((item) => item.workspaceId !== where.id);
+      },
+    },
+    $transaction: async (fn) => fn(db),
+  };
+  const bucket = {
+    list: async (prefix) => { state.listed.push(prefix); return { data: folders[prefix] ?? [], error: null }; },
+    remove: async (paths) => { if (removeError) return { error: removeError }; state.removedFiles.push(...paths); return { error: null }; },
+  };
+  const { deleteExpiredTrialWorkspaces } = load('features/settings/services/delete-expired-trials.ts', ['deleteExpiredTrialWorkspaces'], {
+    prisma: db, DOCUMENTS_BUCKET: 'documents', getTrialDataCutoff: trial.getTrialDataCutoff,
+    getStorage: () => ({ from: (name) => { assert.equal(name, 'documents'); return bucket; } }),
+    createAdminClient: () => ({ auth: { admin: { deleteUser: async (id) => { state.authDeleted.push(id); return { error: deleteUserError }; } } } }),
+  });
+  return { state, run: () => deleteExpiredTrialWorkspaces(NOW) };
+}
+
+test('prazo de exclusão: 90 dias depois do fim do teste', () => {
+  assert.equal(trial.TRIAL_DATA_RETENTION_DAYS, 90);
+  assert.equal(trial.getTrialDataDeletionAt(new Date(NOW_MS)).getTime(), NOW_MS + 90 * DAY);
+  assert.equal(trial.getTrialDataCutoff(new Date(NOW_MS)).getTime(), NOW_MS - 90 * DAY);
+});
+
+test('exclusão: apaga arquivos, auditoria, escritório e só as contas exclusivas dele', async () => {
+  const office = officeId(1);
+  const ctx = loadTrialPurge({
+    subscriptions: [trialRow(office, 90)],
+    memberships: [{ userId: 'dono', workspaceId: office }, { userId: 'membro', workspaceId: office }, { userId: 'membro', workspaceId: 'outro' }],
+    users: [{ id: 'dono' }, { id: 'membro' }],
+    audit: [{ workspaceId: office }, { workspaceId: 'outro' }],
+    documents: [{ workspaceId: office, storagePath: 'antigo/arquivo.pdf' }, { workspaceId: office, storagePath: `${office}/clients/c1/a.pdf` }],
+    folders: {
+      [office]: [{ name: 'clients', id: null }],
+      [`${office}/clients`]: [{ name: 'c1', id: null }],
+      [`${office}/clients/c1`]: [{ name: 'a.pdf', id: 'f1' }, { name: 'sem-registro.pdf', id: 'f2' }],
+    },
+  });
+  assert.deepEqual(normalized(await ctx.run()), { deleted: 1, failed: 0 });
+  assert.deepEqual([...ctx.state.removedFiles].sort(), [`${office}/clients/c1/a.pdf`, `${office}/clients/c1/sem-registro.pdf`, 'antigo/arquivo.pdf'].sort());
+  assert.deepEqual(ctx.state.authDeleted, ['dono'], 'quem tem outro escritório mantém a conta');
+  assert.deepEqual(ctx.state.users.map((user) => user.id), ['membro']);
+  assert.deepEqual(ctx.state.audit, [{ workspaceId: 'outro' }]);
+  assert.deepEqual(ctx.state.workspaces, []);
+});
+
+test('exclusão: não alcança teste no prazo, assinatura ativa, pagamento vinculado ou escritório antigo', async () => {
+  const ctx = loadTrialPurge({
+    subscriptions: [
+      trialRow(officeId(1), 89),
+      trialRow(officeId(2), 200, { status: 'ACTIVE' }),
+      trialRow(officeId(3), 200, { providerCustomerId: 'cus_1' }),
+      trialRow(officeId(4), 200, { providerSubscriptionId: 'sub_1' }),
+      trialRow(officeId(5), 0, { trialEndsAt: null }),
+    ],
+    memberships: [{ userId: 'dono', workspaceId: officeId(1) }],
+    users: [{ id: 'dono' }],
+  });
+  assert.deepEqual(normalized(await ctx.run()), { deleted: 0, failed: 0 });
+  assert.equal(ctx.state.workspaces.length, 5);
+  assert.deepEqual(ctx.state.listed, []);
+  assert.deepEqual(ctx.state.authDeleted, []);
+});
+
+test('exclusão: identificador inválido nunca lista nem apaga o bucket', async () => {
+  const ctx = loadTrialPurge({ subscriptions: [trialRow('', 200)] });
+  assert.deepEqual(normalized(await ctx.run()), { deleted: 0, failed: 1 });
+  assert.deepEqual(ctx.state.listed, []);
+  assert.deepEqual(ctx.state.removedFiles, []);
+});
+
+test('exclusão: falha nos arquivos ou na conta preserva o escritório para nova tentativa', async () => {
+  const setup = { subscriptions: [trialRow(officeId(1), 120)], memberships: [{ userId: 'dono', workspaceId: officeId(1) }], users: [{ id: 'dono' }], folders: { [officeId(1)]: [{ name: 'a.pdf', id: 'f1' }] } };
+  const storage = loadTrialPurge({ ...setup, removeError: { message: 'falha' } });
+  assert.deepEqual(normalized(await storage.run()), { deleted: 0, failed: 1 });
+  assert.deepEqual(storage.state.authDeleted, []);
+  assert.equal(storage.state.workspaces.length, 1);
+
+  const account = loadTrialPurge({ ...setup, deleteUserError: { status: 500, code: 'unexpected_failure' } });
+  assert.deepEqual(normalized(await account.run()), { deleted: 0, failed: 1 });
+  assert.equal(account.state.workspaces.length, 1);
+  assert.equal(account.state.users.length, 1);
+
+  const alreadyGone = loadTrialPurge({ ...setup, deleteUserError: { status: 404, code: 'user_not_found' } });
+  assert.deepEqual(normalized(await alreadyGone.run()), { deleted: 1, failed: 0 });
+  assert.equal(alreadyGone.state.workspaces.length, 0);
+});
+
+test('exclusão: cada execução tem limite de escritórios', async () => {
+  const ctx = loadTrialPurge({ subscriptions: Array.from({ length: 30 }, (_, index) => trialRow(officeId(index + 1), 100)) });
+  assert.deepEqual(normalized(await ctx.run()), { deleted: 25, failed: 0 });
+  assert.equal(ctx.state.workspaces.length, 5);
+});
+
+test('rota de exclusão de testes: exige o segredo', async () => {
+  let runs = 0;
+  const { runCronJob } = load('lib/cron-route.ts', ['runCronJob'], {
+    process: { env: { CRON_SECRET: 'segredo' } }, createHash, timingSafeEqual,
+    NextResponse: { json: (body, init) => ({ body, status: init?.status ?? 200 }) },
+  });
+  const { GET } = load('app/api/cron/excluir-testes-vencidos/route.ts', ['GET'], { runCronJob, deleteExpiredTrialWorkspaces: async () => { runs += 1; return { deleted: 0, failed: 0 }; } });
+  const call = (authorization) => GET({ headers: { get: () => authorization ?? null } });
+  assert.equal((await call('Bearer errado')).status, 401);
+  assert.equal(runs, 0);
+  assert.equal((await call('Bearer segredo')).status, 200);
+  assert.equal(runs, 1);
 });

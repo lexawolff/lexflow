@@ -344,6 +344,10 @@ async function getCurrentWorkspaceAccessUncached() {
     },
 
     readOnly,
+
+    trialEndsAt:
+      subscription?.trialEndsAt ??
+      null,
   };
 }
 
