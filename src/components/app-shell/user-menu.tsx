@@ -1,12 +1,29 @@
 "use client";
 
+import {
+  useTransition,
+} from "react";
+
 import Link from "next/link";
 
 import {
+  unstable_rethrow,
+} from "next/navigation";
+
+import {
   ChevronDown,
+  LogOut,
   SlidersHorizontal,
   UserRound,
 } from "lucide-react";
+
+import {
+  toast,
+} from "sonner";
+
+import {
+  logoutAction,
+} from "@/features/auth/actions/logout";
 
 import {
   Avatar,
@@ -57,6 +74,29 @@ export function UserMenu({
     getInitials(
       name,
     );
+
+  const [
+    isLoggingOut,
+    startLogout,
+  ] =
+    useTransition();
+
+  function handleLogout() {
+    startLogout(async () => {
+      try {
+        await logoutAction();
+      } catch (error) {
+        // O redirecionamento para o login também passa por aqui.
+        unstable_rethrow(
+          error,
+        );
+
+        toast.error(
+          "Não foi possível sair. Verifique sua conexão e tente novamente.",
+        );
+      }
+    });
+  }
 
   return (
     <DropdownMenu>
@@ -116,6 +156,24 @@ export function UserMenu({
             <SlidersHorizontal className="size-4" />
             Preferências
           </Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          disabled={
+            isLoggingOut
+          }
+          onClick={
+            handleLogout
+          }
+          className="gap-2"
+        >
+          <LogOut className="size-4" />
+
+          {isLoggingOut
+            ? "Saindo..."
+            : "Sair"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

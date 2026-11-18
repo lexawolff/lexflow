@@ -12,7 +12,10 @@ export async function logoutAction() {
   const supabase =
     await createClient();
 
-  await supabase.auth.signOut();
+  // "local": sai só deste navegador, sem derrubar outros aparelhos.
+  await supabase.auth.signOut({
+    scope: "local",
+  });
 
   redirect(
     "/login",
