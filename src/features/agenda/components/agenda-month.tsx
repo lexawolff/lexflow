@@ -863,27 +863,15 @@ export function AgendaMonth({
         "CONCLUIDA",
     ).length;
 
+  // Vem do servidor: o mês em exibição pode não incluir hoje.
   const todayTasks =
-    data.tasks
+    data.todayTasks
       .filter(
-        (
-          task,
-        ) =>
-          task.status !==
-            "CANCELADA" &&
-          (
-            showCompleted ||
-            task.status !==
-              "CONCLUIDA"
-          ) &&
-          getTaskDateKey(
-            task,
-          ) ===
-            data.todayKey,
+        (task) =>
+          showCompleted ||
+          task.status !== "CONCLUIDA",
       )
-      .sort(
-        sortTasks,
-      );
+      .sort(sortTasks);
 
   const overdueTasks =
     data.overdueTasks;
@@ -1051,6 +1039,9 @@ export function AgendaMonth({
               tasks={
                 overdueTasks
               }
+            totalCount={
+              data.overdueCount
+            }
               todayKey={
                 data.todayKey
               }
@@ -1682,6 +1673,7 @@ function AttentionCard({
   description,
   icon,
   tasks,
+  totalCount,
   todayKey,
   tone,
   onTaskClick,
@@ -1697,6 +1689,9 @@ function AttentionCard({
 
   tasks:
   AgendaTask[];
+
+  totalCount?:
+  number;
 
   todayKey:
   string;
@@ -1714,6 +1709,13 @@ function AttentionCard({
   const danger =
     tone ===
     "danger";
+
+  // A lista mostra até 5; o total pode vir maior que a lista recebida.
+  const count =
+    totalCount ?? tasks.length;
+
+  const hiddenCount =
+    count - Math.min(tasks.length, 5);
 
   return (
     <div
@@ -1754,9 +1756,7 @@ function AttentionCard({
                     : "border-blue-200 text-blue-700 dark:border-blue-900 dark:text-blue-300"
                   }`}
               >
-                {
-                  tasks.length
-                }
+                {count}
               </span>
             </div>
 
@@ -1806,16 +1806,13 @@ function AttentionCard({
         </div>
       )}
 
-      {tasks.length >
-        5 ? (
+      {hiddenCount > 0 ? (
         <div className="border-t bg-muted/10 px-5 py-3 text-xs text-muted-foreground">
           Mais{" "}
           {
-            tasks.length -
-            5
+            hiddenCount
           }{" "}
-          {tasks.length -
-            5 ===
+          {hiddenCount ===
             1
             ? "item"
             : "itens"}{" "}

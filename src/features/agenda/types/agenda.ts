@@ -54,4 +54,10 @@ export type AgendaData = {
   tasks: AgendaTask[];
 
   overdueTasks: AgendaTask[];
+
+  // Total de atrasadas; a lista traz só as primeiras.
+  overdueCount: number;
+
+  // Hoje, independente do mês em exibição.
+  todayTasks: AgendaTask[];
 };

@@ -299,6 +299,31 @@ function serializeTask(
   };
 }
 
+const taskSelect = {
+  id: true,
+  clientId: true,
+  caseId: true,
+  title: true,
+  description: true,
+  type: true,
+  status: true,
+  startsAt: true,
+  dueDate: true,
+  completedAt: true,
+  location: true,
+  googleEventId: true,
+  createdAt: true,
+  updatedAt: true,
+  client: { select: { name: true } },
+  case: {
+    select: {
+      title: true,
+      number: true,
+      administrativeNumber: true,
+    },
+  },
+} as const;
+
 export async function getAgendaData(
   requestedMonth?: string,
 ): Promise<AgendaData> {
@@ -345,10 +370,30 @@ export async function getAgendaData(
       todayKey,
     );
 
+  const tomorrowStart =
+    localDateStart(
+      shiftDateKey(todayKey, 1),
+    );
+
+  const overdueWhere = {
+    workspaceId: workspace.id,
+    status: {
+      notIn: [
+        TaskStatus.CONCLUIDA,
+        TaskStatus.CANCELADA,
+      ],
+    },
+    dueDate: {
+      lt: todayStart,
+    },
+  };
+
   const [
     tasks,
     overdueTasks,
     clients,
+    overdueCount,
+    todayTasks,
   ] =
     await Promise.all([
       prisma.task.findMany({
@@ -535,6 +580,39 @@ export async function getAgendaData(
             "asc",
         },
       }),
+
+      prisma.task.count({
+        where: overdueWhere,
+      }),
+
+      prisma.task.findMany({
+        where: {
+          workspaceId: workspace.id,
+          status: {
+            not: TaskStatus.CANCELADA,
+          },
+          OR: [
+            {
+              startsAt: {
+                gte: todayStart,
+                lt: tomorrowStart,
+              },
+            },
+            {
+              startsAt: null,
+              dueDate: {
+                gte: todayStart,
+                lt: tomorrowStart,
+              },
+            },
+          ],
+        },
+        select: taskSelect,
+        orderBy: [
+          { startsAt: "asc" },
+          { dueDate: "asc" },
+        ],
+      }),
     ]);
 
   return {
@@ -549,6 +627,13 @@ export async function getAgendaData(
 
     overdueTasks:
       overdueTasks.map(
+        serializeTask,
+      ),
+
+    overdueCount,
+
+    todayTasks:
+      todayTasks.map(
         serializeTask,
       ),
 
