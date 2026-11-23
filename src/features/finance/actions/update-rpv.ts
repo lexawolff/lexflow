@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  getRpvContractualFee,
+} from "../lib/rpv-rules";
+
+import {
   ActionError,
 } from "@/lib/actions/action-error";
 
@@ -133,26 +137,18 @@ async function updateRpvImpl(
   const data =
     parsed.data;
 
-  let contractualFeeValue =
-    data.contractualFeeValue;
+  /*
+   * Só o valor digitado é gravado. Honorários pelo percentual são
+   * recalculados sempre que o percentual ou o valor bruto mudam.
+   */
+  const contractualFee =
+    getRpvContractualFee({
+      grossAmount: data.grossAmount,
+      contractualFeeRate: data.contractualFeeRate,
+      contractualFeeValue: data.contractualFeeValue,
+    });
 
-  if (
-    contractualFeeValue === null &&
-    data.contractualFeeRate !== null
-  ) {
-    contractualFeeValue =
-      roundMoney(
-        data.grossAmount *
-          (data.contractualFeeRate /
-            100),
-      );
-  }
-
-  if (
-    contractualFeeValue !== null &&
-    contractualFeeValue >
-      data.grossAmount
-  ) {
+  if (contractualFee > data.grossAmount) {
     throw new ActionError(
       "Os honorários contratuais não podem superar o crédito bruto.",
     );
@@ -161,8 +157,7 @@ async function updateRpvImpl(
   const clientNetAmount =
     roundMoney(
       Math.max(
-        data.grossAmount -
-          (contractualFeeValue ?? 0),
+        data.grossAmount - contractualFee,
         0,
       ),
     );
@@ -220,10 +215,10 @@ async function updateRpvImpl(
                   ),
 
             contractualFeeValue:
-              contractualFeeValue === null
+              data.contractualFeeValue === null
                 ? null
                 : new Prisma.Decimal(
-                    contractualFeeValue,
+                    data.contractualFeeValue,
                   ),
 
             sucumbencyFeeValue:

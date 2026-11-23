@@ -106,6 +106,7 @@ export async function getOfficeFinancialData(): Promise<OfficeFinancialData> {
       },
 
       select: {
+          rpvId: true,
         id: true,
 
         clientId: true,
@@ -302,6 +303,9 @@ export async function getOfficeFinancialData(): Promise<OfficeFinancialData> {
 
         totalInstallments:
           receivable.totalInstallments,
+
+        rpvId:
+          receivable.rpvId,
 
         createdAt:
           receivable.createdAt.toISOString(),

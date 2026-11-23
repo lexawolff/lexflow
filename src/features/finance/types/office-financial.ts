@@ -44,6 +44,8 @@ export type OfficeReceivable = {
   installmentNumber: number | null;
   totalInstallments: number | null;
 
+  rpvId: string | null;
+
   createdAt: string;
   updatedAt: string;
 };

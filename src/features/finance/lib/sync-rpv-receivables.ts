@@ -1,4 +1,8 @@
 import {
+  ActionError,
+} from "@/lib/actions/action-error";
+
+import {
   FinancialStatus,
   Prisma,
   ReceivableType,
@@ -169,7 +173,7 @@ async function findAdoptableReceivable({
     candidates.length >
     1
   ) {
-    throw new Error(
+    throw new ActionError(
       `Há mais de um recebimento de ${candidateLabel} no mesmo processo com o valor de ${amount.toLocaleString(
         "pt-BR",
         {
@@ -304,7 +308,7 @@ async function syncFee({
   }
 
   if (!paidAt) {
-    throw new Error(
+    throw new ActionError(
       "A requisição está marcada como paga, mas não possui data de pagamento.",
     );
   }
@@ -492,7 +496,7 @@ export async function syncRpvReceivables({
     });
 
   if (!rpv) {
-    throw new Error(
+    throw new ActionError(
       "Requisição não encontrada.",
     );
   }

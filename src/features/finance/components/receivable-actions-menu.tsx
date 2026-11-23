@@ -69,6 +69,9 @@ export function ReceivableActionsMenu({
   ] =
     useState(false);
 
+  const linkedToRpv =
+    Boolean(receivable.rpvId);
+
   const canRegisterPayment =
     receivable.status !==
       "PAGO" &&
@@ -76,26 +79,23 @@ export function ReceivableActionsMenu({
       "CANCELADO";
 
   const canReversePayment =
-    receivable.status ===
-    "PAGO";
+    receivable.status === "PAGO" &&
+    !linkedToRpv;
 
   const canEdit =
     receivable.status !==
     "CANCELADO";
 
   const canCancel =
-    receivable.status !==
-      "PAGO" &&
-    receivable.status !==
-      "PARCIAL" &&
-    receivable.status !==
-      "CANCELADO";
+    !linkedToRpv &&
+    !receivable.hasPayment &&
+    receivable.status !== "PAGO" &&
+    receivable.status !== "CANCELADO";
 
   const canDelete =
-    receivable.status !==
-      "PAGO" &&
-    receivable.status !==
-      "PARCIAL";
+    !linkedToRpv &&
+    !receivable.hasPayment &&
+    receivable.status !== "PAGO";
 
   return (
     <>
@@ -114,6 +114,17 @@ export function ReceivableActionsMenu({
         />
 
         <DropdownMenuContent align="end">
+          {linkedToRpv ? (
+            <>
+              <p className="max-w-60 px-2 py-1.5 text-xs leading-relaxed text-muted-foreground">
+                Gerado por uma RPV ou precatório. Valores e pagamento mudam pela
+                requisição.
+              </p>
+
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
+
           <DropdownMenuItem
             disabled={
               !canRegisterPayment

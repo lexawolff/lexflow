@@ -183,6 +183,12 @@ export function ReceivableCard({
 
       totalInstallments:
         receivable.totalInstallments,
+
+      rpvId:
+        receivable.rpvId,
+
+      hasPayment:
+        paidAmount > 0,
     };
 
   const isPaid =

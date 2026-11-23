@@ -58,6 +58,7 @@ export function formatReceivableDate(
   return `${day}/${month}/${year}`;
 }
 
+// Pagamento parcial vencido conta como atrasado, como no servidor.
 export function getEffectiveFinancialStatus(
   status: FinancialStatus,
   dueDate: SerializableDate,
@@ -70,7 +71,6 @@ export function getEffectiveFinancialStatus(
   if (
     status === "PAGO" ||
     status === "CANCELADO" ||
-    status === "PARCIAL" ||
     status === "ATRASADO"
   ) {
     return status;

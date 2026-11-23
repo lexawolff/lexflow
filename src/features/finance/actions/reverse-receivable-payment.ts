@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  RPV_LINKED_RECEIVABLE_MESSAGE,
+} from "../lib/rpv-rules";
+
+import {
   ActionError,
 } from "@/lib/actions/action-error";
 
@@ -181,6 +185,7 @@ async function reverseReceivablePaymentImpl(
         },
 
         select: {
+          rpvId: true,
           id:
             true,
 
@@ -205,6 +210,12 @@ async function reverseReceivablePaymentImpl(
   if (!receivable) {
     throw new ActionError(
       "Recebimento não encontrado.",
+    );
+  }
+
+  if (receivable.rpvId) {
+    throw new ActionError(
+      RPV_LINKED_RECEIVABLE_MESSAGE,
     );
   }
 

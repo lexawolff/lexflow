@@ -1,6 +1,11 @@
 "use client";
 
 import {
+  getRpvContractualFee,
+  isContractualFeeFromRate,
+} from "../lib/rpv-rules";
+
+import {
   useMemo,
   useState,
 } from "react";
@@ -125,25 +130,7 @@ function getContractualFee(
   rpv:
     OfficeRpvRecord,
 ): number {
-  if (
-    rpv.contractualFeeValue !==
-    null
-  ) {
-    return rpv.contractualFeeValue;
-  }
-
-  if (
-    rpv.contractualFeeRate !==
-    null
-  ) {
-    return (
-      rpv.grossAmount *
-      (rpv.contractualFeeRate /
-        100)
-    );
-  }
-
-  return 0;
+  return getRpvContractualFee(rpv);
 }
 
 function getOfficeFees(
@@ -184,9 +171,11 @@ function toEditableRpv(
       rpv.contractualFeeRate ??
       0,
 
+    // Valor calculado pelo percentual não volta como digitado.
     contractualFeeValue:
-      rpv.contractualFeeValue ??
-      0,
+      isContractualFeeFromRate(rpv)
+        ? 0
+        : rpv.contractualFeeValue ?? 0,
 
     sucumbencyFeeValue:
       rpv.sucumbencyFeeValue ??

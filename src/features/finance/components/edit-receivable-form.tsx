@@ -51,6 +51,11 @@ export type EditableReceivable = {
   installmentNumber: number | null;
 
   totalInstallments: number | null;
+
+  // Gerado por RPV: valores e pagamento mudam pela requisição.
+  rpvId: string | null;
+
+  hasPayment: boolean;
 };
 
 type EditReceivableFormProps = {

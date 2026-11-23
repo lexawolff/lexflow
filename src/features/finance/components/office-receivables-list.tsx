@@ -447,6 +447,12 @@ function toEditableReceivable(
 
     totalInstallments:
       receivable.totalInstallments,
+
+    rpvId:
+      receivable.rpvId,
+
+    hasPayment:
+      receivable.paidAmount > 0,
   };
 }
 

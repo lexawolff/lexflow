@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  RPV_LINKED_RECEIVABLE_MESSAGE,
+} from "../lib/rpv-rules";
+
+import {
   ActionError,
 } from "@/lib/actions/action-error";
 
@@ -264,6 +268,10 @@ async function updateReceivableImpl(
         },
 
         select: {
+          rpvId: true,
+          totalAmount: true,
+          type: true,
+          caseId: true,
           id:
             true,
 
@@ -324,6 +332,20 @@ async function updateReceivableImpl(
     new Prisma.Decimal(
       data.totalAmount,
     );
+
+  // Descrição, vencimento e observações continuam editáveis.
+  if (
+    receivable.rpvId &&
+    (
+      !newTotalAmount.equals(receivable.totalAmount) ||
+      data.type !== receivable.type ||
+      (data.caseId ?? null) !== receivable.caseId
+    )
+  ) {
+    throw new ActionError(
+      RPV_LINKED_RECEIVABLE_MESSAGE,
+    );
+  }
 
   if (
     newTotalAmount.lessThan(
