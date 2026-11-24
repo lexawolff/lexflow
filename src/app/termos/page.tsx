@@ -167,7 +167,9 @@ export default function TermosPage() {
             usuário ligadas somente a ele serão excluídos definitivamente,
             inclusive das cópias de segurança conforme o ciclo de renovação
             delas. A data da exclusão é informada no sistema durante esse
-            prazo.
+            prazo e por e-mail ao proprietário do escritório, cerca de 30 e
+            de 7 dias antes; a exclusão só ocorre ao menos 7 dias depois do
+            último aviso.
           </li>
           <li>
             Cada CPF ou CNPJ, considerados em conjunto a matriz e as filiais,

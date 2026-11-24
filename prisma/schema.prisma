@@ -1048,6 +1048,10 @@ model Subscription {
 
   trialEndsAt DateTime?
 
+  // Avisos por e-mail antes de apagar os dados de um teste vencido.
+  trialDeletionNoticeAt      DateTime?
+  trialDeletionFinalNoticeAt DateTime?
+
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
 

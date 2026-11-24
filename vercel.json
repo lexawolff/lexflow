@@ -8,7 +8,7 @@
     },
     {
       "path": "/api/cron/excluir-testes-vencidos",
-      "schedule": "30 6 * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }

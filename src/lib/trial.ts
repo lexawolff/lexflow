@@ -7,6 +7,11 @@ export const TRIAL_DAYS = 10;
 // Prazo para assinar depois do fim do teste, antes de os dados serem apagados.
 export const TRIAL_DATA_RETENTION_DAYS = 90;
 
+// Avisos por e-mail, em dias antes da exclusão. A exclusão só ocorre depois
+// de o último aviso ter sido enviado há pelo menos TRIAL_FINAL_NOTICE_DAYS.
+export const TRIAL_FIRST_NOTICE_DAYS = 30;
+export const TRIAL_FINAL_NOTICE_DAYS = 7;
+
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export const TRIAL_ENDED_MESSAGE =
@@ -33,6 +38,72 @@ export function getTrialDataCutoff(
   return new Date(
     now.getTime() - TRIAL_DATA_RETENTION_DAYS * DAY_IN_MS,
   );
+}
+
+// Testes encerrados até estes momentos entram no primeiro e no último aviso.
+export function getTrialNoticeWindows(
+  now: Date,
+) {
+  const retention = TRIAL_DATA_RETENTION_DAYS * DAY_IN_MS;
+
+  return {
+    firstNoticeFrom: new Date(now.getTime() - retention + TRIAL_FIRST_NOTICE_DAYS * DAY_IN_MS),
+    finalNoticeFrom: new Date(now.getTime() - retention + TRIAL_FINAL_NOTICE_DAYS * DAY_IN_MS),
+  };
+}
+
+export function getTrialNoticeStage({
+  trialEndsAt,
+  noticeAt,
+  finalNoticeAt,
+  now,
+}: {
+  trialEndsAt: Date;
+  noticeAt: Date | null;
+  finalNoticeAt: Date | null;
+  now: Date;
+}): "first" | "final" | null {
+  if (finalNoticeAt) {
+    return null;
+  }
+
+  const deletionAt = getTrialDataDeletionAt(trialEndsAt).getTime();
+
+  if (now.getTime() >= deletionAt - TRIAL_FINAL_NOTICE_DAYS * DAY_IN_MS) {
+    return "final";
+  }
+
+  if (!noticeAt && now.getTime() >= deletionAt - TRIAL_FIRST_NOTICE_DAYS * DAY_IN_MS) {
+    return "first";
+  }
+
+  return null;
+}
+
+// Último aviso enviado até este momento libera a exclusão.
+export function getTrialFinalNoticeCutoff(
+  now: Date,
+): Date {
+  return new Date(now.getTime() - TRIAL_FINAL_NOTICE_DAYS * DAY_IN_MS);
+}
+
+/*
+ * Data em que os dados serão apagados: 90 dias após o fim do teste ou, se
+ * o último aviso saiu atrasado, 7 dias depois dele.
+ */
+export function getPlannedTrialDeletionAt({
+  trialEndsAt,
+  finalNoticeAt,
+}: {
+  trialEndsAt: Date;
+  finalNoticeAt: Date | null;
+}): Date {
+  const byRetention = getTrialDataDeletionAt(trialEndsAt).getTime();
+  const byNotice = finalNoticeAt
+    ? finalNoticeAt.getTime() + TRIAL_FINAL_NOTICE_DAYS * DAY_IN_MS
+    : 0;
+
+  return new Date(Math.max(byRetention, byNotice));
 }
 
 /*

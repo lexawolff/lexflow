@@ -18,6 +18,7 @@ import {
 
 import {
   getTrialDataCutoff,
+  getTrialFinalNoticeCutoff,
 } from "@/lib/trial";
 
 // Limita o alcance de cada execução; o restante fica para o dia seguinte.
@@ -32,14 +33,17 @@ type DocumentBucket = ReturnType<ReturnType<typeof getStorage>["from"]>;
 
 /*
  * Só teste nunca convertido: sem assinatura ativa e sem vínculo com um
- * provedor de pagamento.
+ * provedor de pagamento. O último aviso por e-mail precisa ter saído há
+ * pelo menos 7 dias.
  */
 function expiredTrialWhere(
   cutoff: Date,
+  noticeCutoff: Date,
 ) {
   return {
     status: "TRIALING" as const,
     trialEndsAt: { lte: cutoff },
+    trialDeletionFinalNoticeAt: { lte: noticeCutoff },
     providerCustomerId: null,
     providerSubscriptionId: null,
   };
@@ -134,8 +138,9 @@ async function deleteAuthAccount(
 async function deleteWorkspaceData(
   workspaceId: string,
   cutoff: Date,
+  noticeCutoff: Date,
 ) {
-  const where = expiredTrialWhere(cutoff);
+  const where = expiredTrialWhere(cutoff, noticeCutoff);
 
   const stillExpired = await prisma.subscription.findFirst({
     where: { ...where, workspaceId },
@@ -191,9 +196,10 @@ export async function deleteExpiredTrialWorkspaces(
   now: Date = new Date(),
 ) {
   const cutoff = getTrialDataCutoff(now);
+  const noticeCutoff = getTrialFinalNoticeCutoff(now);
 
   const expired = await prisma.subscription.findMany({
-    where: expiredTrialWhere(cutoff),
+    where: expiredTrialWhere(cutoff, noticeCutoff),
     orderBy: { trialEndsAt: "asc" },
     take: WORKSPACES_PER_RUN,
     select: { workspaceId: true },
@@ -205,7 +211,7 @@ export async function deleteExpiredTrialWorkspaces(
   // Uma falha não impede os demais; ela é repetida na próxima execução.
   for (const { workspaceId } of expired) {
     try {
-      if (await deleteWorkspaceData(workspaceId, cutoff)) {
+      if (await deleteWorkspaceData(workspaceId, cutoff, noticeCutoff)) {
         deleted += 1;
       }
     } catch {

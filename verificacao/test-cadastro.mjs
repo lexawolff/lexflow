@@ -24,7 +24,7 @@ function load(file, names, deps = {}) {
 const normalized = (value) => JSON.parse(JSON.stringify(value));
 const UserRole = { OWNER: 'OWNER', ADMIN: 'ADMIN', LAWYER: 'LAWYER' };
 const documents = load('lib/br-documents.ts', ['onlyDigits', 'normalizeTaxId', 'isValidCpf', 'isValidCnpj', 'isValidTaxId', 'getTaxIdOwnerKey', 'isValidBrazilPhone', 'maskTaxId', 'maskCnpj']);
-const trial = load('lib/trial.ts', ['TRIAL_DAYS', 'TRIAL_DATA_RETENTION_DAYS', 'TRIAL_ENDED_MESSAGE', 'getTrialEndsAt', 'getTrialDataDeletionAt', 'getTrialDataCutoff', 'isWorkspaceReadOnly']);
+const trial = load('lib/trial.ts', ['TRIAL_DAYS', 'TRIAL_DATA_RETENTION_DAYS', 'TRIAL_ENDED_MESSAGE', 'getTrialEndsAt', 'getTrialDataDeletionAt', 'getTrialDataCutoff', 'getTrialFinalNoticeCutoff', 'getTrialNoticeWindows', 'getTrialNoticeStage', 'getPlannedTrialDeletionAt', 'isWorkspaceReadOnly']);
 const encryptSecret = (value) => `enc:${value}`;
 const decryptSecret = (value) => { if (!value.startsWith('enc:')) throw new Error('cifra inválida'); return value.slice(4); };
 const keyedHash = (purpose, value) => `${purpose}|${value}`;
@@ -904,7 +904,7 @@ test('retorno do e-mail: falha ao criar o escritório leva ao login, sem abrir o
 // ---------- Exclusão 90 dias depois do fim do teste ----------
 const officeId = (n) => `aaaaaaaa-aaaa-4aaa-8aaa-${String(n).padStart(12, '0')}`;
 const endedDaysAgo = (days) => new Date(NOW.getTime() - days * DAY);
-const trialRow = (workspaceId, days, extra = {}) => ({ workspaceId, status: 'TRIALING', trialEndsAt: endedDaysAgo(days), providerCustomerId: null, providerSubscriptionId: null, ...extra });
+const trialRow = (workspaceId, days, extra = {}) => ({ workspaceId, status: 'TRIALING', trialEndsAt: endedDaysAgo(days), trialDeletionFinalNoticeAt: endedDaysAgo(30), providerCustomerId: null, providerSubscriptionId: null, ...extra });
 
 function loadTrialPurge({ subscriptions, memberships = [], users = [], audit = [], documents = [], folders = {}, removeError = null, deleteUserError = null }) {
   const state = {
@@ -912,6 +912,7 @@ function loadTrialPurge({ subscriptions, memberships = [], users = [], audit = [
     workspaces: subscriptions.map((row) => row.workspaceId), removedFiles: [], authDeleted: [], listed: [],
   };
   const matches = (row, where) => row.status === where.status && row.trialEndsAt && row.trialEndsAt.getTime() <= where.trialEndsAt.lte.getTime()
+    && row.trialDeletionFinalNoticeAt && row.trialDeletionFinalNoticeAt.getTime() <= where.trialDeletionFinalNoticeAt.lte.getTime()
     && row.providerCustomerId === null && row.providerSubscriptionId === null && (!where.workspaceId || row.workspaceId === where.workspaceId);
   const exclusive = (where) => state.users.filter((user) => where.id.in.includes(user.id)
     && !state.memberships.some((item) => item.userId === user.id && item.workspaceId !== where.memberships.none.workspaceId.not));
@@ -944,7 +945,7 @@ function loadTrialPurge({ subscriptions, memberships = [], users = [], audit = [
     remove: async (paths) => { if (removeError) return { error: removeError }; state.removedFiles.push(...paths); return { error: null }; },
   };
   const { deleteExpiredTrialWorkspaces } = load('features/settings/services/delete-expired-trials.ts', ['deleteExpiredTrialWorkspaces'], {
-    prisma: db, DOCUMENTS_BUCKET: 'documents', getTrialDataCutoff: trial.getTrialDataCutoff,
+    prisma: db, DOCUMENTS_BUCKET: 'documents', getTrialDataCutoff: trial.getTrialDataCutoff, getTrialFinalNoticeCutoff: trial.getTrialFinalNoticeCutoff,
     getStorage: () => ({ from: (name) => { assert.equal(name, 'documents'); return bucket; } }),
     createAdminClient: () => ({ auth: { admin: { deleteUser: async (id) => { state.authDeleted.push(id); return { error: deleteUserError }; } } } }),
   });
@@ -1033,10 +1034,153 @@ test('rota de exclusão de testes: exige o segredo', async () => {
     process: { env: { CRON_SECRET: 'segredo' } }, createHash, timingSafeEqual,
     NextResponse: { json: (body, init) => ({ body, status: init?.status ?? 200 }) },
   });
-  const { GET } = load('app/api/cron/excluir-testes-vencidos/route.ts', ['GET'], { runCronJob, deleteExpiredTrialWorkspaces: async () => { runs += 1; return { deleted: 0, failed: 0 }; } });
+  const { GET } = load('app/api/cron/excluir-testes-vencidos/route.ts', ['GET'], { runCronJob, sendTrialDeletionNotices: async () => ({ sent: 0, skipped: 0, failed: 0 }), deleteExpiredTrialWorkspaces: async () => { runs += 1; return { deleted: 0, failed: 0 }; } });
   const call = (authorization) => GET({ headers: { get: () => authorization ?? null } });
   assert.equal((await call('Bearer errado')).status, 401);
   assert.equal(runs, 0);
   assert.equal((await call('Bearer segredo')).status, 200);
   assert.equal(runs, 1);
+});
+
+// ---------- Avisos por e-mail antes da exclusão ----------
+test('exclusão: só depois de o último aviso ter saído há pelo menos 7 dias', async () => {
+  const ctx = loadTrialPurge({
+    subscriptions: [
+      trialRow(officeId(1), 120, { trialDeletionFinalNoticeAt: null }),
+      trialRow(officeId(2), 120, { trialDeletionFinalNoticeAt: endedDaysAgo(6) }),
+      trialRow(officeId(3), 120, { trialDeletionFinalNoticeAt: endedDaysAgo(7) }),
+    ],
+  });
+  assert.deepEqual(normalized(await ctx.run()), { deleted: 1, failed: 0 });
+  assert.deepEqual(ctx.state.workspaces, [officeId(1), officeId(2)]);
+});
+
+test('avisos: primeiro aviso 30 dias antes, último 7 dias antes, cada um uma vez', () => {
+  const at = (days) => new Date(NOW_MS - days * DAY);
+  const stage = (endedDays, noticeAt = null, finalNoticeAt = null) => trial.getTrialNoticeStage({ trialEndsAt: at(endedDays), noticeAt, finalNoticeAt, now: new Date(NOW_MS) });
+  assert.equal(stage(59), null, 'ainda faltam mais de 30 dias');
+  assert.equal(stage(60), 'first');
+  assert.equal(stage(70, at(10)), null, 'primeiro aviso já enviado');
+  assert.equal(stage(83, at(23)), 'final');
+  assert.equal(stage(100), 'final', 'atrasado: vai direto ao último aviso');
+  assert.equal(stage(100, at(40), at(1)), null, 'último aviso já enviado');
+});
+
+test('data prevista: 90 dias após o teste ou 7 dias após um último aviso atrasado', () => {
+  const end = new Date(NOW_MS - 100 * DAY);
+  assert.equal(trial.getPlannedTrialDeletionAt({ trialEndsAt: end, finalNoticeAt: null }).getTime(), NOW_MS - 10 * DAY);
+  assert.equal(trial.getPlannedTrialDeletionAt({ trialEndsAt: end, finalNoticeAt: new Date(NOW_MS) }).getTime(), NOW_MS + 7 * DAY);
+  const onTime = new Date(NOW_MS - 83 * DAY);
+  assert.equal(trial.getPlannedTrialDeletionAt({ trialEndsAt: onTime, finalNoticeAt: new Date(NOW_MS) }).getTime(), NOW_MS + 7 * DAY);
+});
+
+const notice = load('features/settings/emails/trial-deletion-notice.ts', ['buildTrialDeletionNotice']);
+
+test('e-mail de aviso: data, link para assinar e nome do escritório protegido', () => {
+  const email = notice.buildTrialDeletionNotice({
+    stage: 'final', officeName: 'Silva <script>alert(1)</script> & Cia', trialEndDate: '01/09/2026', deletionDate: '30/11/2026',
+    appUrl: 'https://app.lexflowjuridico.com.br', contactEmail: 'contato@lexflowjuridico.com.br',
+  });
+  assert.match(email.subject, /^Último aviso: .*30\/11\/2026$/);
+  assert.match(email.html, /href="https:\/\/app\.lexflowjuridico\.com\.br\/assinar"/);
+  assert.ok(!email.html.includes('<script>'), 'nome do escritório não vira código');
+  assert.match(email.html, /Silva &lt;script&gt;alert\(1\)&lt;\/script&gt; &amp; Cia/);
+  assert.match(email.text, /https:\/\/app\.lexflowjuridico\.com\.br\/assinar/);
+  assert.match(email.text, /contato@lexflowjuridico\.com\.br/);
+  const first = notice.buildTrialDeletionNotice({ stage: 'first', officeName: 'Souza', trialEndDate: '01/09/2026', deletionDate: '30/11/2026', appUrl: 'http://localhost:3000', contactEmail: 'contato@x.com' });
+  assert.match(first.subject, /^Os dados do seu escritório/);
+  assert.match(first.text, /mais um aviso/);
+});
+
+function loadNotices({ subscriptions, failSend = false }) {
+  const state = { rows: subscriptions.map((row) => ({ ...row })), sent: [] };
+  const matches = (row, where) => row.status === where.status && row.providerCustomerId === null && row.providerSubscriptionId === null
+    && row.trialDeletionFinalNoticeAt === null && row.trialEndsAt.getTime() <= where.trialEndsAt.lte.getTime()
+    && (row.trialDeletionNoticeAt === null || row.trialEndsAt.getTime() <= where.OR[1].trialEndsAt.lte.getTime());
+  const { sendTrialDeletionNotices } = load('features/settings/services/send-trial-deletion-notices.ts', ['sendTrialDeletionNotices'], {
+    prisma: { subscription: {
+      findMany: async ({ where, take }) => state.rows.filter((row) => matches(row, where)).slice(0, take),
+      update: async ({ where, data }) => { Object.assign(state.rows.find((row) => row.id === where.id), data); },
+    } },
+    sendEmail: async (payload) => { if (failSend) throw new Error('fora do ar'); state.sent.push(payload); },
+    getAppUrl: () => 'https://app.lexflowjuridico.com.br',
+    LEGAL_CONTACT_EMAIL: 'contato@lexflowjuridico.com.br',
+    formatDate: (value) => new Date(value).toISOString().slice(0, 10),
+    buildTrialDeletionNotice: notice.buildTrialDeletionNotice,
+    getTrialNoticeStage: trial.getTrialNoticeStage,
+    getTrialNoticeWindows: trial.getTrialNoticeWindows,
+    getPlannedTrialDeletionAt: trial.getPlannedTrialDeletionAt,
+  });
+  return { state, run: () => sendTrialDeletionNotices(new Date(NOW_MS)) };
+}
+
+const noticeRow = (id, endedDays, extra = {}) => ({
+  id, workspaceId: `w-${id}`, status: 'TRIALING', providerCustomerId: null, providerSubscriptionId: null,
+  trialEndsAt: new Date(NOW_MS - endedDays * DAY), trialDeletionNoticeAt: null, trialDeletionFinalNoticeAt: null,
+  workspace: { name: `Escritório ${id}`, members: [{ user: { email: `dono-${id}@exemplo.com` } }] }, ...extra,
+});
+
+test('avisos: envia ao proprietário, registra o envio e não repete', async () => {
+  const ctx = loadNotices({ subscriptions: [noticeRow('cedo', 50), noticeRow('primeiro', 65), noticeRow('ultimo', 85, { trialDeletionNoticeAt: new Date(NOW_MS - 20 * DAY) }), noticeRow('atrasado', 120)] });
+  assert.deepEqual(normalized(await ctx.run()), { sent: 3, skipped: 0, failed: 0 });
+  const bySubject = Object.fromEntries(ctx.state.sent.map((email) => [email.to[0], email]));
+  assert.match(bySubject['dono-primeiro@exemplo.com'].subject, /^Os dados/);
+  assert.match(bySubject['dono-ultimo@exemplo.com'].subject, /^Último aviso/);
+  assert.match(bySubject['dono-atrasado@exemplo.com'].subject, /^Último aviso/, 'atrasado recebe só o último aviso');
+  assert.equal(bySubject['dono-ultimo@exemplo.com'].replyTo, 'contato@lexflowjuridico.com.br');
+  assert.equal(bySubject['dono-primeiro@exemplo.com'].idempotencyKey, 'trial-deletion-first-primeiro');
+  const rows = Object.fromEntries(ctx.state.rows.map((row) => [row.id, row]));
+  assert.equal(rows.cedo.trialDeletionNoticeAt, null);
+  assert.ok(rows.primeiro.trialDeletionNoticeAt && !rows.primeiro.trialDeletionFinalNoticeAt);
+  assert.ok(rows.atrasado.trialDeletionNoticeAt && rows.atrasado.trialDeletionFinalNoticeAt);
+  assert.match(bySubject['dono-atrasado@exemplo.com'].text, new RegExp(new Date(NOW_MS + 7 * DAY).toISOString().slice(0, 10)), 'data dá 7 dias após o aviso');
+
+  assert.deepEqual(normalized(await ctx.run()), { sent: 0, skipped: 0, failed: 0 }, 'segunda execução no mesmo dia não reenvia');
+});
+
+test('avisos: falha no envio não registra nada; escritório sem proprietário é liberado', async () => {
+  const failing = loadNotices({ subscriptions: [noticeRow('a', 85)], failSend: true });
+  assert.deepEqual(normalized(await failing.run()), { sent: 0, skipped: 0, failed: 1 });
+  assert.equal(failing.state.rows[0].trialDeletionFinalNoticeAt, null, 'sem aviso, sem exclusão');
+
+  const orphan = loadNotices({ subscriptions: [noticeRow('b', 85, { workspace: { name: 'Sem dono', members: [] } })] });
+  assert.deepEqual(normalized(await orphan.run()), { sent: 0, skipped: 1, failed: 0 });
+  assert.ok(orphan.state.rows[0].trialDeletionFinalNoticeAt);
+  assert.equal(orphan.state.sent.length, 0);
+});
+
+test('avisos: assinatura ativa ou com pagamento vinculado não recebe aviso', async () => {
+  const ctx = loadNotices({ subscriptions: [noticeRow('ativa', 120, { status: 'ACTIVE' }), noticeRow('pago', 120, { providerCustomerId: 'cus_1' })] });
+  assert.deepEqual(normalized(await ctx.run()), { sent: 0, skipped: 0, failed: 0 });
+});
+
+test('envio de e-mail: exige a chave do Resend e usa o remetente do domínio', async () => {
+  const calls = [];
+  class Resend { constructor(key) { this.key = key; this.emails = { send: async (payload, options) => { calls.push({ key, payload, options }); return { error: null }; } }; } }
+  const loadEmail = (env) => load('lib/email.ts', ['sendEmail', 'getAppUrl', 'EMAIL_FROM'], { process: { env }, Resend });
+  await assert.rejects(loadEmail({}).sendEmail({ to: ['a@b.com'], subject: 's', html: 'h', text: 't' }), /RESEND_API_KEY/);
+  const mail = loadEmail({ RESEND_API_KEY: 're_teste', APP_URL: 'https://app.lexflowjuridico.com.br/' });
+  await mail.sendEmail({ to: ['a@b.com'], subject: 's', html: 'h', text: 't', replyTo: 'contato@x.com', idempotencyKey: 'k1' });
+  assert.equal(calls[0].payload.from, 'LexFlow <nao-responda@mail.lexflowjuridico.com.br>');
+  assert.equal(calls[0].options.idempotencyKey, 'k1');
+  assert.equal(mail.getAppUrl(), 'https://app.lexflowjuridico.com.br', 'sem barra no fim');
+  assert.equal(loadEmail({}).getAppUrl(), 'http://localhost:3000');
+});
+
+test('rota diária: falha nos avisos não impede a exclusão de quem já foi avisado', async () => {
+  const { runCronJob } = load('lib/cron-route.ts', ['runCronJob'], {
+    process: { env: { CRON_SECRET: 'segredo' } }, createHash, timingSafeEqual,
+    NextResponse: { json: (body, init) => ({ body, status: init?.status ?? 200 }) },
+  });
+  let deletions = 0;
+  const { GET } = load('app/api/cron/excluir-testes-vencidos/route.ts', ['GET'], {
+    runCronJob,
+    sendTrialDeletionNotices: async () => { throw new Error('sem chave'); },
+    deleteExpiredTrialWorkspaces: async () => { deletions += 1; return { deleted: 2, failed: 0 }; },
+  });
+  const response = await GET({ headers: { get: () => 'Bearer segredo' } });
+  assert.equal(response.status, 200);
+  assert.equal(deletions, 1);
+  assert.equal(response.body.notices.failed, -1);
+  assert.equal(response.body.deletion.deleted, 2);
 });
