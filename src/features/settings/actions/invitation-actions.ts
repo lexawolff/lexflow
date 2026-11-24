@@ -1,6 +1,11 @@
 "use server";
 
 import {
+  getTeamCapacity,
+  TEAM_FULL_MESSAGE,
+} from "../lib/team-capacity";
+
+import {
   UserRole,
 } from "@prisma/client";
 
@@ -159,6 +164,12 @@ async function createInvitationImpl(
       data: { revokedAt: now },
     });
 
+    const capacity = await getTeamCapacity(tx, workspace.id, now);
+
+    if (capacity?.full) {
+      throw new ActionError(TEAM_FULL_MESSAGE);
+    }
+
     await tx.workspaceInvitation.create({
       data: {
         workspaceId: workspace.id,
@@ -241,6 +252,14 @@ async function regenerateInvitationLinkImpl(
 ): Promise<InvitationLink> {
   const { workspace, invitation } =
     await findManageableInvitation(formData);
+
+  if (getInvitationStatus(invitation, new Date()) === "EXPIRADO") {
+    const capacity = await getTeamCapacity(prisma, workspace.id);
+
+    if (capacity?.full) {
+      throw new ActionError(TEAM_FULL_MESSAGE);
+    }
+  }
 
   const expiresAt = invitationExpiresAt(new Date());
   const { token, tokenHash } = generateInvitationToken();

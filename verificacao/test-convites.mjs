@@ -34,6 +34,7 @@ const inv = load('features/settings/lib/invitations.ts', [
 
 const { authErrorMessage } = load('features/auth/lib/auth-error-message.ts', ['authErrorMessage']);
 const schemas = load('features/auth/schemas/auth-schema.ts', ['acceptInvitationSchema', 'changePasswordSchema', 'newPasswordFormSchema'], { z });
+const capacity = load('features/settings/lib/team-capacity.ts', ['getTeamCapacity', 'isTeamFullForNewMember', 'TEAM_FULL_MESSAGE', 'TEAM_FULL_ON_ACCEPT_MESSAGE'], { PLAN_MAX_USERS: 5 });
 
 function form(values) {
   const data = new FormData();
@@ -42,8 +43,9 @@ function form(values) {
 }
 
 // ---------- Banco simulado ----------
-function makeDb({ users = [], invitations = [] } = {}) {
-  const state = { users: structuredClone(users), memberships: [], invitations: structuredClone(invitations), failCreateMembership: false, lockedOverride: null };
+function makeDb({ users = [], invitations = [], plan = false, members = 0 } = {}) {
+  // plan: escritório com assinatura (limite de 5); members: membros já existentes.
+  const state = { users: structuredClone(users), memberships: Array.from({ length: members }, (_, index) => ({ userId: `m${index}`, workspaceId: 'w1', role: 'LAWYER' })), invitations: structuredClone(invitations), failCreateMembership: false, lockedOverride: null };
   const matches = (row, where) => Object.entries(where).every(([key, value]) => (value === null ? row[key] == null : row[key] === value));
   const db = {
     user: {
@@ -58,7 +60,9 @@ function makeDb({ users = [], invitations = [] } = {}) {
       },
       create: async ({ data }) => { state.users.push({ ...data, memberships: [] }); return data; },
     },
+    subscription: { findUnique: async () => (plan ? { id: 'sub-1' } : null) },
     membership: {
+      count: async ({ where }) => state.memberships.filter((row) => row.workspaceId === where.workspaceId).length,
       create: async ({ data }) => {
         if (state.failCreateMembership) throw new Error('falha simulada do banco');
         state.memberships.push(data);
@@ -66,6 +70,7 @@ function makeDb({ users = [], invitations = [] } = {}) {
       },
     },
     workspaceInvitation: {
+      count: async ({ where }) => state.invitations.filter((row) => row.workspaceId === where.workspaceId && !row.acceptedAt && !row.revokedAt && new Date(row.expiresAt).getTime() > where.expiresAt.gt.getTime()).length,
       updateMany: async ({ where, data }) => {
         const rows = state.invitations.filter((row) => matches(row, where));
         rows.forEach((row) => Object.assign(row, data));
@@ -137,6 +142,7 @@ function loadTeamActions({ role = 'OWNER', allowed = true, db }) {
     prisma: db,
     canInviteRole: inv.canInviteRole, generateInvitationToken: inv.generateInvitationToken,
     getInvitationStatus: inv.getInvitationStatus, invitationExpiresAt: inv.invitationExpiresAt,
+    getTeamCapacity: capacity.getTeamCapacity, TEAM_FULL_MESSAGE: capacity.TEAM_FULL_MESSAGE,
   });
   return { ...actions, revalidated };
 }
@@ -220,10 +226,10 @@ test('novo link e cancelamento: só no próprio escritório, só convites aberto
 });
 
 // ---------- Aceite pelo link (rota pública) ----------
-function setupAccept({ invitation, users = [], createUserError = null } = {}) {
+function setupAccept({ invitation, users = [], createUserError = null, plan = false, members = 0 } = {}) {
   const token = inv.generateInvitationToken().token;
   const invitations = invitation ? [{ id: 'inv-1', workspaceId: 'w1', email: 'novo@x.com', role: 'INTERN', tokenHash: sha256(token), invitedByUserId: 'u-owner', expiresAt: new Date(Date.now() + DAY), acceptedAt: null, revokedAt: null, ...invitation }] : [];
-  const { db, state } = makeDb({ users, invitations });
+  const { db, state } = makeDb({ users, invitations, plan, members });
   const calls = { createUser: [], deleteUser: [], signIn: [] };
   const { acceptInvitationAction } = load('features/auth/actions/accept-invitation.ts', ['acceptInvitationAction'], {
     ActionError, prisma: db,
@@ -236,6 +242,7 @@ function setupAccept({ invitation, users = [], createUserError = null } = {}) {
     getInvitationStatus: inv.getInvitationStatus, hashInvitationToken: inv.hashInvitationToken,
     invitationUnavailableMessage: inv.invitationUnavailableMessage, isWellFormedInvitationToken: inv.isWellFormedInvitationToken,
     authErrorMessage, acceptInvitationSchema: schemas.acceptInvitationSchema,
+    isTeamFullForNewMember: capacity.isTeamFullForNewMember, TEAM_FULL_ON_ACCEPT_MESSAGE: capacity.TEAM_FULL_ON_ACCEPT_MESSAGE,
     LEGAL_VERSION: '1.0',
   });
   const accept = (values, useToken = token) => acceptInvitationAction(useToken, { error: null }, form(values));
@@ -354,4 +361,58 @@ test('middleware: convite e recuperação são públicos; redefinição exige se
   assert.equal(isPublicRoute('/redefinir-senha'), false);
   assert.equal(isPublicRoute('/conviteX'), false);
   assert.equal(isPublicRoute('/configuracoes/equipe'), false);
+});
+
+// ---------- Limite de usuários do plano ----------
+const pendingInvite = (n, extra = {}) => ({ id: `p${n}`, workspaceId: 'w1', email: `p${n}@x.com`, role: 'LAWYER', tokenHash: `h${n}`, invitedByUserId: 'u-owner', expiresAt: new Date(Date.now() + DAY), acceptedAt: null, revokedAt: null, ...extra });
+
+test('limite: conta membros e convites pendentes; vencidos e cancelados não ocupam vaga', async () => {
+  const { db } = makeDb({ plan: true, members: 3, invitations: [pendingInvite(1), pendingInvite(2, { expiresAt: new Date(Date.now() - DAY) }), pendingInvite(3, { revokedAt: new Date() })] });
+  assert.deepEqual(normalized(await capacity.getTeamCapacity(db, 'w1')), { limit: 5, used: 4, full: false });
+  const noPlan = makeDb({ members: 9 });
+  assert.equal(await capacity.getTeamCapacity(noPlan.db, 'w1'), null, 'escritório anterior ao plano não tem limite');
+});
+
+test('limite: o 5º lugar pode ser convidado; além disso o convite é recusado', async () => {
+  const { db, state } = makeDb({ plan: true, members: 3, invitations: [pendingInvite(1)] });
+  const owner = loadTeamActions({ db });
+  await owner.createInvitationImpl(form({ email: 'quinto@x.com', role: 'LAWYER' }));
+  await assert.rejects(owner.createInvitationImpl(form({ email: 'sexto@x.com', role: 'LAWYER' })), /até 5 usuários/);
+  assert.equal(state.invitations.filter((row) => !row.revokedAt).length, 2);
+  // Reenviar o convite de quem já ocupa vaga não precisa de vaga nova.
+  await owner.createInvitationImpl(form({ email: 'quinto@x.com', role: 'INTERN' }));
+  assert.equal(state.invitations.filter((row) => !row.revokedAt && row.email === 'quinto@x.com').length, 1);
+});
+
+test('limite: escritório sem plano continua convidando sem limite', async () => {
+  const { db, state } = makeDb({ members: 8 });
+  await loadTeamActions({ db }).createInvitationImpl(form({ email: 'nono@x.com', role: 'LAWYER' }));
+  assert.equal(state.invitations.length, 1);
+});
+
+test('limite: novo link para convite vencido só se houver vaga', async () => {
+  const expired = pendingInvite(9, { expiresAt: new Date(Date.now() - DAY) });
+
+  const { db, state } = makeDb({ plan: true, members: 4, invitations: [{ ...expired, id: '00000000-0000-4000-8000-000000000009' }, pendingInvite(1)] });
+  await assert.rejects(loadTeamActions({ db }).regenerateInvitationLinkImpl(form({ invitationId: '00000000-0000-4000-8000-000000000009' })), /até 5 usuários/);
+  assert.equal(state.invitations[0].tokenHash, 'h9', 'link antigo mantido');
+
+  const roomy = makeDb({ plan: true, members: 3, invitations: [{ ...expired, id: '00000000-0000-4000-8000-000000000009' }] });
+  const link = await loadTeamActions({ db: roomy.db }).regenerateInvitationLinkImpl(form({ invitationId: '00000000-0000-4000-8000-000000000009' }));
+  assert.match(link.invitePath, /^\/convite\//);
+});
+
+test('limite: escritório lotado não aceita o convite e nenhuma conta é criada', async () => {
+  const { accept, state, calls } = setupAccept({ invitation: {}, plan: true, members: 5 });
+  const result = await accept(validForm);
+  assert.match(result.error, /já tem 5 usuários/);
+  assert.equal(calls.createUser.length, 0, 'conta não chega a ser criada');
+  assert.equal(state.memberships.length, 5);
+  assert.equal(state.invitations[0].acceptedAt, null);
+});
+
+test('limite: com vaga, o convite é aceito normalmente', async () => {
+  const { accept, state } = setupAccept({ invitation: {}, plan: true, members: 4 });
+  await assert.rejects(accept(validForm), (error) => error.url === '/dashboard');
+  assert.equal(state.memberships.length, 5);
 });

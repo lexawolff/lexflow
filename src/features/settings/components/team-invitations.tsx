@@ -48,6 +48,8 @@ type Props = {
   invitations: PendingInvitation[];
   currentRole: TeamRoleValue;
   workspaceName: string;
+  // Vagas do plano; null para escritórios sem limite.
+  capacity: { used: number; limit: number; full: boolean } | null;
 };
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
@@ -64,6 +66,7 @@ export function TeamInvitations({
   invitations,
   currentRole,
   workspaceName,
+  capacity,
 }: Props) {
   const [isPending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -214,8 +217,29 @@ export function TeamInvitations({
               e-mail. Ela cria a própria senha e entra com a função escolhida.
               O link vale por 7 dias.
             </p>
+
+            {capacity ? (
+              <p className="mt-2 text-sm">
+                <strong className="font-semibold">
+                  {capacity.used} de {capacity.limit} vagas usadas
+                </strong>{" "}
+                <span className="text-muted-foreground">
+                  (membros e convites pendentes)
+                </span>
+              </p>
+            ) : null}
           </div>
         </div>
+
+        {capacity?.full ? (
+          <p
+            role="status"
+            className="mt-5 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+          >
+            O escritório chegou ao limite de {capacity.limit} usuários do plano.
+            Remova um membro ou cancele um convite para convidar outra pessoa.
+          </p>
+        ) : null}
 
         <form
           onSubmit={handleCreate}
@@ -268,7 +292,7 @@ export function TeamInvitations({
 
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || Boolean(capacity?.full)}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pendingId === "new" ? (

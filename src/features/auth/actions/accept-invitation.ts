@@ -1,6 +1,11 @@
 "use server";
 
 import {
+  isTeamFullForNewMember,
+  TEAM_FULL_ON_ACCEPT_MESSAGE,
+} from "@/features/settings/lib/team-capacity";
+
+import {
   redirect,
 } from "next/navigation";
 
@@ -113,6 +118,11 @@ export async function acceptInvitationAction(
     };
   }
 
+  // Antes de criar a conta: escritório lotado não recebe novos membros.
+  if (await isTeamFullForNewMember(prisma, invitation.workspaceId)) {
+    return { error: TEAM_FULL_ON_ACCEPT_MESSAGE };
+  }
+
   const admin = createAdminClient();
 
   const {
@@ -167,6 +177,11 @@ export async function acceptInvitationAction(
           invitationUnavailableMessage(currentStatus),
         );
       }
+
+        // Escritório lotado desde o envio do convite.
+        if (await isTeamFullForNewMember(tx, invitation.workspaceId)) {
+          throw new ActionError(TEAM_FULL_ON_ACCEPT_MESSAGE);
+        }
 
       await tx.user.create({
         data: {

@@ -1,4 +1,8 @@
 import {
+  getTeamCapacity,
+} from "@/features/settings/lib/team-capacity";
+
+import {
   UsersRound,
 } from "lucide-react";
 
@@ -115,6 +119,13 @@ export default async function EquipePage() {
   const now =
     new Date();
 
+  const capacity =
+    await getTeamCapacity(
+      prisma,
+      workspace.id,
+      now,
+    );
+
   const invitations: PendingInvitation[] =
     openInvitations.map(
       (
@@ -204,6 +215,9 @@ export default async function EquipePage() {
 
           workspaceName={
             workspace.name
+          }
+          capacity={
+            capacity
           }
         />
 
