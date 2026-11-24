@@ -24,7 +24,7 @@ function load(file, names, deps = {}) {
 const normalized = (value) => JSON.parse(JSON.stringify(value));
 const UserRole = { OWNER: 'OWNER', ADMIN: 'ADMIN', LAWYER: 'LAWYER' };
 const documents = load('lib/br-documents.ts', ['onlyDigits', 'normalizeTaxId', 'isValidCpf', 'isValidCnpj', 'isValidTaxId', 'getTaxIdOwnerKey', 'isValidBrazilPhone', 'maskTaxId', 'maskCnpj']);
-const trial = load('lib/trial.ts', ['TRIAL_DAYS', 'TRIAL_DATA_RETENTION_DAYS', 'TRIAL_ENDED_MESSAGE', 'getTrialEndsAt', 'getTrialDataDeletionAt', 'getTrialDataCutoff', 'getTrialFinalNoticeCutoff', 'getTrialNoticeWindows', 'getTrialNoticeStage', 'getPlannedTrialDeletionAt', 'isWorkspaceReadOnly']);
+const trial = load('lib/trial.ts', ['TRIAL_DAYS', 'TRIAL_DATA_RETENTION_DAYS', 'TRIAL_ENDED_MESSAGE', 'getTrialEndsAt', 'getTrialDataDeletionAt', 'getTrialDataCutoff', 'getTrialFinalNoticeCutoff', 'getTrialNoticeWindows', 'getTrialNoticeStage', 'getPlannedTrialDeletionAt', 'isWorkspaceReadOnly', 'getDataRetentionStart']);
 const encryptSecret = (value) => `enc:${value}`;
 const decryptSecret = (value) => { if (!value.startsWith('enc:')) throw new Error('cifra inválida'); return value.slice(4); };
 const keyedHash = (purpose, value) => `${purpose}|${value}`;
@@ -901,6 +901,22 @@ test('retorno do e-mail: falha ao criar o escritório leva ao login, sem abrir o
 });
 
 // ---------- Exclusão 90 dias depois do fim do teste ----------
+// Avalia um filtro do Prisma (igualdade, lte, not, in, OR e AND) sobre uma linha.
+const isDateValue = (value) => Object.prototype.toString.call(value) === '[object Date]';
+const timeOf = (value) => (isDateValue(value) ? value.getTime() : value);
+function whereMatches(row, where) {
+  return Object.entries(where).every(([key, condition]) => {
+    if (key === 'OR') return condition.some((item) => whereMatches(row, item));
+    if (key === 'AND') return condition.every((item) => whereMatches(row, item));
+    const value = row[key] ?? null;
+    if (condition === null || typeof condition !== 'object' || isDateValue(condition)) return timeOf(value) === timeOf(condition);
+    if ('lte' in condition) return value !== null && timeOf(value) <= timeOf(condition.lte);
+    if ('not' in condition) return condition.not === null ? value !== null : timeOf(value) !== timeOf(condition.not);
+    if ('in' in condition) return condition.in.includes(value);
+    throw new Error(`filtro não suportado em ${key}`);
+  });
+}
+
 const officeId = (n) => `aaaaaaaa-aaaa-4aaa-8aaa-${String(n).padStart(12, '0')}`;
 const endedDaysAgo = (days) => new Date(NOW.getTime() - days * DAY);
 const trialRow = (workspaceId, days, extra = {}) => ({ workspaceId, status: 'TRIALING', trialEndsAt: endedDaysAgo(days), trialDeletionFinalNoticeAt: endedDaysAgo(30), providerCustomerId: null, providerSubscriptionId: null, ...extra });
@@ -910,15 +926,13 @@ function loadTrialPurge({ subscriptions, memberships = [], users = [], audit = [
     subscriptions: [...subscriptions], memberships: [...memberships], users: [...users], audit: [...audit], documents: [...documents],
     workspaces: subscriptions.map((row) => row.workspaceId), removedFiles: [], authDeleted: [], listed: [], asaasDeleted: [], synced: [],
   };
-  const matches = (row, where) => row.status === where.status && row.trialEndsAt && row.trialEndsAt.getTime() <= where.trialEndsAt.lte.getTime()
-    && row.trialDeletionFinalNoticeAt && row.trialDeletionFinalNoticeAt.getTime() <= where.trialDeletionFinalNoticeAt.lte.getTime()
-    && (!where.workspaceId || row.workspaceId === where.workspaceId);
+  const matches = whereMatches;
   const exclusive = (where) => state.users.filter((user) => where.id.in.includes(user.id)
     && !state.memberships.some((item) => item.userId === user.id && item.workspaceId !== where.memberships.none.workspaceId.not));
   const db = {
     subscription: {
       findMany: async ({ where, take }) => state.subscriptions.filter((row) => matches(row, where)).slice(0, take),
-      findFirst: async ({ where }) => { const row = state.subscriptions.find((item) => matches(item, where)); return row ? { id: row.id ?? row.workspaceId, providerSubscriptionId: row.providerSubscriptionId } : null; },
+      findFirst: async ({ where }) => { const row = state.subscriptions.find((item) => matches(item, where)); return row ? { id: row.id ?? row.workspaceId, status: row.status, providerSubscriptionId: row.providerSubscriptionId } : null; },
     },
     document: { findMany: async ({ where }) => state.documents.filter((row) => row.workspaceId === where.workspaceId) },
     membership: { findMany: async ({ where }) => state.memberships.filter((row) => row.workspaceId === where.workspaceId) },
@@ -1092,7 +1106,7 @@ const notice = load('features/settings/emails/trial-deletion-notice.ts', ['build
 
 test('e-mail de aviso: data, link para assinar e nome do escritório protegido', () => {
   const email = notice.buildTrialDeletionNotice({
-    stage: 'final', officeName: 'Silva <script>alert(1)</script> & Cia', trialEndDate: '01/09/2026', deletionDate: '30/11/2026',
+    stage: 'final', officeName: 'Silva <script>alert(1)</script> & Cia', endDate: '01/09/2026', deletionDate: '30/11/2026',
     appUrl: 'https://app.lexflowjuridico.com.br', contactEmail: 'contato@lexflowjuridico.com.br',
   });
   assert.match(email.subject, /^Último aviso: .*30\/11\/2026$/);
@@ -1101,16 +1115,14 @@ test('e-mail de aviso: data, link para assinar e nome do escritório protegido',
   assert.match(email.html, /Silva &lt;script&gt;alert\(1\)&lt;\/script&gt; &amp; Cia/);
   assert.match(email.text, /https:\/\/app\.lexflowjuridico\.com\.br\/assinar/);
   assert.match(email.text, /contato@lexflowjuridico\.com\.br/);
-  const first = notice.buildTrialDeletionNotice({ stage: 'first', officeName: 'Souza', trialEndDate: '01/09/2026', deletionDate: '30/11/2026', appUrl: 'http://localhost:3000', contactEmail: 'contato@x.com' });
+  const first = notice.buildTrialDeletionNotice({ stage: 'first', officeName: 'Souza', endDate: '01/09/2026', deletionDate: '30/11/2026', appUrl: 'http://localhost:3000', contactEmail: 'contato@x.com' });
   assert.match(first.subject, /^Os dados do seu escritório/);
   assert.match(first.text, /mais um aviso/);
 });
 
 function loadNotices({ subscriptions, failSend = false }) {
   const state = { rows: subscriptions.map((row) => ({ ...row })), sent: [] };
-  const matches = (row, where) => row.status === where.status
-    && row.trialDeletionFinalNoticeAt === null && row.trialEndsAt.getTime() <= where.trialEndsAt.lte.getTime()
-    && (row.trialDeletionNoticeAt === null || row.trialEndsAt.getTime() <= where.OR[1].trialEndsAt.lte.getTime());
+  const matches = whereMatches;
   const { sendTrialDeletionNotices } = load('features/settings/services/send-trial-deletion-notices.ts', ['sendTrialDeletionNotices'], {
     prisma: { subscription: {
       findMany: async ({ where, take }) => state.rows.filter((row) => matches(row, where)).slice(0, take),
@@ -1124,6 +1136,7 @@ function loadNotices({ subscriptions, failSend = false }) {
     getTrialNoticeStage: trial.getTrialNoticeStage,
     getTrialNoticeWindows: trial.getTrialNoticeWindows,
     getPlannedTrialDeletionAt: trial.getPlannedTrialDeletionAt,
+    getDataRetentionStart: trial.getDataRetentionStart,
   });
   return { state, run: () => sendTrialDeletionNotices(new Date(NOW_MS)) };
 }
@@ -1199,4 +1212,70 @@ test('rota diária: falha nos avisos não impede a exclusão de quem já foi avi
   assert.equal(response.body.notices.failed, -1);
   assert.equal(response.body.reconciliation.failed, -1, 'falha na conferência também não impede');
   assert.equal(response.body.deletion.deleted, 2);
+});
+
+// ---------- Ex-assinantes: exclusão 90 dias depois do fim da assinatura ----------
+const canceledRow = (workspaceId, days, extra = {}) => trialRow(workspaceId, 400, {
+  status: 'CANCELED', currentPeriodEnd: endedDaysAgo(days), canceledAt: endedDaysAgo(days + 20), ...extra,
+});
+
+test('prazo de exclusão: conta do fim do teste ou do último período pago de quem cancelou', () => {
+  const end = new Date(NOW_MS - 10 * DAY);
+  assert.equal(trial.getDataRetentionStart({ status: 'TRIALING', trialEndsAt: end }).getTime(), end.getTime());
+  assert.equal(trial.getDataRetentionStart({ status: 'CANCELED', trialEndsAt: new Date(0), currentPeriodEnd: end, canceledAt: end }).getTime(), end.getTime());
+  assert.equal(trial.getDataRetentionStart({ status: 'CANCELED', trialEndsAt: new Date(0), currentPeriodEnd: end, canceledAt: null }), null, 'voltou a assinar: aguarda a primeira fatura');
+  for (const status of ['ACTIVE', 'PAST_DUE']) assert.equal(trial.getDataRetentionStart({ status, trialEndsAt: new Date(0), currentPeriodEnd: end, canceledAt: null }), null);
+});
+
+test('exclusão: ex-assinante sai 90 dias depois do fim do período pago; quem voltou a assinar ou está em dia fica', async () => {
+  const ctx = loadTrialPurge({
+    subscriptions: [
+      canceledRow(officeId(1), 90),
+      canceledRow(officeId(2), 89),
+      canceledRow(officeId(3), 200, { canceledAt: null }),
+      canceledRow(officeId(4), 200, { status: 'ACTIVE' }),
+      canceledRow(officeId(5), 200, { status: 'PAST_DUE' }),
+      canceledRow(officeId(6), 200, { trialDeletionFinalNoticeAt: null }),
+    ],
+  });
+  assert.deepEqual(normalized(await ctx.run()), { deleted: 1, failed: 0 });
+  assert.deepEqual(ctx.state.workspaces, [officeId(2), officeId(3), officeId(4), officeId(5), officeId(6)]);
+});
+
+test('exclusão: ex-assinante ligado ao Asaas é conferido antes; quem voltou a pagar fica e a assinatura encerrada não é tocada', async () => {
+  const ctx = loadTrialPurge({
+    subscriptions: [
+      canceledRow(officeId(1), 120, { id: 's-encerrada', providerSubscriptionId: 'sub_encerrada' }),
+      canceledRow(officeId(2), 120, { id: 's-voltou', providerSubscriptionId: 'sub_voltou' }),
+    ],
+    asaasStatus: { sub_encerrada: 'CANCELED', sub_voltou: 'ACTIVE' },
+  });
+  assert.deepEqual(normalized(await ctx.run()), { deleted: 1, failed: 0 });
+  assert.deepEqual(ctx.state.workspaces, [officeId(2)]);
+  assert.deepEqual([...ctx.state.synced].sort(), ['s-encerrada', 's-voltou']);
+  assert.deepEqual(ctx.state.asaasDeleted, [], 'a assinatura já foi encerrada no Asaas');
+});
+
+test('avisos: ex-assinante recebe o aviso com o texto da assinatura; quem aguarda a primeira fatura não recebe', async () => {
+  const ctx = loadNotices({
+    subscriptions: [
+      noticeRow('ex', 400, { status: 'CANCELED', currentPeriodEnd: new Date(NOW_MS - 65 * DAY), canceledAt: new Date(NOW_MS - 70 * DAY) }),
+      noticeRow('voltou', 400, { status: 'CANCELED', currentPeriodEnd: new Date(NOW_MS - 65 * DAY), canceledAt: null }),
+      noticeRow('cedo', 400, { status: 'CANCELED', currentPeriodEnd: new Date(NOW_MS - 50 * DAY), canceledAt: new Date(NOW_MS - 50 * DAY) }),
+    ],
+  });
+  assert.deepEqual(normalized(await ctx.run()), { sent: 1, skipped: 0, failed: 0 });
+  const [email] = ctx.state.sent;
+  assert.deepEqual(email.to, ['dono-ex@exemplo.com']);
+  assert.match(email.text, /A assinatura do escritório Escritório ex no LexFlow terminou em/);
+  assert.match(email.text, new RegExp(new Date(NOW_MS + 25 * DAY).toISOString().slice(0, 10)), '90 dias depois do fim do período pago');
+  assert.equal(email.idempotencyKey, 'subscription-deletion-first-ex');
+});
+
+test('e-mail de aviso: texto do teste e da assinatura', () => {
+  const base = { stage: 'first', officeName: 'Souza', endDate: '01/09/2026', deletionDate: '30/11/2026', appUrl: 'http://localhost:3000', contactEmail: 'contato@x.com' };
+  assert.match(notice.buildTrialDeletionNotice(base).text, /O teste grátis do escritório Souza/);
+  const ended = notice.buildTrialDeletionNotice({ ...base, kind: 'subscription' }).text;
+  assert.match(ended, /A assinatura do escritório Souza no LexFlow terminou em 01\/09\/2026/);
+  assert.match(ended, /assine o LexFlow de novo/);
 });

@@ -41,17 +41,20 @@ const UUID_PATTERN =
 type DocumentBucket = ReturnType<ReturnType<typeof getStorage>["from"]>;
 
 /*
- * Só teste nunca pago (status TRIALING). O último aviso por e-mail precisa
- * ter saído há pelo menos 7 dias.
+ * Teste nunca pago (TRIALING) ou assinatura encerrada (CANCELED com data de
+ * cancelamento), 90 dias depois do fim do teste ou do último período pago.
+ * O último aviso por e-mail precisa ter saído há pelo menos 7 dias.
  */
-function expiredTrialWhere(
+function expiredWorkspaceWhere(
   cutoff: Date,
   noticeCutoff: Date,
 ) {
   return {
-    status: "TRIALING" as const,
-    trialEndsAt: { lte: cutoff },
     trialDeletionFinalNoticeAt: { lte: noticeCutoff },
+    OR: [
+      { status: "TRIALING" as const, trialEndsAt: { lte: cutoff } },
+      { status: "CANCELED" as const, canceledAt: { not: null }, currentPeriodEnd: { lte: cutoff } },
+    ],
   };
 }
 
@@ -146,30 +149,44 @@ async function deleteWorkspaceData(
   cutoff: Date,
   noticeCutoff: Date,
 ) {
-  const where = expiredTrialWhere(cutoff, noticeCutoff);
+  const where = expiredWorkspaceWhere(cutoff, noticeCutoff);
 
-  const stillExpired = await prisma.subscription.findFirst({
-    where: { ...where, workspaceId },
-    select: { id: true, providerSubscriptionId: true },
-  });
+  const findExpired = () =>
+    prisma.subscription.findFirst({
+      where: { ...where, workspaceId },
+      select: { id: true, status: true, providerSubscriptionId: true },
+    });
+
+  let stillExpired = await findExpired();
 
   if (!stillExpired) {
     return false;
   }
 
-  // Ligado ao Asaas: confere se houve pagamento antes de apagar qualquer coisa.
+  // Ligado ao Asaas: confere se houve pagamento antes de apagar qualquer
+  // coisa, e de novo as regras, com o estado atualizado.
   if (stillExpired.providerSubscriptionId) {
     const status = await syncAsaasSubscription(stillExpired.id);
 
-    if (status !== "TRIALING") {
+    if (status !== stillExpired.status) {
       return false;
     }
 
-    try {
-      await deleteAsaasSubscription(stillExpired.providerSubscriptionId);
-    } catch (error) {
-      if (!(error instanceof AsaasError && error.status === 404)) {
-        throw error;
+    stillExpired = await findExpired();
+
+    if (!stillExpired) {
+      return false;
+    }
+
+    // Teste com cobrança nunca paga: cancela no Asaas. A assinatura de quem
+    // cancelou já foi encerrada lá.
+    if (stillExpired.status === "TRIALING" && stillExpired.providerSubscriptionId) {
+      try {
+        await deleteAsaasSubscription(stillExpired.providerSubscriptionId);
+      } catch (error) {
+        if (!(error instanceof AsaasError && error.status === 404)) {
+          throw error;
+        }
       }
     }
   }
@@ -222,7 +239,7 @@ export async function deleteExpiredTrialWorkspaces(
   const noticeCutoff = getTrialFinalNoticeCutoff(now);
 
   const expired = await prisma.subscription.findMany({
-    where: expiredTrialWhere(cutoff, noticeCutoff),
+    where: expiredWorkspaceWhere(cutoff, noticeCutoff),
     orderBy: { trialEndsAt: "asc" },
     take: WORKSPACES_PER_RUN,
     select: { workspaceId: true },
@@ -239,7 +256,7 @@ export async function deleteExpiredTrialWorkspaces(
       }
     } catch {
       failed += 1;
-      console.error("Falha ao excluir teste vencido:", workspaceId);
+      console.error("Falha ao excluir escritório vencido:", workspaceId);
     }
   }
 

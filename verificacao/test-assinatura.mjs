@@ -184,7 +184,7 @@ test('suboperadores: Asaas incluído para a cobrança das assinaturas', () => {
 
 // ---------- Estado da assinatura e acesso ----------
 const { TRIAL_ENDED_MESSAGE } = load('lib/trial.ts', ['TRIAL_ENDED_MESSAGE']);
-const state = load('lib/subscription-state.ts', ['PAYMENT_GRACE_DAYS', 'PAID_PAYMENT_STATUSES', 'READ_ONLY_MESSAGES', 'getReadOnlyReason', 'getPaymentGraceEndsAt', 'computeSubscriptionState', 'isAbandonedFirstPayment'], { TRIAL_ENDED_MESSAGE });
+const state = load('lib/subscription-state.ts', ['PAYMENT_GRACE_DAYS', 'PAID_PAYMENT_STATUSES', 'REFUNDED_PAYMENT_STATUSES', 'PAST_DUE_CANCEL_DAYS', 'READ_ONLY_MESSAGES', 'getReadOnlyReason', 'getPaymentGraceEndsAt', 'getPastDueCancelAt', 'computeSubscriptionState', 'isAbandonedFirstPayment', 'isLongOverdue'], { TRIAL_ENDED_MESSAGE });
 const DAY = 24 * 60 * 60 * 1000;
 const iso = (date) => (date ? date.toISOString().slice(0, 10) : null);
 
@@ -248,6 +248,8 @@ function loadSync({ local, remote = { id: 'sub_1', status: 'ACTIVE', cycle: 'MON
     BILLING_OPTIONS: plans.BILLING_OPTIONS,
     computeSubscriptionState: state.computeSubscriptionState,
     isAbandonedFirstPayment: state.isAbandonedFirstPayment,
+    isLongOverdue: state.isLongOverdue,
+    REFUNDED_PAYMENT_STATUSES: state.REFUNDED_PAYMENT_STATUSES,
     prisma: { subscription: {
       findUnique: async () => local,
       update: async ({ data }) => { calls.updates.push(data); return {}; },
@@ -371,7 +373,10 @@ test('assinar: fatura em atraso se paga na tela de assinatura; cancelada começa
   const [sub] = plain(canceled.calls.subscriptions);
   assert.equal(sub.customer, 'cus_1');
   assert.equal(sub.nextDueDate, new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()), 'acesso já encerrado: cobra hoje');
-  assert.equal(plain(canceled.calls.updates).at(-1).canceledAt, null, 'marca a volta para a conferência diária');
+  const last = plain(canceled.calls.updates).at(-1);
+  assert.equal(last.canceledAt, null, 'marca a volta para a conferência diária');
+  assert.equal(last.trialDeletionNoticeAt, null, 'avisos de exclusão anteriores deixam de valer');
+  assert.equal(last.trialDeletionFinalNoticeAt, null);
 });
 
 test('assinar de novo: quem cancelou e volta antes do fim do período começa a pagar quando ele termina', async () => {
@@ -514,4 +519,57 @@ test('cancelar: assinatura já removida no Asaas segue para o LexFlow; sem assin
   const result = plain(await down.cancel());
   assert.equal(result.success, false);
   assert.equal(down.calls.synced.length, 0, 'sem confirmação do Asaas, nada muda no LexFlow');
+});
+
+// ---------- Atraso de 30 dias e devolução ----------
+test('regras: 30 dias de atraso encerram a assinatura', () => {
+  assert.equal(state.PAST_DUE_CANCEL_DAYS, 30);
+  assert.equal(state.getPastDueCancelAt(new Date('2026-12-24T12:00:00Z')).toISOString().slice(0, 10), '2027-01-23');
+  const overdue = [{ status: 'RECEIVED', dueDate: '2026-11-24' }, { status: 'OVERDUE', dueDate: '2026-12-24' }];
+  assert.equal(state.isLongOverdue(overdue, new Date('2027-01-22T12:00:00Z')), false);
+  assert.equal(state.isLongOverdue(overdue, new Date('2027-01-23T12:00:00Z')), true);
+});
+
+test('sincronizar: com 30 dias de atraso a assinatura é encerrada no Asaas e fica cancelada', async () => {
+  const payments = [{ status: 'RECEIVED', dueDate: '2026-11-24' }, { status: 'OVERDUE', dueDate: '2026-12-24' }];
+  const late = loadSync({ local: localSub({ status: 'PAST_DUE' }), payments });
+  assert.equal(await late.syncAsaasSubscription('s1', new Date('2027-01-23T12:00:00Z')), 'CANCELED');
+  assert.deepEqual(late.calls.deleted, ['sub_1']);
+  const [data] = plain(late.calls.updates);
+  assert.equal(data.currentPeriodEnd.slice(0, 10), '2026-12-24', 'a contagem para exclusão parte do fim do período pago');
+  assert.ok(data.canceledAt);
+  assert.equal('providerSubscriptionId' in data, false, 'o histórico de faturas continua visível');
+
+  const tolerated = loadSync({ local: localSub({ status: 'PAST_DUE' }), payments });
+  assert.equal(await tolerated.syncAsaasSubscription('s1', new Date('2027-01-20T12:00:00Z')), 'PAST_DUE');
+  assert.deepEqual(tolerated.calls.deleted, []);
+});
+
+test('sincronizar: primeiro pagamento devolvido encerra o acesso na hora e a assinatura no Asaas', async () => {
+  const now = new Date('2026-11-28T15:00:00Z');
+  const local = () => localSub({ status: 'ACTIVE', currentPeriodStart: new Date('2026-11-24T12:00:00Z'), currentPeriodEnd: new Date('2026-12-24T12:00:00Z') });
+  const refunded = loadSync({ local: local(), payments: [{ status: 'REFUNDED', dueDate: '2026-11-24' }] });
+  assert.equal(await refunded.syncAsaasSubscription('s1', now), 'CANCELED');
+  assert.deepEqual(refunded.calls.deleted, ['sub_1']);
+  const [data] = plain(refunded.calls.updates);
+  assert.equal(data.currentPeriodEnd, now.toISOString(), 'acesso termina na devolução');
+  assert.ok(data.canceledAt, 'entra na contagem para exclusão');
+
+  // Já cancelada pelo Cliente: a devolução só antecipa o fim do acesso.
+  const canceled = loadSync({ local: local(), remote: { id: 'sub_1', status: 'ACTIVE', cycle: 'MONTHLY', deleted: true }, payments: [{ status: 'REFUND_IN_PROGRESS', dueDate: '2026-11-24' }] });
+  assert.equal(await canceled.syncAsaasSubscription('s1', now), 'CANCELED');
+  assert.deepEqual(canceled.calls.deleted, []);
+  assert.equal(plain(canceled.calls.updates)[0].currentPeriodEnd, now.toISOString());
+});
+
+test('sincronizar: assinatura em dia zera os avisos de exclusão; cancelada mantém', async () => {
+  const active = loadSync({ local: localSub({ status: 'TRIALING' }), payments: [{ status: 'RECEIVED', dueDate: '2026-11-24' }] });
+  await active.syncAsaasSubscription('s1', new Date('2026-11-25T12:00:00Z'));
+  const [data] = plain(active.calls.updates);
+  assert.equal(data.trialDeletionNoticeAt, null);
+  assert.equal(data.trialDeletionFinalNoticeAt, null);
+
+  const ended = loadSync({ local: localSub({ status: 'CANCELED', canceledAt: new Date('2026-12-01T12:00:00Z') }), remote: { id: 'sub_1', status: 'ACTIVE', cycle: 'MONTHLY', deleted: true }, payments: [{ status: 'RECEIVED', dueDate: '2026-11-24' }] });
+  await ended.syncAsaasSubscription('s1', new Date('2027-01-10T12:00:00Z'));
+  assert.equal('trialDeletionNoticeAt' in plain(ended.calls.updates)[0], false);
 });

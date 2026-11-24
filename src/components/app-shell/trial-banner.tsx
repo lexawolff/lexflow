@@ -14,6 +14,7 @@ import {
 } from "@/lib/permissions";
 
 import {
+  getPastDueCancelAt,
   getPaymentGraceEndsAt,
 } from "@/lib/subscription-state";
 
@@ -112,7 +113,11 @@ export async function TrialBanner() {
       <AccessBanner
         tone="danger"
         title="Pagamento atrasado."
-        text="O escritório está disponível só para consulta até a regularização."
+        text={
+          currentPeriodEnd
+            ? `O escritório está disponível só para consulta. Sem pagamento até ${formatDate(getPastDueCancelAt(currentPeriodEnd))}, a assinatura será encerrada.`
+            : "O escritório está disponível só para consulta até a regularização."
+        }
         href="/configuracoes/assinatura"
         action="REGULARIZAR"
       />
@@ -123,8 +128,12 @@ export async function TrialBanner() {
     return (
       <AccessBanner
         tone="warning"
-        title="Assinatura cancelada."
-        text="Os dados continuam disponíveis só para consulta."
+        title="Assinatura encerrada."
+        text={
+          currentPeriodEnd
+            ? `Os dados ficam disponíveis só para consulta até ${formatDate(getTrialDataDeletionAt(currentPeriodEnd))} e depois serão apagados.`
+            : "Os dados continuam disponíveis só para consulta."
+        }
         href="/assinar"
         action="ASSINE"
       />

@@ -67,8 +67,11 @@ export default async function AssinarPage() {
         deletionDate={
           readOnly && subscription.status === "TRIALING" && trialEndsAt
             ? formatDate(getTrialDataDeletionAt(trialEndsAt))
-            : null
+            : readOnly && subscription.status === "CANCELED" && subscription.currentPeriodEnd
+              ? formatDate(getTrialDataDeletionAt(subscription.currentPeriodEnd))
+              : null
         }
+        endedReason={subscription.status === "CANCELED" ? "subscription" : "trial"}
         trialEndDate={
           !readOnly && subscription.status === "TRIALING" && trialEndsAt
             ? formatDate(trialEndsAt)

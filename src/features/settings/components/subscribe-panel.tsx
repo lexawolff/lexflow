@@ -38,6 +38,8 @@ type SubscribePanelProps = {
   trialEndDate: string | null;
   // Assinatura cancelada com acesso ainda valendo: fim do período pago.
   accessUntil?: string | null;
+  // O que terminou: o teste ou a assinatura.
+  endedReason?: "trial" | "subscription";
 };
 
 function optionClass(selected: boolean) {
@@ -55,6 +57,7 @@ export function SubscribePanel({
   deletionDate,
   trialEndDate,
   accessUntil = null,
+  endedReason = "trial",
 }: SubscribePanelProps) {
   const [selectedInterval, setSelectedInterval] = useState<BillingIntervalKey>("MONTHLY");
   const [method, setMethod] = useState<PaymentMethodKey>("PIX");
@@ -95,9 +98,11 @@ export function SubscribePanel({
         {deletionDate ? (
           <>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Os {TRIAL_DAYS} dias de teste grátis terminaram. Nada foi apagado: você
-              continua consultando os dados do escritório e volta a cadastrar e
-              editar assim que a assinatura for ativada.
+              {endedReason === "subscription"
+                ? "A assinatura do escritório terminou."
+                : `Os ${TRIAL_DAYS} dias de teste grátis terminaram.`}{" "}
+              Nada foi apagado: você continua consultando os dados do escritório
+              e volta a cadastrar e editar assim que a assinatura for ativada.
             </p>
 
             <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">

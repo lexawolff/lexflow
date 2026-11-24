@@ -18,6 +18,8 @@ import {
 import {
   computeSubscriptionState,
   isAbandonedFirstPayment,
+  isLongOverdue,
+  REFUNDED_PAYMENT_STATUSES,
 } from "@/lib/subscription-state";
 
 // Assinatura ou cobranças apagadas no Asaas respondem 404.
@@ -80,16 +82,33 @@ export async function syncAsaasSubscription(
   // que o LexFlow já conhecia.
   const wasPaid = local.status === "ACTIVE" || local.status === "PAST_DUE" || local.status === "CANCELED";
 
+  // Pagamento devolvido (desistência): o acesso termina na hora e a
+  // assinatura é encerrada no Asaas.
+  const refunded =
+    neverPaid &&
+    wasPaid &&
+    payments.some((payment) => REFUNDED_PAYMENT_STATUSES.includes(payment.status));
+
+  // Fatura em atraso há 30 dias: a assinatura é encerrada no Asaas, que
+  // deixa de gerar cobranças.
+  const longOverdue = state.status === "PAST_DUE" && isLongOverdue(payments, now);
+
   // Ex-assinante que voltou a assinar e ainda não pagou a primeira fatura:
   // fica sem data de cancelamento, para a conferência diária acompanhar.
-  const awaitingReturn = neverPaid && wasPaid && providerActive && !abandoned;
+  const awaitingReturn = neverPaid && wasPaid && providerActive && !abandoned && !refunded;
 
   if (neverPaid && wasPaid) {
     state = {
       status: "CANCELED",
       currentPeriodStart: local.currentPeriodStart,
-      currentPeriodEnd: local.currentPeriodEnd,
+      currentPeriodEnd: refunded
+        ? new Date(Math.min(local.currentPeriodEnd?.getTime() ?? now.getTime(), now.getTime()))
+        : local.currentPeriodEnd,
     };
+  }
+
+  if (longOverdue) {
+    state = { ...state, status: "CANCELED" };
   }
 
   const data: {
@@ -99,6 +118,8 @@ export async function syncAsaasSubscription(
     canceledAt: Date | null;
     planName?: string;
     providerSubscriptionId?: null;
+    trialDeletionNoticeAt?: null;
+    trialDeletionFinalNoticeAt?: null;
   } = {
     status: state.status,
     currentPeriodStart: state.currentPeriodStart,
@@ -113,10 +134,20 @@ export async function syncAsaasSubscription(
     data.planName = BILLING_OPTIONS[cycle].planName;
   }
 
-  // Sem pagamento, o escritório volta às regras do teste (ou ao período
-  // pago, para quem já foi assinante).
-  if (abandoned) {
+  // Assinatura em dia ou na tolerância sai da contagem para exclusão: se
+  // terminar depois, os avisos por e-mail começam de novo.
+  if (state.status === "ACTIVE" || state.status === "PAST_DUE") {
+    data.trialDeletionNoticeAt = null;
+    data.trialDeletionFinalNoticeAt = null;
+  }
+
+  if (abandoned || (providerActive && (refunded || longOverdue))) {
     await ignoreNotFound(deleteAsaasSubscription(providerId), undefined);
+  }
+
+  // Tentativa abandonada: o escritório volta às regras do teste (ou ao
+  // período pago, para quem já foi assinante).
+  if (abandoned) {
     data.providerSubscriptionId = null;
   }
 

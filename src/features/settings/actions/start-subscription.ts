@@ -207,7 +207,11 @@ async function startSubscriptionImpl(
         // Ex-assinante aguardando o primeiro pagamento da nova assinatura:
         // segue cancelado, sem data de cancelamento, o que coloca a tentativa
         // na conferência diária (pagamento ou abandono).
-        ...(canceled ? { canceledAt: null } : {}),
+        // Avisos de exclusão anteriores deixam de valer: se a tentativa for
+        // abandonada, a contagem recomeça com um novo aviso.
+        ...(canceled
+          ? { canceledAt: null, trialDeletionNoticeAt: null, trialDeletionFinalNoticeAt: null }
+          : {}),
       },
     });
 

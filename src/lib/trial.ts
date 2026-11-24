@@ -31,6 +31,31 @@ export function getTrialDataDeletionAt(
   );
 }
 
+/*
+ * Início do prazo de 90 dias para apagar os dados: fim do teste ou, para
+ * quem foi assinante, fim do último período pago. Assinatura em dia e
+ * ex-assinante aguardando a primeira fatura de uma nova assinatura (sem
+ * data de cancelamento) ficam de fora.
+ */
+export function getDataRetentionStart(
+  subscription: {
+    status: string;
+    trialEndsAt: Date | null;
+    currentPeriodEnd?: Date | null;
+    canceledAt?: Date | null;
+  },
+): Date | null {
+  if (subscription.status === "TRIALING") {
+    return subscription.trialEndsAt;
+  }
+
+  if (subscription.status === "CANCELED" && subscription.canceledAt) {
+    return subscription.currentPeriodEnd ?? null;
+  }
+
+  return null;
+}
+
 // Testes encerrados até este momento já podem ser apagados.
 export function getTrialDataCutoff(
   now: Date,

@@ -19,6 +19,16 @@ export const PAID_PAYMENT_STATUSES: readonly string[] = [
   "RECEIVED_IN_CASH",
 ];
 
+// Pagamento devolvido (desistência): o acesso termina na hora.
+export const REFUNDED_PAYMENT_STATUSES: readonly string[] = [
+  "REFUND_REQUESTED",
+  "REFUND_IN_PROGRESS",
+  "REFUNDED",
+];
+
+// Dias de atraso depois dos quais a assinatura é encerrada.
+export const PAST_DUE_CANCEL_DAYS = 30;
+
 export type ReadOnlyReason = "trial" | "past-due" | "canceled";
 
 export const READ_ONLY_MESSAGES: Record<ReadOnlyReason, string> = {
@@ -39,6 +49,13 @@ export function getPaymentGraceEndsAt(
   currentPeriodEnd: Date,
 ): Date {
   return new Date(currentPeriodEnd.getTime() + PAYMENT_GRACE_DAYS * DAY_IN_MS);
+}
+
+// Data em que a fatura em atraso encerra a assinatura.
+export function getPastDueCancelAt(
+  currentPeriodEnd: Date,
+): Date {
+  return new Date(currentPeriodEnd.getTime() + PAST_DUE_CANCEL_DAYS * DAY_IN_MS);
 }
 
 /*
@@ -159,5 +176,17 @@ export function isAbandonedFirstPayment(
         payment.status === "OVERDUE" &&
         parseDateOnly(payment.dueDate).getTime() + days * DAY_IN_MS <= now.getTime(),
     )
+  );
+}
+
+// Fatura vencida há PAST_DUE_CANCEL_DAYS dias ou mais.
+export function isLongOverdue(
+  payments: PaymentSummary[],
+  now: Date = new Date(),
+): boolean {
+  return payments.some(
+    (payment) =>
+      payment.status === "OVERDUE" &&
+      parseDateOnly(payment.dueDate).getTime() + PAST_DUE_CANCEL_DAYS * DAY_IN_MS <= now.getTime(),
   );
 }

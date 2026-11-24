@@ -1,14 +1,16 @@
 /*
  * E-mail que avisa o proprietário antes de apagar os dados de um escritório
- * cujo teste grátis terminou sem assinatura.
+ * cujo teste grátis terminou sem assinatura ou cuja assinatura terminou.
  */
 
 export type TrialNoticeStage = "first" | "final";
 
 type TrialDeletionNoticeInput = {
   stage: TrialNoticeStage;
+  // Fim do teste ou fim da assinatura.
+  kind?: "trial" | "subscription";
   officeName: string;
-  trialEndDate: string;
+  endDate: string;
   deletionDate: string;
   appUrl: string;
   contactEmail: string;
@@ -26,8 +28,9 @@ function escapeHtml(value: string): string {
 
 export function buildTrialDeletionNotice({
   stage,
+  kind = "trial",
   officeName,
-  trialEndDate,
+  endDate,
   deletionDate,
   appUrl,
   contactEmail,
@@ -39,11 +42,17 @@ export function buildTrialDeletionNotice({
     ? `Último aviso: os dados do seu escritório no LexFlow serão apagados em ${deletionDate}`
     : `Os dados do seu escritório no LexFlow serão apagados em ${deletionDate}`;
 
-  const paragraphs = [
-    `O teste grátis do escritório ${officeName} no LexFlow terminou em ${trialEndDate}. Desde então, ele está disponível só para consulta.`,
-    `Como nenhuma assinatura foi contratada, os dados do escritório, os arquivos enviados e as contas ligadas só a ele serão apagados definitivamente em ${deletionDate}.`,
-    "Para manter tudo e voltar a cadastrar e editar, assine o LexFlow antes dessa data.",
-  ];
+  const paragraphs = kind === "subscription"
+    ? [
+        `A assinatura do escritório ${officeName} no LexFlow terminou em ${endDate}. Desde então, ele está disponível só para consulta.`,
+        `Como a assinatura não foi renovada, os dados do escritório, os arquivos enviados e as contas ligadas só a ele serão apagados definitivamente em ${deletionDate}.`,
+        "Para manter tudo e voltar a cadastrar e editar, assine o LexFlow de novo antes dessa data.",
+      ]
+    : [
+        `O teste grátis do escritório ${officeName} no LexFlow terminou em ${endDate}. Desde então, ele está disponível só para consulta.`,
+        `Como nenhuma assinatura foi contratada, os dados do escritório, os arquivos enviados e as contas ligadas só a ele serão apagados definitivamente em ${deletionDate}.`,
+        "Para manter tudo e voltar a cadastrar e editar, assine o LexFlow antes dessa data.",
+      ];
 
   const footer = [
     `Quer uma cópia dos dados antes da exclusão? Responda este e-mail ou escreva para ${contactEmail}.`,

@@ -18,6 +18,7 @@ import {
 } from "@/lib/prisma";
 
 import {
+  getDataRetentionStart,
   getPlannedTrialDeletionAt,
   getTrialNoticeStage,
   getTrialNoticeWindows,
@@ -31,8 +32,9 @@ import {
 const NOTICES_PER_RUN = 40;
 
 /*
- * Avisa os proprietários de escritórios com teste vencido e sem assinatura:
- * um e-mail 30 dias antes da exclusão e outro 7 dias antes.
+ * Avisa os proprietários de escritórios com teste vencido sem assinatura ou
+ * com assinatura encerrada: um e-mail 30 dias antes da exclusão e outro 7
+ * dias antes.
  */
 export async function sendTrialDeletionNotices(
   now: Date = new Date(),
@@ -41,12 +43,27 @@ export async function sendTrialDeletionNotices(
 
   const candidates = await prisma.subscription.findMany({
     where: {
-      status: "TRIALING",
       trialDeletionFinalNoticeAt: null,
-      trialEndsAt: { lte: firstNoticeFrom },
       OR: [
-        { trialDeletionNoticeAt: null },
-        { trialEndsAt: { lte: finalNoticeFrom } },
+        {
+          status: "TRIALING",
+          trialEndsAt: { lte: firstNoticeFrom },
+          OR: [
+            { trialDeletionNoticeAt: null },
+            { trialEndsAt: { lte: finalNoticeFrom } },
+          ],
+        },
+        // Ex-assinante: conta do fim do último período pago. Sem data de
+        // cancelamento, aguarda a primeira fatura de uma nova assinatura.
+        {
+          status: "CANCELED",
+          canceledAt: { not: null },
+          currentPeriodEnd: { lte: firstNoticeFrom },
+          OR: [
+            { trialDeletionNoticeAt: null },
+            { currentPeriodEnd: { lte: finalNoticeFrom } },
+          ],
+        },
       ],
     },
     orderBy: { trialEndsAt: "asc" },
@@ -54,7 +71,10 @@ export async function sendTrialDeletionNotices(
     select: {
       id: true,
       workspaceId: true,
+      status: true,
       trialEndsAt: true,
+      currentPeriodEnd: true,
+      canceledAt: true,
       trialDeletionNoticeAt: true,
       workspace: {
         select: {
@@ -73,12 +93,16 @@ export async function sendTrialDeletionNotices(
   let failed = 0;
 
   for (const subscription of candidates) {
-    if (!subscription.trialEndsAt) {
+    const endedAt = getDataRetentionStart(subscription);
+
+    if (!endedAt) {
       continue;
     }
 
+    const kind = subscription.status === "CANCELED" ? "subscription" : "trial";
+
     const stage = getTrialNoticeStage({
-      trialEndsAt: subscription.trialEndsAt,
+      trialEndsAt: endedAt,
       noticeAt: subscription.trialDeletionNoticeAt,
       finalNoticeAt: null,
       now,
@@ -108,11 +132,12 @@ export async function sendTrialDeletionNotices(
 
       const notice = buildTrialDeletionNotice({
         stage,
+        kind,
         officeName: subscription.workspace.name,
-        trialEndDate: formatDate(subscription.trialEndsAt),
+        endDate: formatDate(endedAt),
         deletionDate: formatDate(
           getPlannedTrialDeletionAt({
-            trialEndsAt: subscription.trialEndsAt,
+            trialEndsAt: endedAt,
             finalNoticeAt: stage === "final" ? now : null,
           }),
         ),
@@ -126,7 +151,7 @@ export async function sendTrialDeletionNotices(
         html: notice.html,
         text: notice.text,
         replyTo: LEGAL_CONTACT_EMAIL,
-        idempotencyKey: `trial-deletion-${stage}-${subscription.id}`,
+        idempotencyKey: `${kind}-deletion-${stage}-${subscription.id}`,
       });
 
       await prisma.subscription.update({
@@ -137,7 +162,7 @@ export async function sendTrialDeletionNotices(
       sent += 1;
     } catch {
       failed += 1;
-      console.error("Falha ao avisar sobre exclusão de teste vencido:", subscription.workspaceId);
+      console.error("Falha ao avisar sobre exclusão de dados:", subscription.workspaceId);
     }
   }
 
