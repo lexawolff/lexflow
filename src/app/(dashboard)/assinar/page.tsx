@@ -7,10 +7,6 @@ import {
 } from "@/components/app-shell/app-shell";
 
 import {
-  LEGAL_CONTACT_EMAIL,
-} from "@/features/legal/legal-info";
-
-import {
   SubscribePanel,
 } from "@/features/settings/components/subscribe-panel";
 
@@ -24,6 +20,10 @@ import {
 } from "@/lib/permissions";
 
 import {
+  prisma,
+} from "@/lib/prisma";
+
+import {
   getTrialDataDeletionAt,
 } from "@/lib/trial";
 
@@ -32,18 +32,26 @@ export default async function AssinarPage() {
     workspace,
     membership,
     readOnly,
-    trialEndsAt,
   } =
     await getCurrentWorkspaceAccess();
 
-  if (!readOnly || !trialEndsAt) {
-    redirect("/dashboard");
+  const [subscription, billing] = await Promise.all([
+    prisma.subscription.findUnique({
+      where: { workspaceId: workspace.id },
+      select: { status: true, trialEndsAt: true },
+    }),
+    prisma.billingProfile.findUnique({
+      where: { workspaceId: workspace.id },
+      select: { taxId: true },
+    }),
+  ]);
+
+  // Escritório sem teste (anterior ao plano) ou já assinante.
+  if (!subscription || subscription.status === "ACTIVE") {
+    redirect("/configuracoes/assinatura");
   }
 
-  const subject =
-    encodeURIComponent(
-      `Assinatura do LexFlow - ${workspace.name}`,
-    );
+  const trialEndsAt = subscription.trialEndsAt;
 
   return (
     <AppShell>
@@ -54,13 +62,16 @@ export default async function AssinarPage() {
             "BILLING_MANAGE",
           )
         }
-        contactHref={
-          `mailto:${LEGAL_CONTACT_EMAIL}?subject=${subject}`
-        }
+        hasTaxId={Boolean(billing?.taxId)}
         deletionDate={
-          formatDate(
-            getTrialDataDeletionAt(trialEndsAt),
-          )
+          readOnly && trialEndsAt
+            ? formatDate(getTrialDataDeletionAt(trialEndsAt))
+            : null
+        }
+        trialEndDate={
+          !readOnly && trialEndsAt
+            ? formatDate(trialEndsAt)
+            : null
         }
       />
     </AppShell>

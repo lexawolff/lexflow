@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   UserRole,
 } from "@prisma/client";
@@ -26,7 +28,11 @@ import {
   prisma,
 } from "@/lib/prisma";
 
-export default async function AssinaturaPage() {
+export default async function AssinaturaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pagamento?: string }>;
+}) {
   const {
     workspace,
     membership,
@@ -34,6 +40,8 @@ export default async function AssinaturaPage() {
     await requireWorkspacePagePermission(
       "BILLING_MANAGE",
     );
+
+  const { pagamento } = await searchParams;
 
   const [
     subscription,
@@ -140,6 +148,36 @@ export default async function AssinaturaPage() {
 
           <SettingsNav />
         </header>
+
+        {pagamento === "concluido" ? (
+          <div
+            role="status"
+            className="rounded-2xl border border-emerald-200! bg-emerald-50 px-5 py-4 text-sm text-emerald-900 dark:border-emerald-900! dark:bg-emerald-950/20 dark:text-emerald-200"
+          >
+            Pagamento enviado. Assim que o Asaas confirmar, a assinatura é ativada.
+          </div>
+        ) : null}
+
+        {subscription?.status === "TRIALING" && isOwner ? (
+          <div className="flex flex-col gap-3 rounded-2xl border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold">
+                Assine o LexFlow
+              </p>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                R$ 59,00 por mês ou R$ 590,00 por ano, por Pix, boleto ou cartão.
+              </p>
+            </div>
+
+            <Link
+              href="/assinar"
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-primary px-6 text-sm font-bold tracking-wide text-primary-foreground transition hover:bg-primary/90"
+            >
+              ASSINE
+            </Link>
+          </div>
+        ) : null}
 
         <BillingSettings
           subscription={

@@ -75,6 +75,11 @@ export const SUBPROCESSORS = [
     location: "Envio pela região de São Paulo (AWS sa-east-1). Empresa com sede nos EUA.",
   },
   {
+    name: "Asaas Gestão Financeira Instituição de Pagamento S.A.",
+    purpose: "Cobrança das assinaturas por Pix, boleto e cartão; recebe nome, CPF ou CNPJ e e-mail de quem assina. Os dados do cartão são informados direto na página do Asaas.",
+    location: "Empresa brasileira.",
+  },
+  {
     name: "Zoho Corporation",
     purpose: "Caixa de e-mail do endereço de contato, usada para atendimento, suporte e pedidos sobre dados pessoais.",
     location: "Mensagens armazenadas em data center nos EUA.",
