@@ -71,7 +71,7 @@ export const SUBPROCESSORS = [
   },
   {
     name: "Resend, Inc.",
-    purpose: "Envio de e-mails do sistema (confirmação de cadastro e redefinição de senha).",
+    purpose: "Envio de e-mails do sistema (confirmação de cadastro, redefinição de senha e avisos antes da exclusão de dados).",
     location: "Envio pela região de São Paulo (AWS sa-east-1). Empresa com sede nos EUA.",
   },
   {

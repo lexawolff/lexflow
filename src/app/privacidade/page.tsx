@@ -81,7 +81,9 @@ export default function PrivacidadePage() {
           <li>
             <strong>Cobrança:</strong> dados de faturamento informados pelo
             escritório na área de assinatura (nome ou razão social, CPF/CNPJ,
-            contato e endereço).
+            contato e endereço) e a situação das faturas consultada no Asaas
+            (vencimentos, valores, forma de pagamento e, no cartão, apenas a
+            bandeira e os 4 últimos dígitos).
           </li>
         </LegalList>
       </LegalSection>
@@ -102,8 +104,9 @@ export default function PrivacidadePage() {
             do cadastro: legítimo interesse (art. 7º, IX).
           </li>
           <li>
-            Enviar e-mails do serviço, como confirmação de cadastro e
-            redefinição de senha: execução de contrato.
+            Enviar e-mails do serviço, como confirmação de cadastro,
+            redefinição de senha e avisos antes da exclusão de dados: execução
+            de contrato.
           </li>
           <li>
             Cobrar pelo serviço e emitir documentos fiscais: execução de
@@ -161,7 +164,8 @@ export default function PrivacidadePage() {
           <li>
             Escritórios em teste que não contrataram assinatura: dados, arquivos
             e contas ligadas somente a eles são excluídos 90 dias após o fim do
-            teste, e as cópias de segurança seguem o ciclo de renovação delas.
+            teste, com aviso por e-mail ao proprietário cerca de 30 e 7 dias
+            antes, e as cópias de segurança seguem o ciclo de renovação delas.
           </li>
           <li>
             Código de controle do cadastro: mantido mesmo após o encerramento
@@ -169,8 +173,11 @@ export default function PrivacidadePage() {
             gratuito.
           </li>
           <li>
-            Após o encerramento: conforme a cláusula 10 dos Termos de Uso
-            (30 dias para exportação e exclusão em até 60 dias).
+            Escritórios cuja assinatura terminou: dados, arquivos e contas
+            ligadas somente a eles são excluídos 90 dias após o fim do último
+            período pago (ou da devolução, em caso de desistência), conforme a
+            cláusula 10 dos Termos de Uso, com aviso por e-mail ao
+            proprietário cerca de 30 e 7 dias antes.
           </li>
           <li>
             Registros de segurança e de acesso: pelo tempo necessário para

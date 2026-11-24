@@ -149,13 +149,8 @@ export default function TermosPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="9. Planos, período de teste e pagamento">
+      <LegalSection title="9. Período de teste, planos e pagamento">
         <LegalList>
-          <li>
-            Valores, periodicidade, forma de pagamento e eventual período de
-            teste gratuito são os informados no momento da contratação ou na
-            área de assinatura do sistema.
-          </li>
           <li>
             O período de teste gratuito é de 10 (dez) dias, contados da
             confirmação do cadastro. Ao terminar, o escritório fica disponível
@@ -177,32 +172,86 @@ export default function TermosPage() {
             período de teste gratuito uma única vez.
           </li>
           <li>
-            Em caso de atraso no pagamento, o Fornecedor poderá suspender o
-            acesso após aviso prévio, sem apagar os dados durante o período
-            previsto na cláusula 10.
+            <strong>Plano:</strong> a assinatura é contratada por escritório e
+            permite até 5 (cinco) Usuários, contando a pessoa proprietária. O
+            preço é de R$ 59,00 (cinquenta e nove reais) por mês, no plano
+            mensal, ou de R$ 590,00 (quinhentos e noventa reais) por ano, no
+            plano anual, salvo condição diferente informada no momento da
+            contratação.
           </li>
           <li>
-            Os valores poderão ser reajustados, com aviso de pelo menos 30
-            (trinta) dias.
+            <strong>Pagamento:</strong> por Pix, boleto bancário ou cartão de
+            crédito, com cobranças processadas pelo Asaas Gestão Financeira
+            Instituição de Pagamento S.A. Os dados do cartão são informados
+            diretamente na página do Asaas e não ficam com o Fornecedor.
+          </li>
+          <li>
+            <strong>Início e renovação:</strong> a assinatura começa na
+            confirmação do primeiro pagamento e se renova automaticamente ao
+            fim de cada período, no mesmo plano, até ser cancelada. No cartão
+            de crédito, a renovação é cobrada automaticamente; no Pix e no
+            boleto, a fatura de cada período fica disponível na área de
+            assinatura do sistema. Se o Cliente voltar a assinar antes do fim
+            de um período já pago, a primeira cobrança da nova assinatura
+            vence quando esse período termina.
+          </li>
+          <li>
+            <strong>Atraso:</strong> se uma fatura não for paga até o
+            vencimento, o Cliente mantém o acesso completo por 7 (sete) dias de
+            tolerância, com aviso no sistema. Depois disso, o escritório fica
+            disponível apenas para consulta até o pagamento. Com 30 (trinta)
+            dias de atraso, a assinatura é encerrada automaticamente e
+            aplicam-se as regras de término da cláusula 10.
+          </li>
+          <li>
+            <strong>Reajuste:</strong> os preços poderão ser reajustados, com
+            aviso de pelo menos 30 (trinta) dias. O novo valor vale a partir da
+            renovação seguinte ao aviso, sem alterar o período já pago.
           </li>
         </LegalList>
       </LegalSection>
 
-      <LegalSection title="10. Cancelamento e devolução dos dados">
+      <LegalSection title="10. Cancelamento, desistência e dados após o término">
         <LegalList>
           <li>
-            O Cliente pode cancelar a contratação a qualquer momento.
+            O Cliente pode cancelar a assinatura a qualquer momento, pela área
+            de assinatura do sistema, sem multa. As cobranças seguintes deixam
+            de ser geradas e o acesso completo continua até o fim do período
+            já pago.
           </li>
           <li>
-            Após o término, por qualquer motivo, os dados ficam disponíveis por
-            30 (trinta) dias para que o Cliente solicite a exportação, que será
-            entregue em formato eletrônico de uso comum (por exemplo, planilhas
-            e os arquivos de documentos).
+            <strong>Desistência:</strong> o Cliente pode desistir da
+            contratação em até 7 (sete) dias contados do primeiro pagamento de
+            uma assinatura, pelo e-mail <Fill value={provider.email} />, e
+            receber de volta o valor integral pago, pelo mesmo meio de
+            pagamento sempre que possível. Nesse caso, a assinatura e o acesso
+            completo terminam na data da devolução.
           </li>
           <li>
-            Depois desse prazo, os dados serão excluídos em até 60 (sessenta)
-            dias, inclusive das cópias de segurança conforme o ciclo de
-            renovação delas, salvo quando a lei exigir a guarda.
+            Fora da hipótese de desistência, não há devolução proporcional de
+            valores já pagos, inclusive no plano anual.
+          </li>
+          <li>
+            Quando a assinatura termina, por cancelamento, desistência ou
+            atraso, o escritório fica disponível apenas para consulta por 90
+            (noventa) dias, contados do fim do último período pago ou, na
+            desistência, da data da devolução. Nesse prazo, o Cliente pode
+            assinar novamente e manter os dados, ou solicitar pelo e-mail{" "}
+            <Fill value={provider.email} /> a exportação deles, que será
+            entregue em formato eletrônico de uso comum (por exemplo,
+            planilhas e os arquivos de documentos).
+          </li>
+          <li>
+            A pessoa proprietária é avisada por e-mail cerca de 30 e de 7 dias
+            antes da exclusão, que só ocorre ao menos 7 dias depois do último
+            aviso. Terminado o prazo, os dados e arquivos do escritório e as
+            contas de usuário ligadas somente a ele são excluídos
+            definitivamente, inclusive das cópias de segurança conforme o
+            ciclo de renovação delas, salvo quando a lei exigir a guarda.
+          </li>
+          <li>
+            Se a contratação terminar por outro motivo, aplicam-se o mesmo
+            prazo e a mesma forma de exclusão, contados do término.
           </li>
         </LegalList>
       </LegalSection>
