@@ -135,8 +135,9 @@ export default function PrivacidadePage() {
 
       <LegalSection title="5. Transferência internacional">
         <p>
-          O banco de dados e a execução do sistema ficam em São Paulo. Como os
-          provedores são empresas estrangeiras, pode haver acesso ou
+          O banco de dados e a execução do sistema ficam em São Paulo. As
+          mensagens enviadas ao e-mail de contato ficam armazenadas nos EUA.
+          Como os provedores são empresas estrangeiras, pode haver acesso ou
           processamento no exterior, com base nas garantias contratuais
           oferecidas por eles (art. 33 da LGPD).
         </p>

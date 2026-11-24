@@ -9,7 +9,7 @@ import "server-only";
  */
 export const LEGAL_VERSION = "1.0";
 
-export const LEGAL_UPDATED_AT = "17/11/2026";
+export const LEGAL_UPDATED_AT = "24/11/2026";
 
 /*
  * E-mail público de contato, suporte e privacidade.
@@ -70,9 +70,14 @@ export const SUBPROCESSORS = [
     location: "Infraestrutura global do Google. Empresa com sede nos EUA.",
   },
   {
-    name: "[PROVEDOR DE E-MAIL]",
+    name: "Resend, Inc.",
     purpose: "Envio de e-mails do sistema (confirmação de cadastro e redefinição de senha).",
-    location: "[LOCALIZAÇÃO]",
+    location: "Envio pela região de São Paulo (AWS sa-east-1). Empresa com sede nos EUA.",
+  },
+  {
+    name: "Zoho Corporation",
+    purpose: "Caixa de e-mail do endereço de contato, usada para atendimento, suporte e pedidos sobre dados pessoais.",
+    location: "Mensagens armazenadas em data center nos EUA.",
   },
 ] as const;
 

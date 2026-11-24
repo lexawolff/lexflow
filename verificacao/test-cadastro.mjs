@@ -397,8 +397,19 @@ test('dados do fornecedor vêm do ambiente; sem eles, aparecem campos a preenche
   });
   assert.equal(filled.getLegalProvider().cpf, '000.000.000-00');
   assert.equal(loadLegal({ LEGAL_PROVIDER_CPF: '   ' }).getLegalProvider().cpf, '[CPF]', 'valor em branco conta como ausente');
-  // Ainda falta o provedor de e-mail na lista de suboperadores.
-  assert.equal(filled.isLegalInfoComplete(), false);
+  // Com os dados do fornecedor e a lista de suboperadores completa, os documentos estão prontos.
+  assert.equal(filled.isLegalInfoComplete(), true);
+  assert.equal(loadLegal({}).isLegalInfoComplete(), false, 'sem os dados do fornecedor continua incompleto');
+});
+
+test('suboperadores: nenhum campo a preencher e e-mails com Resend e Zoho', () => {
+  const { SUBPROCESSORS, isPlaceholder } = load('features/legal/legal-info.ts', ['SUBPROCESSORS', 'isPlaceholder'], { process: { env: {} } });
+  const names = SUBPROCESSORS.map((item) => item.name);
+  assert.ok(names.includes('Resend, Inc.'));
+  assert.ok(names.includes('Zoho Corporation'));
+  for (const item of SUBPROCESSORS) {
+    for (const value of [item.name, item.purpose, item.location]) assert.equal(isPlaceholder(value), false, value);
+  }
 });
 
 test('código-fonte não contém dados pessoais do fornecedor', () => {
