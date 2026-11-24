@@ -383,7 +383,9 @@ export function BillingSettings({
               ?.status ===
             "TRIALING"
               ? "Fim do teste"
-              : "Próxima renovação"
+              : subscription?.status === "CANCELED"
+                ? "Acesso até"
+                : "Próxima renovação"
           }
           value={
             subscription
@@ -401,10 +403,12 @@ export function BillingSettings({
                 : "—"
           }
           description={
-            subscription
-              ?.cancelAtPeriodEnd
-              ? "A assinatura está marcada para encerramento ao fim do período."
-              : "Data informada pelo sistema de cobrança."
+            subscription?.status === "CANCELED"
+              ? "Assinatura cancelada. Depois desta data, o escritório fica só para consulta."
+              : subscription
+                    ?.cancelAtPeriodEnd
+                ? "A assinatura está marcada para encerramento ao fim do período."
+                : "Data informada pelo sistema de cobrança."
           }
         />
       </section>

@@ -49,8 +49,11 @@ export async function syncAsaasSubscription(
     where: { id: subscriptionId },
     select: {
       id: true,
+      status: true,
       providerSubscriptionId: true,
       billingInterval: true,
+      currentPeriodStart: true,
+      currentPeriodEnd: true,
       canceledAt: true,
     },
   });
@@ -65,7 +68,29 @@ export async function syncAsaasSubscription(
   const providerActive = Boolean(remote && !remote.deleted && remote.status === "ACTIVE");
   const cycle = local.billingInterval ?? (remote?.cycle === "YEARLY" ? "YEARLY" : "MONTHLY");
 
-  const state = computeSubscriptionState({ providerActive, cycle, payments });
+  let state = computeSubscriptionState({ providerActive, cycle, payments });
+  const neverPaid = state.status === "TRIALING";
+
+  // Primeira fatura abandonada: cancela no Asaas para não seguir gerando
+  // cobranças a quem nunca pagou.
+  const abandoned = neverPaid && providerActive && isAbandonedFirstPayment(payments, now);
+
+  // Assinatura que já foi paga nunca volta a ser tratada como teste, mesmo
+  // que o Asaas não mostre mais as cobranças: fica cancelada com o período
+  // que o LexFlow já conhecia.
+  const wasPaid = local.status === "ACTIVE" || local.status === "PAST_DUE" || local.status === "CANCELED";
+
+  // Ex-assinante que voltou a assinar e ainda não pagou a primeira fatura:
+  // fica sem data de cancelamento, para a conferência diária acompanhar.
+  const awaitingReturn = neverPaid && wasPaid && providerActive && !abandoned;
+
+  if (neverPaid && wasPaid) {
+    state = {
+      status: "CANCELED",
+      currentPeriodStart: local.currentPeriodStart,
+      currentPeriodEnd: local.currentPeriodEnd,
+    };
+  }
 
   const data: {
     status: typeof state.status;
@@ -78,16 +103,19 @@ export async function syncAsaasSubscription(
     status: state.status,
     currentPeriodStart: state.currentPeriodStart,
     currentPeriodEnd: state.currentPeriodEnd,
-    canceledAt: state.status === "CANCELED" ? local.canceledAt ?? now : null,
+    canceledAt:
+      state.status === "CANCELED" && !awaitingReturn
+        ? local.canceledAt ?? now
+        : null,
   };
 
   if (state.status !== "TRIALING") {
     data.planName = BILLING_OPTIONS[cycle].planName;
   }
 
-  // Primeira fatura abandonada: cancela no Asaas para não seguir gerando
-  // cobranças a quem nunca pagou; o escritório volta às regras do teste.
-  if (state.status === "TRIALING" && providerActive && isAbandonedFirstPayment(payments, now)) {
+  // Sem pagamento, o escritório volta às regras do teste (ou ao período
+  // pago, para quem já foi assinante).
+  if (abandoned) {
     await ignoreNotFound(deleteAsaasSubscription(providerId), undefined);
     data.providerSubscriptionId = null;
   }
@@ -106,7 +134,8 @@ const RECONCILE_PER_RUN = 50;
 /*
  * Conferência diária: cobre avisos do Asaas que se perderam. Revisa as
  * assinaturas ligadas ao Asaas cujo período acaba em até um dia, ainda sem
- * período (aguardando o primeiro pagamento) ou em atraso.
+ * período (aguardando o primeiro pagamento), em atraso ou de ex-assinantes
+ * que voltaram a assinar e aguardam o primeiro pagamento.
  */
 export async function reconcileAsaasSubscriptions(
   now: Date = new Date(),
@@ -116,11 +145,11 @@ export async function reconcileAsaasSubscriptions(
   const subscriptions = await prisma.subscription.findMany({
     where: {
       providerSubscriptionId: { not: null },
-      status: { in: ["TRIALING", "ACTIVE", "PAST_DUE"] },
       OR: [
-        { currentPeriodEnd: null },
-        { currentPeriodEnd: { lte: soon } },
+        { status: { in: ["TRIALING", "ACTIVE"] }, currentPeriodEnd: null },
+        { status: { in: ["TRIALING", "ACTIVE"] }, currentPeriodEnd: { lte: soon } },
         { status: "PAST_DUE" },
+        { status: "CANCELED", canceledAt: null },
       ],
     },
     orderBy: { updatedAt: "asc" },

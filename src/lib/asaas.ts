@@ -87,7 +87,14 @@ export async function createAsaasSubscription(input: {
 
 export async function getAsaasSubscription(
   subscriptionId: string,
-): Promise<{ id: string; status: string; cycle: string; deleted?: boolean }> {
+): Promise<{
+  id: string;
+  status: string;
+  cycle: string;
+  billingType?: string;
+  deleted?: boolean;
+  creditCard?: { creditCardBrand?: string | null; creditCardNumber?: string | null } | null;
+}> {
   return request("GET", `/subscriptions/${encodeURIComponent(subscriptionId)}`);
 }
 

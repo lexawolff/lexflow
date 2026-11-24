@@ -21,6 +21,7 @@ import {
   createAsaasCustomer,
   createAsaasSubscription,
   deleteAsaasSubscription,
+  getAsaasSubscription,
   listAsaasSubscriptionPayments,
 } from "@/lib/asaas";
 
@@ -50,18 +51,23 @@ const startSubscriptionSchema = z.object({
   method: z.enum(["PIX", "BOLETO", "CREDIT_CARD"]),
 });
 
-function todayInSaoPaulo(): string {
+// Data no formato do Asaas (AAAA-MM-DD), no horário de São Paulo.
+function dateInSaoPaulo(date: Date): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
-  }).format(new Date());
+  }).format(date);
 }
 
-async function listPaymentsIfExists(subscriptionId: string) {
+// Assinatura ou cobranças apagadas no Asaas respondem 404.
+async function ignoreNotFound<T>(
+  promise: Promise<T>,
+  fallback: T,
+): Promise<T> {
   try {
-    return await listAsaasSubscriptionPayments(subscriptionId);
+    return await promise;
   } catch (error) {
     if (error instanceof AsaasError && error.status === 404) {
-      return [];
+      return fallback;
     }
 
     throw error;
@@ -94,6 +100,7 @@ async function startSubscriptionImpl(
       status: true,
       providerCustomerId: true,
       providerSubscriptionId: true,
+      currentPeriodEnd: true,
     },
   });
 
@@ -121,19 +128,38 @@ async function startSubscriptionImpl(
   const option = BILLING_OPTIONS[parsed.data.interval];
 
   try {
-    // Tentativa anterior sem pagamento é substituída; com pagamento, nunca.
-    // Assinatura cancelada não é reaproveitada: começa outra.
-    if (subscription.providerSubscriptionId && subscription.status !== "CANCELED") {
-      const previous = await listPaymentsIfExists(subscription.providerSubscriptionId);
+    const now = new Date();
+    const canceled = subscription.status === "CANCELED";
 
-      if (previous.some((payment) => PAID_PAYMENT_STATUSES.includes(payment.status))) {
+    // Assinatura anterior: a tentativa sem pagamento é substituída, para não
+    // seguir gerando cobranças; a que já recebeu pagamento nunca é refeita.
+    // A assinatura antiga de quem cancelou (já encerrada no Asaas) fica como
+    // está, com o histórico de faturas.
+    if (subscription.providerSubscriptionId) {
+      const previousId = subscription.providerSubscriptionId;
+      const [remote, previous] = await Promise.all([
+        ignoreNotFound(getAsaasSubscription(previousId), null),
+        ignoreNotFound(listAsaasSubscriptionPayments(previousId), []),
+      ]);
+      const exists = Boolean(remote && !remote.deleted);
+      const live = exists && remote?.status === "ACTIVE";
+      const paid = previous.some((payment) => PAID_PAYMENT_STATUSES.includes(payment.status));
+
+      if (paid && (live || !canceled)) {
         throw new ActionError("Já recebemos um pagamento desta assinatura. A liberação do escritório acontece em instantes.");
       }
 
-      if (previous.length > 0) {
-        await deleteAsaasSubscription(subscription.providerSubscriptionId);
+      if (!paid && exists) {
+        await ignoreNotFound(deleteAsaasSubscription(previousId), undefined);
       }
     }
+
+    // Quem cancelou e volta antes do fim do período já pago começa a pagar
+    // quando esse período termina: os dias pagos não são cobrados de novo.
+    const accessEnd =
+      canceled && subscription.currentPeriodEnd && subscription.currentPeriodEnd.getTime() > now.getTime()
+        ? subscription.currentPeriodEnd
+        : null;
 
     let customerId = subscription.providerCustomerId;
 
@@ -164,7 +190,7 @@ async function startSubscriptionImpl(
       billingType: parsed.data.method,
       value: option.amountCents / 100,
       cycle: option.cycle,
-      nextDueDate: todayInSaoPaulo(),
+      nextDueDate: dateInSaoPaulo(accessEnd ?? now),
       description: `${option.planName} - ${workspace.name}`.slice(0, 500),
       externalReference: workspace.id,
       ...(callback ? { callback } : {}),
@@ -178,6 +204,10 @@ async function startSubscriptionImpl(
         billingInterval: parsed.data.interval,
         amountCents: option.amountCents,
         planCode: PLAN_CODE,
+        // Ex-assinante aguardando o primeiro pagamento da nova assinatura:
+        // segue cancelado, sem data de cancelamento, o que coloca a tentativa
+        // na conferência diária (pagamento ou abandono).
+        ...(canceled ? { canceledAt: null } : {}),
       },
     });
 

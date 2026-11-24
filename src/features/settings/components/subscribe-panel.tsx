@@ -36,6 +36,8 @@ type SubscribePanelProps = {
   deletionDate: string | null;
   // Teste em andamento: data de término.
   trialEndDate: string | null;
+  // Assinatura cancelada com acesso ainda valendo: fim do período pago.
+  accessUntil?: string | null;
 };
 
 function optionClass(selected: boolean) {
@@ -52,6 +54,7 @@ export function SubscribePanel({
   hasTaxId,
   deletionDate,
   trialEndDate,
+  accessUntil = null,
 }: SubscribePanelProps) {
   const [selectedInterval, setSelectedInterval] = useState<BillingIntervalKey>("MONTHLY");
   const [method, setMethod] = useState<PaymentMethodKey>("PIX");
@@ -107,7 +110,9 @@ export function SubscribePanel({
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {trialEndDate
               ? `Seu teste grátis vai até ${trialEndDate}. Assinando agora, o acesso continua sem interrupção.`
-              : "Escolha o plano e a forma de pagamento."}
+              : accessUntil
+                ? `A assinatura anterior foi cancelada e o acesso continua até ${accessUntil}. Assinando agora, a primeira cobrança vence nessa data: os dias já pagos não são cobrados de novo.`
+                : "Escolha o plano e a forma de pagamento."}
           </p>
         )}
 

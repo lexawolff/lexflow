@@ -38,7 +38,7 @@ export default async function AssinarPage() {
   const [subscription, billing] = await Promise.all([
     prisma.subscription.findUnique({
       where: { workspaceId: workspace.id },
-      select: { status: true, trialEndsAt: true },
+      select: { status: true, trialEndsAt: true, currentPeriodEnd: true },
     }),
     prisma.billingProfile.findUnique({
       where: { workspaceId: workspace.id },
@@ -72,6 +72,11 @@ export default async function AssinarPage() {
         trialEndDate={
           !readOnly && subscription.status === "TRIALING" && trialEndsAt
             ? formatDate(trialEndsAt)
+            : null
+        }
+        accessUntil={
+          !readOnly && subscription.status === "CANCELED" && subscription.currentPeriodEnd
+            ? formatDate(subscription.currentPeriodEnd)
             : null
         }
       />

@@ -21,8 +21,25 @@ import {
 } from "@/features/settings/components/billing-settings";
 
 import {
+  getAsaasSubscription,
   listAsaasSubscriptionPayments,
 } from "@/lib/asaas";
+
+import {
+  formatDate,
+} from "@/lib/format/date";
+
+import {
+  billingTypeLabel,
+  formatAsaasDate,
+  formatMoney,
+  isPaymentOpen,
+} from "@/lib/subscription-display";
+
+import {
+  type InvoiceRow,
+  SubscriptionInvoices,
+} from "@/features/settings/components/subscription-invoices";
 
 import {
   requireWorkspacePagePermission,
@@ -32,36 +49,53 @@ import {
   prisma,
 } from "@/lib/prisma";
 
-function formatMoney(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDueDate(value: string) {
-  const [year, month, day] = value.split("-");
-
-  return `${day}/${month}/${year}`;
-}
-
-async function getOpenInvoice(providerSubscriptionId: string) {
+/*
+ * Uma consulta ao Asaas alimenta a fatura em aberto, a lista de pagamentos
+ * e a forma de pagamento. Sem resposta, a página abre sem essas partes.
+ */
+async function getBillingOverview(providerSubscriptionId: string) {
   try {
-    const payments = await listAsaasSubscriptionPayments(providerSubscriptionId);
-    const open = payments
-      .filter((payment) => (payment.status === "PENDING" || payment.status === "OVERDUE") && payment.invoiceUrl)
+    const [remote, payments] = await Promise.all([
+      getAsaasSubscription(providerSubscriptionId).catch(() => null),
+      listAsaasSubscriptionPayments(providerSubscriptionId),
+    ]);
+
+    const invoices: InvoiceRow[] = [...payments]
+      .sort((first, second) => second.dueDate.localeCompare(first.dueDate))
+      .slice(0, 12)
+      .map((payment) => ({
+        id: payment.id,
+        dueDate: payment.dueDate,
+        value: typeof payment.value === "number" ? payment.value : null,
+        status: payment.status,
+        invoiceUrl: payment.invoiceUrl ?? null,
+      }));
+
+    const open = [...invoices]
+      .filter((invoice) => isPaymentOpen(invoice.status) && invoice.invoiceUrl)
       .sort((first, second) => first.dueDate.localeCompare(second.dueDate))[0];
 
-    if (!open?.invoiceUrl) {
-      return null;
-    }
+    const card = remote?.creditCard;
 
     return {
-      invoiceUrl: open.invoiceUrl,
-      dueDate: formatDueDate(open.dueDate),
-      overdue: open.status === "OVERDUE",
-      value: typeof open.value === "number" ? open.value : null,
+      invoices,
+      paymentMethod: remote?.billingType
+        ? billingTypeLabel(remote.billingType, {
+            brand: card?.creditCardBrand ?? null,
+            last4: card?.creditCardNumber ?? null,
+          })
+        : null,
+      openInvoice: open?.invoiceUrl
+        ? {
+            invoiceUrl: open.invoiceUrl,
+            dueDate: formatAsaasDate(open.dueDate),
+            overdue: open.status === "OVERDUE",
+            value: open.value,
+          }
+        : null,
     };
   } catch {
-    // Sem resposta do Asaas, a página abre sem o atalho da fatura.
-    console.error("Falha ao consultar fatura em aberto no Asaas.");
+    console.error("Falha ao consultar a assinatura no Asaas.");
     return null;
   }
 }
@@ -117,6 +151,9 @@ export default async function AssinaturaPage({
 
           providerSubscriptionId:
             true,
+
+          canceledAt:
+            true,
         },
       }),
 
@@ -167,13 +204,27 @@ export default async function AssinaturaPage({
     membership.role ===
     UserRole.OWNER;
 
+  const overview =
+    isOwner && subscription?.providerSubscriptionId
+      ? await getBillingOverview(subscription.providerSubscriptionId)
+      : null;
+
+  // Ex-assinante que voltou a assinar e aguarda o primeiro pagamento.
+  const awaitingReturn =
+    subscription?.status === "CANCELED" &&
+    subscription.canceledAt === null &&
+    Boolean(subscription.providerSubscriptionId);
+
   // Fatura aguardando pagamento (primeira cobrança ou em atraso).
   const openInvoice =
-    isOwner &&
-    subscription?.providerSubscriptionId &&
-    (subscription.status === "TRIALING" || subscription.status === "PAST_DUE")
-      ? await getOpenInvoice(subscription.providerSubscriptionId)
+    subscription?.status === "TRIALING" || subscription?.status === "PAST_DUE" || awaitingReturn
+      ? overview?.openInvoice ?? null
       : null;
+
+  const isSubscriber =
+    subscription?.status === "ACTIVE" ||
+    subscription?.status === "PAST_DUE" ||
+    subscription?.status === "CANCELED";
 
   const canSubscribe =
     isOwner &&
@@ -254,6 +305,21 @@ export default async function AssinaturaPage({
               ASSINE
             </Link>
           </div>
+        ) : null}
+
+        {isOwner && isSubscriber ? (
+          <SubscriptionInvoices
+            paymentMethod={overview?.paymentMethod ?? null}
+            invoices={overview?.invoices ?? []}
+            canCancel={subscription?.status === "ACTIVE" || subscription?.status === "PAST_DUE"}
+            canceled={subscription?.status === "CANCELED"}
+            awaitingPayment={awaitingReturn}
+            accessUntil={
+              subscription?.currentPeriodEnd
+                ? formatDate(subscription.currentPeriodEnd)
+                : null
+            }
+          />
         ) : null}
 
         <BillingSettings
