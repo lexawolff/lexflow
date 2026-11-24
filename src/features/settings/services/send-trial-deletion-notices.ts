@@ -42,8 +42,6 @@ export async function sendTrialDeletionNotices(
   const candidates = await prisma.subscription.findMany({
     where: {
       status: "TRIALING",
-      providerCustomerId: null,
-      providerSubscriptionId: null,
       trialDeletionFinalNoticeAt: null,
       trialEndsAt: { lte: firstNoticeFrom },
       OR: [

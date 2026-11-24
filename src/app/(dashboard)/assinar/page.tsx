@@ -46,8 +46,9 @@ export default async function AssinarPage() {
     }),
   ]);
 
-  // Escritório sem teste (anterior ao plano) ou já assinante.
-  if (!subscription || subscription.status === "ACTIVE") {
+  // Escritório sem teste (anterior ao plano), assinante ou com fatura em
+  // atraso, que se regulariza pela fatura em aberto.
+  if (!subscription || subscription.status === "ACTIVE" || subscription.status === "PAST_DUE") {
     redirect("/configuracoes/assinatura");
   }
 
@@ -64,12 +65,12 @@ export default async function AssinarPage() {
         }
         hasTaxId={Boolean(billing?.taxId)}
         deletionDate={
-          readOnly && trialEndsAt
+          readOnly && subscription.status === "TRIALING" && trialEndsAt
             ? formatDate(getTrialDataDeletionAt(trialEndsAt))
             : null
         }
         trialEndDate={
-          !readOnly && trialEndsAt
+          !readOnly && subscription.status === "TRIALING" && trialEndsAt
             ? formatDate(trialEndsAt)
             : null
         }

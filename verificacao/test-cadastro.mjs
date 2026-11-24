@@ -779,8 +779,7 @@ function loadPermissions({ role = 'OWNER', subscription = null } = {}) {
     redirect: redirectTo,
     ActionError,
     getCurrentAuthUserId: async () => 'u1',
-    isWorkspaceReadOnly: trial.isWorkspaceReadOnly,
-    TRIAL_ENDED_MESSAGE: trial.TRIAL_ENDED_MESSAGE,
+    ...load('lib/subscription-state.ts', ['getReadOnlyReason', 'READ_ONLY_MESSAGES'], { TRIAL_ENDED_MESSAGE: trial.TRIAL_ENDED_MESSAGE }),
     prisma: { membership: { findFirst: async () => ({ id: 'm1', role, user: { id: 'u1' }, workspace: { id: 'w1', name: 'Escritório', subscription } }) } },
   });
 }
@@ -906,20 +905,20 @@ const officeId = (n) => `aaaaaaaa-aaaa-4aaa-8aaa-${String(n).padStart(12, '0')}`
 const endedDaysAgo = (days) => new Date(NOW.getTime() - days * DAY);
 const trialRow = (workspaceId, days, extra = {}) => ({ workspaceId, status: 'TRIALING', trialEndsAt: endedDaysAgo(days), trialDeletionFinalNoticeAt: endedDaysAgo(30), providerCustomerId: null, providerSubscriptionId: null, ...extra });
 
-function loadTrialPurge({ subscriptions, memberships = [], users = [], audit = [], documents = [], folders = {}, removeError = null, deleteUserError = null }) {
+function loadTrialPurge({ subscriptions, memberships = [], users = [], audit = [], documents = [], folders = {}, removeError = null, deleteUserError = null, asaasStatus = {} }) {
   const state = {
     subscriptions: [...subscriptions], memberships: [...memberships], users: [...users], audit: [...audit], documents: [...documents],
-    workspaces: subscriptions.map((row) => row.workspaceId), removedFiles: [], authDeleted: [], listed: [],
+    workspaces: subscriptions.map((row) => row.workspaceId), removedFiles: [], authDeleted: [], listed: [], asaasDeleted: [], synced: [],
   };
   const matches = (row, where) => row.status === where.status && row.trialEndsAt && row.trialEndsAt.getTime() <= where.trialEndsAt.lte.getTime()
     && row.trialDeletionFinalNoticeAt && row.trialDeletionFinalNoticeAt.getTime() <= where.trialDeletionFinalNoticeAt.lte.getTime()
-    && row.providerCustomerId === null && row.providerSubscriptionId === null && (!where.workspaceId || row.workspaceId === where.workspaceId);
+    && (!where.workspaceId || row.workspaceId === where.workspaceId);
   const exclusive = (where) => state.users.filter((user) => where.id.in.includes(user.id)
     && !state.memberships.some((item) => item.userId === user.id && item.workspaceId !== where.memberships.none.workspaceId.not));
   const db = {
     subscription: {
       findMany: async ({ where, take }) => state.subscriptions.filter((row) => matches(row, where)).slice(0, take),
-      findFirst: async ({ where }) => state.subscriptions.find((row) => matches(row, where)) ?? null,
+      findFirst: async ({ where }) => { const row = state.subscriptions.find((item) => matches(item, where)); return row ? { id: row.id ?? row.workspaceId, providerSubscriptionId: row.providerSubscriptionId } : null; },
     },
     document: { findMany: async ({ where }) => state.documents.filter((row) => row.workspaceId === where.workspaceId) },
     membership: { findMany: async ({ where }) => state.memberships.filter((row) => row.workspaceId === where.workspaceId) },
@@ -948,6 +947,9 @@ function loadTrialPurge({ subscriptions, memberships = [], users = [], audit = [
     prisma: db, DOCUMENTS_BUCKET: 'documents', getTrialDataCutoff: trial.getTrialDataCutoff, getTrialFinalNoticeCutoff: trial.getTrialFinalNoticeCutoff,
     getStorage: () => ({ from: (name) => { assert.equal(name, 'documents'); return bucket; } }),
     createAdminClient: () => ({ auth: { admin: { deleteUser: async (id) => { state.authDeleted.push(id); return { error: deleteUserError }; } } } }),
+    AsaasError: class AsaasError extends Error {},
+    deleteAsaasSubscription: async (id) => { state.asaasDeleted.push(id); },
+    syncAsaasSubscription: async (id) => { state.synced.push(id); const row = state.subscriptions.find((item) => item.id === id); return asaasStatus[row?.providerSubscriptionId] ?? 'TRIALING'; },
   });
   return { state, run: () => deleteExpiredTrialWorkspaces(NOW) };
 }
@@ -980,22 +982,34 @@ test('exclusão: apaga arquivos, auditoria, escritório e só as contas exclusiv
   assert.deepEqual(ctx.state.workspaces, []);
 });
 
-test('exclusão: não alcança teste no prazo, assinatura ativa, pagamento vinculado ou escritório antigo', async () => {
+test('exclusão: não alcança teste no prazo, assinatura ativa ou escritório antigo', async () => {
   const ctx = loadTrialPurge({
     subscriptions: [
       trialRow(officeId(1), 89),
       trialRow(officeId(2), 200, { status: 'ACTIVE' }),
-      trialRow(officeId(3), 200, { providerCustomerId: 'cus_1' }),
-      trialRow(officeId(4), 200, { providerSubscriptionId: 'sub_1' }),
       trialRow(officeId(5), 0, { trialEndsAt: null }),
     ],
     memberships: [{ userId: 'dono', workspaceId: officeId(1) }],
     users: [{ id: 'dono' }],
   });
   assert.deepEqual(normalized(await ctx.run()), { deleted: 0, failed: 0 });
-  assert.equal(ctx.state.workspaces.length, 5);
+  assert.equal(ctx.state.workspaces.length, 3);
   assert.deepEqual(ctx.state.listed, []);
   assert.deepEqual(ctx.state.authDeleted, []);
+});
+
+test('exclusão: ligado ao Asaas, confere o pagamento antes; quem pagou fica, quem não pagou sai e a cobrança é cancelada', async () => {
+  const ctx = loadTrialPurge({
+    subscriptions: [
+      trialRow(officeId(3), 200, { id: 's-pago', providerSubscriptionId: 'sub_pago' }),
+      trialRow(officeId(4), 200, { id: 's-nao-pago', providerSubscriptionId: 'sub_aberto' }),
+    ],
+    asaasStatus: { sub_pago: 'ACTIVE', sub_aberto: 'TRIALING' },
+  });
+  assert.deepEqual(normalized(await ctx.run()), { deleted: 1, failed: 0 });
+  assert.deepEqual(ctx.state.workspaces, [officeId(3)], 'quem pagou não é apagado');
+  assert.deepEqual([...ctx.state.synced].sort(), ['s-nao-pago', 's-pago']);
+  assert.deepEqual(ctx.state.asaasDeleted, ['sub_aberto']);
 });
 
 test('exclusão: identificador inválido nunca lista nem apaga o bucket', async () => {
@@ -1034,7 +1048,7 @@ test('rota de exclusão de testes: exige o segredo', async () => {
     process: { env: { CRON_SECRET: 'segredo' } }, createHash, timingSafeEqual,
     NextResponse: { json: (body, init) => ({ body, status: init?.status ?? 200 }) },
   });
-  const { GET } = load('app/api/cron/excluir-testes-vencidos/route.ts', ['GET'], { runCronJob, sendTrialDeletionNotices: async () => ({ sent: 0, skipped: 0, failed: 0 }), deleteExpiredTrialWorkspaces: async () => { runs += 1; return { deleted: 0, failed: 0 }; } });
+  const { GET } = load('app/api/cron/excluir-testes-vencidos/route.ts', ['GET'], { runCronJob, reconcileAsaasSubscriptions: async () => ({ synced: 0, failed: 0 }), sendTrialDeletionNotices: async () => ({ sent: 0, skipped: 0, failed: 0 }), deleteExpiredTrialWorkspaces: async () => { runs += 1; return { deleted: 0, failed: 0 }; } });
   const call = (authorization) => GET({ headers: { get: () => authorization ?? null } });
   assert.equal((await call('Bearer errado')).status, 401);
   assert.equal(runs, 0);
@@ -1094,7 +1108,7 @@ test('e-mail de aviso: data, link para assinar e nome do escritório protegido',
 
 function loadNotices({ subscriptions, failSend = false }) {
   const state = { rows: subscriptions.map((row) => ({ ...row })), sent: [] };
-  const matches = (row, where) => row.status === where.status && row.providerCustomerId === null && row.providerSubscriptionId === null
+  const matches = (row, where) => row.status === where.status
     && row.trialDeletionFinalNoticeAt === null && row.trialEndsAt.getTime() <= where.trialEndsAt.lte.getTime()
     && (row.trialDeletionNoticeAt === null || row.trialEndsAt.getTime() <= where.OR[1].trialEndsAt.lte.getTime());
   const { sendTrialDeletionNotices } = load('features/settings/services/send-trial-deletion-notices.ts', ['sendTrialDeletionNotices'], {
@@ -1149,9 +1163,9 @@ test('avisos: falha no envio não registra nada; escritório sem proprietário �
   assert.equal(orphan.state.sent.length, 0);
 });
 
-test('avisos: assinatura ativa ou com pagamento vinculado não recebe aviso', async () => {
-  const ctx = loadNotices({ subscriptions: [noticeRow('ativa', 120, { status: 'ACTIVE' }), noticeRow('pago', 120, { providerCustomerId: 'cus_1' })] });
-  assert.deepEqual(normalized(await ctx.run()), { sent: 0, skipped: 0, failed: 0 });
+test('avisos: assinatura paga não recebe aviso; tentativa de assinatura sem pagamento recebe', async () => {
+  const ctx = loadNotices({ subscriptions: [noticeRow('ativa', 120, { status: 'ACTIVE' }), noticeRow('atrasada', 120, { status: 'PAST_DUE' }), noticeRow('tentou', 120, { providerCustomerId: 'cus_1', providerSubscriptionId: 'sub_1' })] });
+  assert.deepEqual(normalized(await ctx.run()), { sent: 1, skipped: 0, failed: 0 });
 });
 
 test('envio de e-mail: exige a chave do Resend e usa o remetente do domínio', async () => {
@@ -1175,6 +1189,7 @@ test('rota diária: falha nos avisos não impede a exclusão de quem já foi avi
   let deletions = 0;
   const { GET } = load('app/api/cron/excluir-testes-vencidos/route.ts', ['GET'], {
     runCronJob,
+    reconcileAsaasSubscriptions: async () => { throw new Error('Asaas fora do ar'); },
     sendTrialDeletionNotices: async () => { throw new Error('sem chave'); },
     deleteExpiredTrialWorkspaces: async () => { deletions += 1; return { deleted: 2, failed: 0 }; },
   });
@@ -1182,5 +1197,6 @@ test('rota diária: falha nos avisos não impede a exclusão de quem já foi avi
   assert.equal(response.status, 200);
   assert.equal(deletions, 1);
   assert.equal(response.body.notices.failed, -1);
+  assert.equal(response.body.reconciliation.failed, -1, 'falha na conferência também não impede');
   assert.equal(response.body.deletion.deleted, 2);
 });

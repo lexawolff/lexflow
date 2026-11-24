@@ -5,6 +5,11 @@ import {
 } from "@/features/documents/services/upload-file";
 
 import {
+  AsaasError,
+  deleteAsaasSubscription,
+} from "@/lib/asaas";
+
+import {
   prisma,
 } from "@/lib/prisma";
 
@@ -21,6 +26,10 @@ import {
   getTrialFinalNoticeCutoff,
 } from "@/lib/trial";
 
+import {
+  syncAsaasSubscription,
+} from "./sync-asaas-subscription";
+
 // Limita o alcance de cada execução; o restante fica para o dia seguinte.
 const WORKSPACES_PER_RUN = 25;
 const STORAGE_PAGE_SIZE = 1000;
@@ -32,9 +41,8 @@ const UUID_PATTERN =
 type DocumentBucket = ReturnType<ReturnType<typeof getStorage>["from"]>;
 
 /*
- * Só teste nunca convertido: sem assinatura ativa e sem vínculo com um
- * provedor de pagamento. O último aviso por e-mail precisa ter saído há
- * pelo menos 7 dias.
+ * Só teste nunca pago (status TRIALING). O último aviso por e-mail precisa
+ * ter saído há pelo menos 7 dias.
  */
 function expiredTrialWhere(
   cutoff: Date,
@@ -44,8 +52,6 @@ function expiredTrialWhere(
     status: "TRIALING" as const,
     trialEndsAt: { lte: cutoff },
     trialDeletionFinalNoticeAt: { lte: noticeCutoff },
-    providerCustomerId: null,
-    providerSubscriptionId: null,
   };
 }
 
@@ -144,11 +150,28 @@ async function deleteWorkspaceData(
 
   const stillExpired = await prisma.subscription.findFirst({
     where: { ...where, workspaceId },
-    select: { id: true },
+    select: { id: true, providerSubscriptionId: true },
   });
 
   if (!stillExpired) {
     return false;
+  }
+
+  // Ligado ao Asaas: confere se houve pagamento antes de apagar qualquer coisa.
+  if (stillExpired.providerSubscriptionId) {
+    const status = await syncAsaasSubscription(stillExpired.id);
+
+    if (status !== "TRIALING") {
+      return false;
+    }
+
+    try {
+      await deleteAsaasSubscription(stillExpired.providerSubscriptionId);
+    } catch (error) {
+      if (!(error instanceof AsaasError && error.status === 404)) {
+        throw error;
+      }
+    }
   }
 
   await removeWorkspaceFiles(workspaceId);

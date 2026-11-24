@@ -30,6 +30,10 @@ function isPublicRoute(
     // Protegida pelo CRON_SECRET na própria rota.
     pathname.startsWith(
       "/api/cron/",
+    ) ||
+    // Avisos do Asaas, protegidos pelo token do webhook.
+    pathname.startsWith(
+      "/api/webhooks/",
     )
   );
 }

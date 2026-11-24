@@ -22,7 +22,6 @@ import {
   createAsaasSubscription,
   deleteAsaasSubscription,
   listAsaasSubscriptionPayments,
-  PAID_PAYMENT_STATUSES,
 } from "@/lib/asaas";
 
 import {
@@ -41,6 +40,10 @@ import {
 import {
   prisma,
 } from "@/lib/prisma";
+
+import {
+  PAID_PAYMENT_STATUSES,
+} from "@/lib/subscription-state";
 
 const startSubscriptionSchema = z.object({
   interval: z.enum(["MONTHLY", "YEARLY"]),
@@ -102,6 +105,10 @@ async function startSubscriptionImpl(
     throw new ActionError("A assinatura deste escritório já está ativa.");
   }
 
+  if (subscription.status === "PAST_DUE") {
+    throw new ActionError("Há uma fatura em atraso. Pague em Configurações > Assinatura para regularizar.");
+  }
+
   const billing = await prisma.billingProfile.findUnique({
     where: { workspaceId: workspace.id },
     select: { name: true, taxId: true, email: true },
@@ -115,7 +122,8 @@ async function startSubscriptionImpl(
 
   try {
     // Tentativa anterior sem pagamento é substituída; com pagamento, nunca.
-    if (subscription.providerSubscriptionId) {
+    // Assinatura cancelada não é reaproveitada: começa outra.
+    if (subscription.providerSubscriptionId && subscription.status !== "CANCELED") {
       const previous = await listPaymentsIfExists(subscription.providerSubscriptionId);
 
       if (previous.some((payment) => PAID_PAYMENT_STATUSES.includes(payment.status))) {

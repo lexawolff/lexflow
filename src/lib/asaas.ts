@@ -16,13 +16,6 @@ export class AsaasError extends Error {
   }
 }
 
-// Cobrança paga ou confirmada no Asaas.
-export const PAID_PAYMENT_STATUSES: readonly string[] = [
-  "CONFIRMED",
-  "RECEIVED",
-  "RECEIVED_IN_CASH",
-];
-
 function getConfig() {
   const key = process.env.ASAAS_API_KEY;
   const url = process.env.ASAAS_API_URL;
@@ -92,11 +85,18 @@ export async function createAsaasSubscription(input: {
   return request<{ id: string }>("POST", "/subscriptions", input);
 }
 
+export async function getAsaasSubscription(
+  subscriptionId: string,
+): Promise<{ id: string; status: string; cycle: string; deleted?: boolean }> {
+  return request("GET", `/subscriptions/${encodeURIComponent(subscriptionId)}`);
+}
+
 export type AsaasPayment = {
   id: string;
   status: string;
   billingType: string;
   dueDate: string;
+  value?: number;
   invoiceUrl?: string | null;
 };
 

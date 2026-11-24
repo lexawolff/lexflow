@@ -23,9 +23,9 @@ import {
 } from "@/lib/actions/action-error";
 
 import {
-  isWorkspaceReadOnly,
-  TRIAL_ENDED_MESSAGE,
-} from "@/lib/trial";
+  getReadOnlyReason,
+  READ_ONLY_MESSAGES,
+} from "@/lib/subscription-state";
 
 export type Permission =
   | "CLIENT_VIEW"
@@ -299,6 +299,9 @@ async function getCurrentWorkspaceAccessUncached() {
 
                 trialEndsAt:
                   true,
+
+                currentPeriodEnd:
+                  true,
               },
             },
           },
@@ -323,10 +326,13 @@ async function getCurrentWorkspaceAccessUncached() {
   } =
     membership.workspace;
 
-  const readOnly =
-    isWorkspaceReadOnly(
+  const readOnlyReason =
+    getReadOnlyReason(
       subscription,
     );
+
+  const readOnly =
+    readOnlyReason !== null;
 
   return {
     user:
@@ -345,8 +351,18 @@ async function getCurrentWorkspaceAccessUncached() {
 
     readOnly,
 
+    readOnlyReason,
+
     trialEndsAt:
       subscription?.trialEndsAt ??
+      null,
+
+    subscriptionStatus:
+      subscription?.status ??
+      null,
+
+    currentPeriodEnd:
+      subscription?.currentPeriodEnd ??
       null,
   };
 }
@@ -386,7 +402,9 @@ export async function requireWorkspacePermission(
     )
   ) {
     throw new ActionError(
-      TRIAL_ENDED_MESSAGE,
+      READ_ONLY_MESSAGES[
+        access.readOnlyReason ?? "trial"
+      ],
     );
   }
 

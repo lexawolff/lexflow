@@ -21,12 +21,50 @@ import {
 } from "@/features/settings/components/billing-settings";
 
 import {
+  listAsaasSubscriptionPayments,
+} from "@/lib/asaas";
+
+import {
   requireWorkspacePagePermission,
 } from "@/lib/permissions";
 
 import {
   prisma,
 } from "@/lib/prisma";
+
+function formatMoney(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function formatDueDate(value: string) {
+  const [year, month, day] = value.split("-");
+
+  return `${day}/${month}/${year}`;
+}
+
+async function getOpenInvoice(providerSubscriptionId: string) {
+  try {
+    const payments = await listAsaasSubscriptionPayments(providerSubscriptionId);
+    const open = payments
+      .filter((payment) => (payment.status === "PENDING" || payment.status === "OVERDUE") && payment.invoiceUrl)
+      .sort((first, second) => first.dueDate.localeCompare(second.dueDate))[0];
+
+    if (!open?.invoiceUrl) {
+      return null;
+    }
+
+    return {
+      invoiceUrl: open.invoiceUrl,
+      dueDate: formatDueDate(open.dueDate),
+      overdue: open.status === "OVERDUE",
+      value: typeof open.value === "number" ? open.value : null,
+    };
+  } catch {
+    // Sem resposta do Asaas, a página abre sem o atalho da fatura.
+    console.error("Falha ao consultar fatura em aberto no Asaas.");
+    return null;
+  }
+}
 
 export default async function AssinaturaPage({
   searchParams,
@@ -75,6 +113,9 @@ export default async function AssinaturaPage({
             true,
 
           cancelAtPeriodEnd:
+            true,
+
+          providerSubscriptionId:
             true,
         },
       }),
@@ -126,6 +167,18 @@ export default async function AssinaturaPage({
     membership.role ===
     UserRole.OWNER;
 
+  // Fatura aguardando pagamento (primeira cobrança ou em atraso).
+  const openInvoice =
+    isOwner &&
+    subscription?.providerSubscriptionId &&
+    (subscription.status === "TRIALING" || subscription.status === "PAST_DUE")
+      ? await getOpenInvoice(subscription.providerSubscriptionId)
+      : null;
+
+  const canSubscribe =
+    isOwner &&
+    (subscription?.status === "TRIALING" || subscription?.status === "CANCELED");
+
   return (
     <AppShell>
       <div className="space-y-7">
@@ -158,11 +211,35 @@ export default async function AssinaturaPage({
           </div>
         ) : null}
 
-        {subscription?.status === "TRIALING" && isOwner ? (
+        {openInvoice ? (
+          <div
+            className={`flex flex-col gap-3 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${openInvoice.overdue ? "border-red-200! bg-red-50 dark:border-red-900! dark:bg-red-950/20" : "bg-card"}`}
+          >
+            <div>
+              <p className="font-semibold">
+                {openInvoice.overdue ? "Fatura em atraso" : "Fatura aguardando pagamento"}
+              </p>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                {openInvoice.value !== null ? `${formatMoney(openInvoice.value)} · ` : ""}
+                vencimento em {openInvoice.dueDate}
+              </p>
+            </div>
+
+            <a
+              href={openInvoice.invoiceUrl}
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-primary px-6 text-sm font-bold tracking-wide text-primary-foreground transition hover:bg-primary/90"
+            >
+              PAGAR FATURA
+            </a>
+          </div>
+        ) : null}
+
+        {canSubscribe ? (
           <div className="flex flex-col gap-3 rounded-2xl border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold">
-                Assine o LexFlow
+                {openInvoice ? "Prefere outro plano ou forma de pagamento?" : "Assine o LexFlow"}
               </p>
 
               <p className="mt-1 text-sm text-muted-foreground">
